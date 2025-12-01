@@ -8,6 +8,9 @@
                         <select class="form-select" id="p2m-select" aria-label="Default select example">
                             <option {{ Route::is('p2m.index') ? 'selected' : '' }} data-url="{{ route('p2m.index') }}">pilih kegiatan P2M</option>
                             <option {{ Route::is('p2m.sosialisasi.*') ? 'selected' : '' }} data-url="{{ route('p2m.sosialisasi.index') }}">Sosialisasi Tatap Muka/Konvensional</option>
+                            <option {{ Route::is('p2m.cfd.*') ? 'selected' : '' }} data-url="{{ route('p2m.cfd.index') }}">Sosialisasi di lokasi Car Free Days (CFD)</option>
+                            <option {{ Route::is('p2m.elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.elektronik.create') }}">Informasi dan Edukasi Melalui Media Elektronik</option>
+                            <option {{ Route::is('p2m.online.*') ? 'selected' : '' }} data-url="{{ route('p2m.online.create') }}">Informasi dan Edukasi Melalui Media Online</option>
                         </select>
                     </div>
                     <div class="col">

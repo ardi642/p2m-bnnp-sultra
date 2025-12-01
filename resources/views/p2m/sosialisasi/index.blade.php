@@ -173,8 +173,6 @@
 @endsection
 
 @push('scripts')
-    {{-- Pastikan Alpine JS dimuat --}}
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
     <script type="module">
         window.confirmDelete = function(id) {

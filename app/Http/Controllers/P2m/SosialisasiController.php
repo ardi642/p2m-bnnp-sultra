@@ -5,20 +5,82 @@ namespace App\Http\Controllers\P2m;
 use App\Http\Controllers\Controller;
 use App\Models\P2mSosialisasi;
 use App\Models\SatuanKerja;
-use App\Models\Pegawai; // Import Model Pegawai
+use App\Models\Pegawai;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB; // Import DB untuk transaksi (opsional tapi bagus)
+use Illuminate\Support\Facades\DB;
 
 class SosialisasiController extends Controller
 {
-    public function index(): View {
-        // Eager load 'pegawai' agar query lebih cepat saat menampilkan list
-        $sosialisasis = P2mSosialisasi::with('pegawai', 'satuanKerja')
-            ->latest()
-            ->paginate(10);
+    public function index(Request $request): View {
+        
+        // 1. DATA MASTER UNTUK FILTER
+        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        
+        $years = P2mSosialisasi::selectRaw('YEAR(tanggal_pelaksanaan) as year')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+        
+        // --- TENTUKAN TAHUN AKTIF (UNTUK DEFAULT QUERY) ---
+        // Jika request tahun kosong, gunakan tahun saat ini sebagai nilai default query.
+        $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
+
+        // 2. MULAI QUERY DATA
+        $query = P2mSosialisasi::with('pegawai', 'satuanKerja');
+
+        // --- LOGIKA FILTERING (MULTIPLE) ---
+
+        // A. Filter Satuan Kerja
+        if ($request->filled('satuan_kerja_id')) {
+            $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+        }
+
+        // B. Filter Bulan
+        if ($request->filled('bulan')) {
+            $query->where(function($q) use ($request) {
+                foreach ($request->bulan as $b) {
+                    $q->orWhereMonth('tanggal_pelaksanaan', $b);
+                }
+            });
+        }
+        
+        // C. Filter TAHUN (Wajib ada, defaultnya tahun saat ini)
+        $query->where(function($q) use ($activeYears) {
+            foreach ($activeYears as $y) {
+                $q->orWhereYear('tanggal_pelaksanaan', $y);
+            }
+        });
+
+        // D. Filter Anggaran
+        if ($request->filled('anggaran_pelaksanaan')) {
+            $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
+        }
+
+        // E. Filter Sasaran
+        if ($request->filled('sasaran_kegiatan')) {
+            $query->whereIn('sasaran_kegiatan', $request->sasaran_kegiatan);
+        }
+
+        // --- LOGIKA PENCARIAN UMUM (LIKE QUERY) ---
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('nama_kegiatan', 'LIKE', "%{$search}%")
+                    ->orWhere('tempat_kegiatan', 'LIKE', "%{$search}%")
+                    ->orWhere('sasaran_kegiatan', 'LIKE', "%{$search}%")
+                    ->orWhereHas('satuanKerja', function($subQ) use ($search) {
+                        $subQ->where('satuan_kerja', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        // 3. EKSEKUSI
+        $sosialisasis = $query->latest()
+            ->paginate(10)
+            ->withQueryString();
                         
-        return view('p2m.sosialisasi.index', compact('sosialisasis'));
+        return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years'));
     }
 
     public function create(): View {

@@ -32,8 +32,11 @@
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{  asset("assets/manifest-DTaoG9pG.json") }}">
+    @vite(['resources/js/app.js'])
+
   <script type="module" crossorigin src="{{  asset("assets/main-f0Mg-34g.js") }}"></script>
   <link rel="stylesheet" crossorigin href="{{  asset("assets/main-DLfE7m78.css") }}">
+  @stack('styles')
 </head>
 
 <body data-page="dashboard" class="admin-layout">

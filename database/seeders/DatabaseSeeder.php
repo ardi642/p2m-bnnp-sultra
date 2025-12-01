@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Models\P2mSosialisasi;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\Pegawai;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,10 +18,23 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            SatuanKerjaSeeder::class, 
         ]);
+        Pegawai::factory(50)->create();
+
+        P2mSosialisasi::factory(100)
+        ->create()
+        ->each(function ($kegiatan) {
+            // Ambil 3 sampai 5 pegawai acak
+            $pegawaiAcak = Pegawai::inRandomOrder()->take(rand(3, 5))->pluck('nip');
+            
+            // Hubungkan (Attach) ke kegiatan
+            $kegiatan->pegawai()->attach($pegawaiAcak);
+        });
+        // User::factory()->create([
+        //     'name' => 'Test User',
+        //     'email' => 'test@example.com',
+        // ]);
     }
 }

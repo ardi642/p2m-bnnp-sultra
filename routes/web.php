@@ -20,5 +20,7 @@ Route::prefix('p2m')
         Route::get('/sosialisasi/create', [SosialisasiController::class, 'create'])->name("sosialisasi.create");
 
         Route::post('/sosialisasi/store', [SosialisasiController::class, 'store'])->name("sosialisasi.store");
+
+        Route::delete('/sosialisasi/destroy/{id}', [SosialisasiController::class, 'destroy'])->name("sosialisasi.destroy");
     });
 

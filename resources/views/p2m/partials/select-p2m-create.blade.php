@@ -26,7 +26,7 @@
     </div>
 </div>
 
-@section('scripts')
+@push('scripts')
 <script>
     
     const p2mSelect = document.getElementById("p2m-select")
@@ -39,4 +39,4 @@
     })
 
 </script>
-@endsection
+@endpush

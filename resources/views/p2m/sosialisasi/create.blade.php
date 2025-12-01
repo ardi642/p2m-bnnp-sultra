@@ -104,10 +104,23 @@
                                 <div class="row g-8 mb-5">
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-3">
-                                            <label for="exampleFormControlInput1" class="form-label">Nama Pegawai yang ditugaskan</label>
-                                            <input type="text" class="form-control @error('nama_pegawai') is-invalid @enderror" placeholder="masukkan nama pegawai" name="nama_pegawai" value="{{ old('nama_pegawai') }}">
-                                            @error('nama_pegawai')
-                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            <label for="select-pegawai" class="form-label">Nama Pegawai yang ditugaskan</label>
+                                            
+                                            {{-- Perhatikan name="pegawai_nips[]" pakai kurung siku karena multiple --}}
+                                            <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih Pegawai..." autocomplete="off" class="form-control @error('pegawai_nips') is-invalid @enderror">
+                                                <option value="">Pilih pegawai...</option>
+                                                @foreach ($pegawais as $pegawai)
+                                                    <option value="{{ $pegawai->nip }}" 
+                                                        @selected(collect(old('pegawai_nips'))->contains($pegawai->nip))>
+                                                        {{-- FORMAT TAMPILAN: Nama - Satuan Kerja - NIP --}}
+                                                        {{ $pegawai->nama }} - {{ $pegawai->satuanKerja->satuan_kerja ?? '-' }} - NIP: {{ $pegawai->nip }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            
+                                            {{-- Menampilkan pesan error validasi --}}
+                                            @error('pegawai_nips') 
+                                                <div class="invalid-feedback d-block">{{ $message }}</div> 
                                             @enderror
                                         </div>
                                     </div>
@@ -150,12 +163,31 @@
     </main>
 @endsection
 
-@section('scripts')
-<script>
-    
-    const p2mSelect = document.getElementById("p2m-select")
-    const selectedOption = this.options[this.selectedIndex];
-    document.getElementById("#judul").inn
+@push('styles')
+{{-- CSS Tom Select (Theme Bootstrap 5) --}}
+    @vite('resources/css/tom-select.css')
+@endpush
 
+@push('scripts')
+{{-- Script Tom Select --}}
+<script type="module">
+    document.addEventListener("DOMContentLoaded", function() {
+        // Pastikan library Tom Select sudah di-load di layout utama (admin.blade.php)
+        if(typeof TomSelect !== 'undefined'){
+            console.log("test dulu berjalan")
+            new TomSelect("#select-pegawai", {
+                create: false, // User tidak boleh buat nama baru (harus pilih dari list)
+                sortField: {
+                    field: "text",
+                    direction: "asc"
+                },
+                maxItems: null, // <--- MENAMBAHKAN INI AGAR SELECT BISA TANPA BATAS
+                placeholder: "Cari atau pilih pegawai...",
+                plugins: ['remove_button'], // Tombol 'x' untuk menghapus pilihan
+            });
+        } else {
+            console.error("Library Tom Select belum terinstall/terload");
+        }
+    });
 </script>
-@endsection
+@endpush

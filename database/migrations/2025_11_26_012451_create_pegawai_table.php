@@ -15,7 +15,15 @@ return new class extends Migration
             $table->string('nip')->primary();
             $table->string('nama');
             $table->string('email')->unique();
-            $table->string('nomor_hp', 15)->nullable();
+            $table->string('nomor_hp', 20)->nullable();
+
+            $table->unsignedBigInteger('satuan_kerja_id');
+            $table->foreign('satuan_kerja_id')
+                    ->references('id')
+                    ->on('satuan_kerja')
+                    ->onUpdate('cascade')
+                    ->onDelete('cascade');
+                    
             $table->timestamps();
         });
     }

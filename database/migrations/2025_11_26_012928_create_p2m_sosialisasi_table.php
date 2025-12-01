@@ -24,7 +24,6 @@ return new class extends Migration
             $table->enum('sasaran_kegiatan', ['lingkungan pendidikan', 'lingkungan kerja', 'lingkungan masyarakat']);
             $table->date('tanggal_pelaksanaan');
             $table->text('tempat_kegiatan');
-            $table->text('nama_pegawai');
             $table->integer('jumlah_peserta');
             $table->text('link_kelengkapan_dokumentasi');
             $table->timestamps();

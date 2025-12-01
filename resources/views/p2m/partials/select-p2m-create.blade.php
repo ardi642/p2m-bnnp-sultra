@@ -8,6 +8,7 @@
                         <select class="form-select" id="p2m-select" aria-label="Default select example">
                             <option disabled>pilih kegiatan P2M</option>
                             <option {{ Route::is('p2m.sosialisasi.*') ? 'selected' : '' }} data-url="{{ route('p2m.sosialisasi.create') }}">Sosialisasi Tatap Muka/Konvensional</option>
+                            <option {{ Route::is('p2m.safarireligi.*') ? 'selected' : '' }} data-url="{{ route('p2m.safarireligi.create') }}">Safari Religi</option>
                         </select>
                     </div>
                     <div class="col-12 col-lg">
@@ -28,13 +29,13 @@
 
 @section('scripts')
 <script>
-    
+
     const p2mSelect = document.getElementById("p2m-select")
     p2mSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const targetUrl = selectedOption.getAttribute('data-url');
         if (targetUrl == window.location.href) return
-        
+
         window.location.href = targetUrl
     })
 

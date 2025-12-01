@@ -21,7 +21,7 @@ class SosialisasiController extends Controller
     }
 
     public function store(Request $request) {
-                    
+
         $validasi = $request->validate([
             'satuan_kerja_id' => 'required',
             'anggaran_pelaksanaan' => 'required',

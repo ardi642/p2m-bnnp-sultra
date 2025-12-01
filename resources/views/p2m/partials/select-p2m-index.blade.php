@@ -6,13 +6,18 @@
                     <div class="col-2">Kegiatan P2M:</div>
                     <div class="col-4">
                         <select class="form-select" id="p2m-select" aria-label="Default select example">
-                            <option {{ Route::is('p2m.index') ? 'selected' : '' }} data-url="{{ route('p2m.index') }}">pilih kegiatan P2M</option>
-                            <option {{ Route::is('p2m.sosialisasi.*') ? 'selected' : '' }} data-url="{{ route('p2m.sosialisasi.index') }}">Sosialisasi Tatap Muka/Konvensional</option>
+                            <option {{ Route::is('p2m.index') ? 'selected' : '' }} data-url="{{ route('p2m.index') }}">
+                                pilih kegiatan P2M</option>
+                            <option {{ Route::is('p2m.sosialisasi.*') ? 'selected' : '' }}
+                                data-url="{{ route('p2m.sosialisasi.index') }}">Sosialisasi Tatap Muka/Konvensional
+                            </option>
+                            <option {{ Route::is('p2m.safarireligi.*') ? 'selected' : '' }} data-url="{{
+                                route('p2m.safarireligi.index') }}">Safari Religi</option>
                         </select>
                     </div>
                     <div class="col">
                         <div class="d-flex justify-content-end">
-                            @if (! Route::is('p2m.index'))
+                            @if (!Route::is('p2m.index'))
                                 @php
                                     $baseRoute = Str::beforeLast(Route::currentRouteName(), '.');
                                 @endphp
@@ -29,16 +34,16 @@
 </div>
 
 @section('scripts')
-<script>
-    
-    const p2mSelect = document.getElementById("p2m-select")
-    p2mSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const targetUrl = selectedOption.getAttribute('data-url');
-        if (targetUrl == window.location.href) return
-        
-        window.location.href = targetUrl
-    })
+    <script>
 
-</script>
+        const p2mSelect = document.getElementById("p2m-select")
+        p2mSelect.addEventListener('change', function () {
+            const selectedOption = this.options[this.selectedIndex];
+            const targetUrl = selectedOption.getAttribute('data-url');
+            if (targetUrl == window.location.href) return
+
+            window.location.href = targetUrl
+        })
+
+    </script>
 @endsection

@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('p2m_kie', function (Blueprint $table) {
+        Schema::create('p2m_cfd', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('satuan_kerja_id');
             $table->foreign('satuan_kerja_id')
@@ -22,6 +22,7 @@ return new class extends Migration
             $table->text('tempat_kegiatan');
             $table->date('tanggal_pelaksanaan');
             $table->text('nama_pegawai');
+            $table->integer('jumlah_peserta');
             $table->text('link_kelengkapan_dokumentasi');
             $table->timestamps();
         });
@@ -32,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('p2m_kie');
+        Schema::dropIfExists('p2m_cfd');
     }
 };

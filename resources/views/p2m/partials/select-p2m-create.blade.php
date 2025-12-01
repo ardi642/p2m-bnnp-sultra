@@ -8,9 +8,15 @@
                         <select class="form-select" id="p2m-select" aria-label="Default select example">
                             <option disabled>Pilih Kegiatan P2M</option>
                             <option {{ Route::is('p2m.sosialisasi.*') ? 'selected' : '' }} data-url="{{ route('p2m.sosialisasi.create') }}">Sosialisasi Tatap Muka/Konvensional</option>
+<<<<<<< HEAD
                             <option {{ Route::is('p2m.upacara.*') ? 'selected' : '' }} data-url="{{ route('p2m.upacara.create') }}">Sosialisasi sebagai Pembina Upacara</option>
                             <option {{ Route::is('p2m.kie.*') ? 'selected' : '' }} data-url="{{ route('p2m.kie.create') }}">KIE (Kegiatan Informasi dan Edukasi) Keliling</option>
                             <option {{ Route::is('p2m.lingkungan.*') ? 'selected' : '' }} data-url="{{ route('p2m.lingkungan.create') }}">Lingkungan Bersinar</option>
+=======
+                            <option {{ Route::is('p2m.cfd.*') ? 'selected' : '' }} data-url="{{ route('p2m.cfd.create') }}">Sosialisasi di lokasi Car Free Days (CFD)</option>
+                            <option {{ Route::is('p2m.elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.elektronik.create') }}">Informasi dan Edukasi Melalui Media Elektronik</option>
+                            <option {{ Route::is('p2m.online.*') ? 'selected' : '' }} data-url="{{ route('p2m.online.create') }}">Informasi dan Edukasi Melalui Media Online</option>
+>>>>>>> origin/feature/input-p2m-akbar
                         </select>
                     </div>
                     <div class="col-12 col-lg">

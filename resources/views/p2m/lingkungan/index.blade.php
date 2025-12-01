@@ -18,7 +18,7 @@
                         <div class="card-header">
                             <div class="row align-items-center">
                                 <div class="col">
-                                    <h5 class="card-title mb-0 text-center">Data sosialisasi Tatap Muka/Konvensional</h5>
+                                    <h5 class="card-title mb-0 text-center">Data Lingkungan Bersinar yang telah Terbentuk</h5>
                                 </div>
                             </div>
                         </div>
@@ -29,29 +29,27 @@
                                         <tr class="text-center">
                                             <th>No</th>
                                             <th>Satuan Kerja</th>
-                                            <th>Anggaran Pelaksanaan</th>
-                                            <th>Nama Kegiatan</th>
-                                            <th>Sasaran Kegiatan</th>
+                                            <th>Sasaran</th>
+                                            <th>Nama Tempat</th>
                                             <th>Tanggal Pelaksanaan</th>
-                                            <th>Tempat Kegiatan</th>
-                                            <th>Nama Pegawai</th>
-                                            <th>Jumlah Peserta</th>
+                                            <th>Jumlah Penggiat</th>
+                                            <th>Nama Penanggung Jawab</th>
+                                            <th>No HP Penanggung Jawab</th>
                                             <th>Link Kelengkapan atau Dokumentasi</th>
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse ($sosialisasis as $data)
+                                        @forelse ($lingkungans as $data)
                                             <tr class="text-center">
                                                 <td>{{ $loop->iteration }}</td>
                                                 <td>{{ $data->satuanKerja->satuan_kerja }}</td>
-                                                <td>{{ $data->anggaran_pelaksanaan }}</td>
-                                                <td>{{ $data->nama_kegiatan }}</td>
-                                                <td>{{ $data->sasaran_kegiatan }}</td>
+                                                <td>{{ $data->sasaran }}</td>
+                                                <td>{{ $data->nama_tempat }}</td>
                                                 <td>{{ $data->tanggal_pelaksanaan }}</td>
-                                                <td>{{ $data->tempat_kegiatan }}</td>
-                                                <td>{{ $data->nama_pegawai }}</td>
-                                                <td>{{ $data->jumlah_peserta }}</td>
+                                                <td>{{ $data->jumlah_penggiat }}</td>
+                                                <td>{{ $data->nama_penanggungjawab }}</td>
+                                                <td>{{ $data->nomor_hp }}</td>
                                                 <td>{{ $data->link_kelengkapan_dokumentasi }}</td>
                                                 <td>
                                                     <div class="d-flex gap-4">
@@ -64,7 +62,7 @@
                                             <tr>
                                                 <td colspan="9" class="text-center p-4">
                                                     <div class="text-muted">
-                                                        Belum ada data kegiatan sosialisasi
+                                                        Belum ada data lingkungan bersinar yang terbentuk
                                                     </div>
                                                 <td>
                                             </tr>

@@ -18,7 +18,7 @@
                         <div class="card-header">
                             <div class="row align-items-center">
                                 <div class="col">
-                                    <h5 class="card-title mb-0 text-center">Data sosialisasi Tatap Muka/Konvensional</h5>
+                                    <h5 class="card-title mb-0 text-center">Data KIE (Kegiatan Informasi dan Edukasi) Keliling</h5>
                                 </div>
                             </div>
                         </div>
@@ -29,29 +29,21 @@
                                         <tr class="text-center">
                                             <th>No</th>
                                             <th>Satuan Kerja</th>
-                                            <th>Anggaran Pelaksanaan</th>
-                                            <th>Nama Kegiatan</th>
-                                            <th>Sasaran Kegiatan</th>
-                                            <th>Tanggal Pelaksanaan</th>
                                             <th>Tempat Kegiatan</th>
+                                            <th>Tanggal Pelaksanaan</th>
                                             <th>Nama Pegawai</th>
-                                            <th>Jumlah Peserta</th>
                                             <th>Link Kelengkapan atau Dokumentasi</th>
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse ($sosialisasis as $data)
+                                        @forelse ($kies as $data)
                                             <tr class="text-center">
                                                 <td>{{ $loop->iteration }}</td>
                                                 <td>{{ $data->satuanKerja->satuan_kerja }}</td>
-                                                <td>{{ $data->anggaran_pelaksanaan }}</td>
-                                                <td>{{ $data->nama_kegiatan }}</td>
-                                                <td>{{ $data->sasaran_kegiatan }}</td>
-                                                <td>{{ $data->tanggal_pelaksanaan }}</td>
                                                 <td>{{ $data->tempat_kegiatan }}</td>
+                                                <td>{{ $data->tanggal_pelaksanaan }}</td>
                                                 <td>{{ $data->nama_pegawai }}</td>
-                                                <td>{{ $data->jumlah_peserta }}</td>
                                                 <td>{{ $data->link_kelengkapan_dokumentasi }}</td>
                                                 <td>
                                                     <div class="d-flex gap-4">
@@ -64,7 +56,7 @@
                                             <tr>
                                                 <td colspan="9" class="text-center p-4">
                                                     <div class="text-muted">
-                                                        Belum ada data kegiatan sosialisasi
+                                                        Belum ada data KIE (Kegiatan Informasi dan Edukasi) Keliling
                                                     </div>
                                                 <td>
                                             </tr>

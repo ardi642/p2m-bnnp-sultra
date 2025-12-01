@@ -18,7 +18,7 @@
                         <div class="card-header">
                             <div class="row align-items-center">
                                 <div class="col">
-                                    <h5 class="card-title mb-0 text-center">Data sosialisasi Tatap Muka/Konvensional</h5>
+                                    <h5 class="card-title mb-0 text-center">Data Sosialisasi sebagai Pembina Upacara</h5>
                                 </div>
                             </div>
                         </div>
@@ -29,11 +29,8 @@
                                         <tr class="text-center">
                                             <th>No</th>
                                             <th>Satuan Kerja</th>
-                                            <th>Anggaran Pelaksanaan</th>
-                                            <th>Nama Kegiatan</th>
-                                            <th>Sasaran Kegiatan</th>
+                                            <th>Nama Sekolah</th>
                                             <th>Tanggal Pelaksanaan</th>
-                                            <th>Tempat Kegiatan</th>
                                             <th>Nama Pegawai</th>
                                             <th>Jumlah Peserta</th>
                                             <th>Link Kelengkapan atau Dokumentasi</th>
@@ -41,15 +38,12 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse ($sosialisasis as $data)
+                                        @forelse ($upacaras as $data)
                                             <tr class="text-center">
                                                 <td>{{ $loop->iteration }}</td>
                                                 <td>{{ $data->satuanKerja->satuan_kerja }}</td>
-                                                <td>{{ $data->anggaran_pelaksanaan }}</td>
-                                                <td>{{ $data->nama_kegiatan }}</td>
-                                                <td>{{ $data->sasaran_kegiatan }}</td>
+                                                <td>{{ $data->nama_sekolah }}</td>
                                                 <td>{{ $data->tanggal_pelaksanaan }}</td>
-                                                <td>{{ $data->tempat_kegiatan }}</td>
                                                 <td>{{ $data->nama_pegawai }}</td>
                                                 <td>{{ $data->jumlah_peserta }}</td>
                                                 <td>{{ $data->link_kelengkapan_dokumentasi }}</td>

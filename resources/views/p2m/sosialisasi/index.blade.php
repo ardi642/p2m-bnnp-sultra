@@ -19,7 +19,7 @@
                         <div class="card-header">
                             <div class="row align-items-center">
                                 <div class="col">
-                                    <h5 class="card-title mb-0">Data sosialisasi Tatap Muka/Konvensional</h5>
+                                    <h5 class="card-title mb-0 text-center">Data sosialisasi Tatap Muka/Konvensional</h5>
                                 </div>
                             </div>
                         </div>

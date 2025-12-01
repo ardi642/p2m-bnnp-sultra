@@ -6,8 +6,11 @@
                     <div class="col-12 col-lg-2 ">Kegiatan P2M:</div>
                     <div class="col-12 col-lg-4">
                         <select class="form-select" id="p2m-select" aria-label="Default select example">
-                            <option disabled>pilih kegiatan P2M</option>
+                            <option disabled>Pilih Kegiatan P2M</option>
                             <option {{ Route::is('p2m.sosialisasi.*') ? 'selected' : '' }} data-url="{{ route('p2m.sosialisasi.create') }}">Sosialisasi Tatap Muka/Konvensional</option>
+                            <option {{ Route::is('p2m.upacara.*') ? 'selected' : '' }} data-url="{{ route('p2m.upacara.create') }}">Sosialisasi sebagai Pembina Upacara</option>
+                            <option {{ Route::is('p2m.kie.*') ? 'selected' : '' }} data-url="{{ route('p2m.kie.create') }}">KIE (Kegiatan Informasi dan Edukasi) Keliling</option>
+                            <option {{ Route::is('p2m.lingkungan.*') ? 'selected' : '' }} data-url="{{ route('p2m.lingkungan.create') }}">Lingkungan Bersinar</option>
                         </select>
                     </div>
                     <div class="col-12 col-lg">

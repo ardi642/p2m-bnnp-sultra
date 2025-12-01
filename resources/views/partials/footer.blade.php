@@ -6,7 +6,7 @@
                         <p class="mb-0 text-muted">© 2025 BNN Provinsi Sulawesi Tenggara</p>
                     </div>
                     <div class="col-md-6 text-md-end">
-                        <p class="mb-0 text-muted">Built with ❤️ Magang Nasional (Maganghub) Kemnaker 2025</p>
+                        <p class="mb-0 text-muted">Build with ❤️ Magang Nasional (Maganghub) Kemnaker 2025</p>
                     </div>
                 </div>
             </div>

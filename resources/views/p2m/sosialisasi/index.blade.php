@@ -226,16 +226,105 @@
                             <div class="table-responsive">
                                 <table class="table table-hover mb-0" x-data="{ expanded: [] }">
                                     <thead class="table-light">
-                                        <tr class="text-center">
+                                        <tr class="text-center align-middle">
+                                            {{-- 1. NO (Tidak di-sort) --}}
                                             <th>No</th>
-                                            <th>Satuan Kerja</th>
-                                            <th>Anggaran Pelaksanaan</th>
-                                            <th>Nama Kegiatan</th>
-                                            <th>Sasaran Kegiatan</th>
-                                            <th>Tanggal Pelaksanaan</th>
-                                            <th>Tempat Kegiatan</th>
+
+                                            {{-- 2. SATUAN KERJA --}}
+                                            <th>
+                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'satuan_kerja', 'sort_order' => request('sort_by') == 'satuan_kerja' && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" 
+                                                class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
+                                                    Satuan Kerja
+                                                    @if(request('sort_by') == 'satuan_kerja')
+                                                        <i class="bi bi-sort-{{ request('sort_order') == 'asc' ? 'alpha-down' : 'alpha-down-alt' }}"></i>
+                                                    @else
+                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
+                                                    @endif
+                                                </a>
+                                            </th>
+
+                                            {{-- 3. ANGGARAN --}}
+                                            <th>
+                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'anggaran_pelaksanaan', 'sort_order' => request('sort_by') == 'anggaran_pelaksanaan' && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" 
+                                                class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
+                                                    Anggaran
+                                                    @if(request('sort_by') == 'anggaran_pelaksanaan')
+                                                        <i class="bi bi-sort-{{ request('sort_order') == 'asc' ? 'down' : 'up' }}"></i>
+                                                    @else
+                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
+                                                    @endif
+                                                </a>
+                                            </th>
+
+                                            {{-- 4. NAMA KEGIATAN --}}
+                                            <th>
+                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'nama_kegiatan', 'sort_order' => request('sort_by') == 'nama_kegiatan' && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" 
+                                                class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
+                                                    Nama Kegiatan
+                                                    @if(request('sort_by') == 'nama_kegiatan')
+                                                        <i class="bi bi-sort-{{ request('sort_order') == 'asc' ? 'alpha-down' : 'alpha-down-alt' }}"></i>
+                                                    @else
+                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
+                                                    @endif
+                                                </a>
+                                            </th>
+
+                                            {{-- 5. SASARAN --}}
+                                            <th>
+                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'sasaran_kegiatan', 'sort_order' => request('sort_by') == 'sasaran_kegiatan' && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" 
+                                                class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
+                                                    Sasaran
+                                                    @if(request('sort_by') == 'sasaran_kegiatan')
+                                                        <i class="bi bi-sort-{{ request('sort_order') == 'asc' ? 'alpha-down' : 'alpha-down-alt' }}"></i>
+                                                    @else
+                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
+                                                    @endif
+                                                </a>
+                                            </th>
+
+                                            {{-- 6. TANGGAL --}}
+                                            <th>
+                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'tanggal_pelaksanaan', 'sort_order' => request('sort_by') == 'tanggal_pelaksanaan' && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" 
+                                                class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
+                                                    Tanggal
+                                                    @if(request('sort_by') == 'tanggal_pelaksanaan')
+                                                        <i class="bi bi-sort-numeric-{{ request('sort_order') == 'asc' ? 'down' : 'up-alt' }}"></i>
+                                                    @else
+                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
+                                                    @endif
+                                                </a>
+                                            </th>
+
+                                            {{-- 7. TEMPAT --}}
+                                            <th>
+                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'tempat_kegiatan', 'sort_order' => request('sort_by') == 'tempat_kegiatan' && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" 
+                                                class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
+                                                    Tempat
+                                                    @if(request('sort_by') == 'tempat_kegiatan')
+                                                        <i class="bi bi-sort-{{ request('sort_order') == 'asc' ? 'alpha-down' : 'alpha-down-alt' }}"></i>
+                                                    @else
+                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
+                                                    @endif
+                                                </a>
+                                            </th>
+
+                                            {{-- 8. PEGAWAI (Tidak di-sort sesuai permintaan) --}}
                                             <th style="min-width: 200px;">Nama Pegawai</th>
-                                            <th>Jumlah Peserta</th>
+
+                                            {{-- 9. JUMLAH PESERTA --}}
+                                            <th>
+                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'jumlah_peserta', 'sort_order' => request('sort_by') == 'jumlah_peserta' && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" 
+                                                class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
+                                                    Peserta
+                                                    @if(request('sort_by') == 'jumlah_peserta')
+                                                        <i class="bi bi-sort-numeric-{{ request('sort_order') == 'asc' ? 'down' : 'up-alt' }}"></i>
+                                                    @else
+                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
+                                                    @endif
+                                                </a>
+                                            </th>
+
+                                            {{-- 10. AKSI (Tidak di-sort) --}}
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>

@@ -98,12 +98,37 @@ class SosialisasiController extends Controller
             });
         }
 
+        // --- G. LOGIKA SORTING (BARU) ---
+        // Default: created_at, desc (sama dengan latest())
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+
+        // Daftar kolom yang diizinkan untuk sorting (Security practice)
+        $allowSort = [
+            'anggaran_pelaksanaan', 'nama_kegiatan', 'sasaran_kegiatan', 
+            'tanggal_pelaksanaan', 'tempat_kegiatan', 'jumlah_peserta', 
+            'created_at', 'satuan_kerja' // satuan_kerja butuh penanganan khusus
+        ];
+
+        if (in_array($sortBy, $allowSort)) {
+            if ($sortBy === 'satuan_kerja') {
+                // Khusus Satuan Kerja (Relasi): Join tabel agar bisa sort by nama satker
+                $query->join('satuan_kerja', 'p2m_sosialisasi.satuan_kerja_id', '=', 'satuan_kerja.id')
+                    ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
+                    ->select('p2m_sosialisasi.*'); // Select p2m saja agar id tidak bentrok
+            } else {
+                // Kolom Biasa
+                $query->orderBy($sortBy, $sortOrder);
+            }
+        } else {
+            // Fallback default
+            $query->latest(); 
+        }
+
         // 3. EKSEKUSI
-        $sosialisasis = $query->latest()
-            ->paginate(10)
-            ->withQueryString();
+        $sosialisasis = $query->paginate(10)->withQueryString();
                         
-        return view('p2m.sosialisasi.index', compact('sosialisasis', 'pegawais', 'satuanKerjas', 'years'));
+        return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years', 'pegawais'));
     }
 
     public function create(): View {

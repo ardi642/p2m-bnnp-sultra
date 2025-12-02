@@ -13,10 +13,28 @@
 
             {{-- LOGIKA HITUNG JUMLAH FILTER AKTIF (Define variable di sini) --}}
             @php
-                // Hitung total item yang dipilih (termasuk Search)
-                $activeFilters = collect(request()->only([
-                    'satuan_kerja_id', 'bulan', 'tahun', 'anggaran_pelaksanaan', 'sasaran_kegiatan', 'search'
-                ]))->flatten()->filter()->count(); 
+                // 1. Ambil semua input dari request
+                $allFilters = request()->only([
+                    'satuan_kerja_id', 
+                    'bulan', 
+                    'tahun', 
+                    'anggaran_pelaksanaan', 
+                    'sasaran_kegiatan', 
+                    'search',
+                    'pegawai_nips'
+                ]);
+
+                // 2. LOGIC DEFAULT TAHUN:
+                // Jika filter 'tahun' kosong di request, sistem (Controller) otomatis pakai tahun sekarang.
+                // Maka kita manual masukkan tahun sekarang ke array agar terhitung sebagai "1 Aktif".
+                if (empty($allFilters['tahun'])) {
+                    $allFilters['tahun'] = [date('Y')];
+                }
+
+                // 3. Hitung total item (Flatten array multidimensi -> Hapus nilai kosong -> Hitung)
+                $activeFilters = collect($allFilters)->flatten()->filter(function($value) {
+                    return !is_null($value) && $value !== '';
+                })->count(); 
             @endphp
             
             {{-- ALPINE JS STATE: showFilter selalu true agar filter terbuka default --}}
@@ -147,13 +165,46 @@
                                             </div>
 
                                             {{-- 5. SASARAN --}}
-                                            <div class="col-12">
+                                            <div class="col-md-6">
                                                 <label class="form-label fw-bold small text-muted text-uppercase mb-1">Sasaran Kegiatan</label>
                                                 <select id="select-sasaran" name="sasaran_kegiatan[]" multiple placeholder="Pilih Sasaran..." autocomplete="off">
                                                     <option value="lingkungan pendidikan" {{ in_array('lingkungan pendidikan', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Pendidikan</option>
                                                     <option value="lingkungan kerja" {{ in_array('lingkungan kerja', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Kerja</option>
                                                     <option value="lingkungan masyarakat" {{ in_array('lingkungan masyarakat', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Masyarakat</option>
                                                 </select>
+                                            </div>
+
+                                            {{-- 6. PEGAWAI --}}
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Pegawai</label>
+                                                
+                                                <div class="input-group" x-data="{ logic: '{{ request('pegawai_logic', 'OR') }}' }">
+                                                    
+                                                    {{-- Tombol Toggle Logic --}}
+                                                    <button type="button" 
+                                                            class="btn d-flex align-items-center gap-2 fw-bold"
+                                                            :class="logic === 'AND' ? 'btn-danger text-white' : 'btn-outline-secondary bg-white text-secondary'"
+                                                            @click="logic = logic === 'OR' ? 'AND' : 'OR'"
+                                                            title="Klik untuk ubah logika filter">
+                                                        
+                                                        <i class="bi" :class="logic === 'AND' ? 'bi-check-all' : 'bi-check'"></i>
+                                                        <span x-text="logic === 'AND' ? 'SEMUA (AND)' : 'SALAH SATU (OR)'" style="font-size: 0.8rem;"></span>
+                                                    </button>
+
+                                                    <input type="hidden" name="pegawai_logic" :value="logic">
+
+                                                    {{-- Select TomSelect Pegawai --}}
+                                                    <div style="flex-grow: 1;">
+                                                        <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih Pegawai..." autocomplete="off">
+                                                            @php $selectedNips = request('pegawai_nips', []); @endphp
+                                                            @foreach($pegawais as $pgw)
+                                                                <option value="{{ $pgw->nip }}" {{ in_array($pgw->nip, $selectedNips) ? 'selected' : '' }}>
+                                                                    {{ $pgw->nama }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {{-- BUTTONS ACTION --}}
@@ -290,6 +341,17 @@
 <style>
     .ts-control { border-radius: 0.375rem !important; border-color: #dee2e6 !important; box-shadow: none !important; }
     .ts-wrapper.focus .ts-control { box-shadow: none !important; border-color: #dee2e6 !important; }
+
+    .input-group .ts-wrapper {
+        height: 100%;
+    }
+    .input-group .ts-control {
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+        height: 100%;
+        display: flex;
+        align-items: center;
+    }
 </style>
 @endpush
 
@@ -301,9 +363,9 @@
         if(document.getElementById('select-bulan')) new TomSelect('#select-bulan', configTomSelect);
         if(document.getElementById('select-anggaran')) new TomSelect('#select-anggaran', configTomSelect);
         if(document.getElementById('select-sasaran')) new TomSelect('#select-sasaran', configTomSelect);
-
-        // TARGET TAHUN (INI YANG PALING PENTING)
         if(document.getElementById('select-tahun')) new TomSelect('#select-tahun', configTomSelect);
+        if(document.getElementById('select-pegawai')) new TomSelect('#select-pegawai', configTomSelect);
+
     });
 
     window.confirmDelete = function(id) {

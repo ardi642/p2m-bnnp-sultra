@@ -16,6 +16,8 @@ class SosialisasiController extends Controller
         
         // 1. DATA MASTER UNTUK FILTER
         $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+
+        $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
         
         $years = P2mSosialisasi::selectRaw('YEAR(tanggal_pelaksanaan) as year')
             ->distinct()
@@ -62,6 +64,27 @@ class SosialisasiController extends Controller
             $query->whereIn('sasaran_kegiatan', $request->sasaran_kegiatan);
         }
 
+        if ($request->filled('pegawai_nips')) {
+            $nips = $request->pegawai_nips;
+            $logic = $request->input('pegawai_logic', 'OR'); // Default OR jika tidak ada
+
+            if ($logic === 'AND') {
+                // LOGIKA AND (Irisan/Intersection)
+                // Loop setiap NIP, pastikan kegiatan memiliki relasi ke SETIAP NIP tersebut
+                foreach ($nips as $nip) {
+                    $query->whereHas('pegawai', function($q) use ($nip) {
+                        $q->where('pegawai.nip', $nip);
+                    });
+                }
+            } else {
+                // LOGIKA OR (Gabungan/Union)
+                // Cukup cek apakah kegiatan memiliki SALAH SATU dari NIP tersebut
+                $query->whereHas('pegawai', function($q) use ($nips) {
+                    $q->whereIn('pegawai.nip', $nips);
+                });
+            }
+        }
+
         // --- LOGIKA PENCARIAN UMUM (LIKE QUERY) ---
         if ($request->filled('search')) {
             $search = $request->search;
@@ -80,7 +103,7 @@ class SosialisasiController extends Controller
             ->paginate(10)
             ->withQueryString();
                         
-        return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years'));
+        return view('p2m.sosialisasi.index', compact('sosialisasis', 'pegawais', 'satuanKerjas', 'years'));
     }
 
     public function create(): View {

@@ -3,18 +3,40 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class p2mcfd extends Model
 {
-     protected $table = 'p2m_cfd';
+    use HasFactory;
+    protected $table = 'p2m_cfd';
     protected $casts = [
         'tanggal_pelaksanaan' => 'date'
     ];
     protected $guarded = [];
 
-    public function satuanKerja() {
-        return $this->belongsTo(satuanKerja::class, 'satuan_kerja_id');
+    public function satuanKerja(): BelongsTo
+    {
+        // Pastikan nama Model SatuanKerja Anda sesuai (huruf besar/kecilnya)
+        return $this->belongsTo(SatuanKerja::class, 'satuan_kerja_id');
     }
+
+    public function pegawai(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Pegawai::class,                // 1. Model Tujuan
+            'pegawai_p2m_cfd',     // 2. Nama Tabel Pivot
+            'p2m_cfd_id',          // 3. Foreign Key tabel ini di Pivot
+            'pegawai_nip',                 // 4. Foreign Key tabel tujuan (Pegawai) di Pivot
+            'id',                          // 5. Primary Key tabel ini (Local Key)
+            'nip'                          // 6. Primary Key tabel tujuan (Pegawai Key - NIP)
+        )->withTimestamps();               // Opsional: jika tabel pivot punya created_at/updated_at
+    }
+    
+
+
+
 }
 
 

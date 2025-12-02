@@ -48,4 +48,16 @@ class Pegawai extends Model
             'id'                       // Related Key (Primary Key model lawan)
         )->withTimestamps();
     }
+
+     public function p2mcfd(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            p2mcfd::class, 
+            'pegawai_p2m_cfd', // Nama tabel pivot
+            'pegawai_nip',             // Foreign key untuk model ini (Pegawai)
+            'p2m_cfd_id',      // Foreign key untuk model lawan (Kegiatan)
+            'nip',                     // Local Key (Primary Key model ini)
+            'id'                       // Related Key (Primary Key model lawan)
+        )->withTimestamps();
+    }
 }

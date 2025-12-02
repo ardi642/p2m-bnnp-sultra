@@ -47,16 +47,19 @@ Route::prefix('p2m')
         Route::get('/cfd', [CfdController::class, 'index'])->name("cfd.index");
         Route::get('/cfd/create', [CfdController::class, 'create'])->name("cfd.create");
         Route::post('/cfd/store', [CfdController::class, 'store'])->name("cfd.store");
+        Route::delete('/cfd/destroy/{id}', [cfdController::class, 'destroy'])->name("cfd.destroy");
 
 
         Route::get('/elektronik', [ElektronikController::class, 'index'])->name("elektronik.index");
         Route::get('/elektronik/create', [ElektronikController::class, 'create'])->name("elektronik.create");
         Route::post('/elektronik/store', [ElektronikController::class, 'store'])->name("elektronik.store");
+        Route::delete('/elektronik/destroy/{id}', [ElektronikController::class, 'destroy'])->name("elektronik.destroy");
 
 
         Route::get('/online', [OnlineController::class, 'index'])->name("online.index");
         Route::get('/online/create', [OnlineController::class, 'create'])->name("online.create");
         Route::post('/online/store', [OnlineController::class, 'store'])->name("online.store");
+        Route::delete('/online/destroy/{id}', [OnlineController::class, 'destroy'])->name("online.destroy");
 
     });
 

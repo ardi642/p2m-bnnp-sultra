@@ -18,7 +18,7 @@
                         <div class="card-header">
                             <div class="row align-items-center">
                                 <div class="col">
-                                    <h5 class="card-title mb-0">Data sosialisasi Car Free Day</h5>
+                                    <h5 class="card-title mb-0 text-center">Data sosialisasi Car Free Day</h5>
                                 </div>
                             </div>
                         </div>

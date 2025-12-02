@@ -5,20 +5,27 @@ namespace App\Http\Controllers\P2m;
 use App\Http\Controllers\Controller;
 use App\Models\P2mKie;
 use App\Models\SatuanKerja;
+use App\Models\Pegawai; // Import Model Pegawai
 use Illuminate\View\View;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\DB; // Import DB untuk transaksi (opsional tapi bagus)
 
 class KieController extends Controller
 {
     public function index(): View {
-        $kies = P2mKie::all();
+        $kies = P2mKie::with('pegawai', 'satuanKerja')
+            ->latest()
+            ->paginate(10);
         return view('p2m.kie.index', compact('kies'));
     }
 
     public function create(): View {
         $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
-        return view('p2m.kie.create', compact('satuanKerjas'));
+
+        // Ambil data pegawai untuk dropdown (urutkan nama a-z)     
+        $pegawais = Pegawai::with('satuanKerja')->orderBy('nama', 'asc')->get();
+        
+        return view('p2m.kie.create', compact('satuanKerjas', 'pegawais'));
     }
 
     public function store(Request $request) {
@@ -27,12 +34,42 @@ class KieController extends Controller
             'satuan_kerja_id' => 'required',
             'tempat_kegiatan' => 'required',
             'tanggal_pelaksanaan' => 'required',
-            'nama_pegawai' => 'required',
-            'link_kelengkapan_dokumentasi' => 'required'
+            // 'nama_pegawai' => 'required',
+            'link_kelengkapan_dokumentasi' => 'required',
+            
+            // Validasi Array Pegawai (NIP)
+            'pegawai_nips' => 'required|array', // Harus berbentuk array
+            'pegawai_nips.*' => 'exists:pegawai,nip', // Pastikan NIP valid di DB
         ]);
 
-        P2mKie::create($validasi);
+        // Gunakan Database Transaction agar data aman (jika gagal simpan pivot, data utama batal)
+        DB::transaction(function () use ($validasi) {
+            
+            // 2. Pisahkan data pegawai dari data utama
+            // Kita hapus 'pegawai_nips' dari array validasi karena kolom ini tidak ada di tabel p2m_sosialisasi
+            $dataKegiatan = collect($validasi)->except('pegawai_nips')->toArray();
+            $pegawaiNips = $validasi['pegawai_nips'];
 
-        return redirect()->route('p2m.kie.index')->with('status', 'success');
+            // 3. Simpan Data Kegiatan (Tabel Utama)
+            $kegiatan = P2mKie::create($dataKegiatan);
+
+            // 4. Simpan Relasi Pegawai (Tabel Pivot)
+            // Menggunakan method attach() untuk many-to-many
+            $kegiatan->pegawai()->attach($pegawaiNips);
+        });
+
+        return redirect()->route('p2m.kie.index')
+            ->with('success', 'store')
+            ->with('message', 'Berhasil menambahkan data');
+    }
+
+    public function destroy($id) {
+        $data = P2mKie::findOrFail($id);
+
+        $data->delete();
+
+        return redirect()->back()
+        ->with('success', 'destroy')
+        ->with('message', 'Data berhasil dihapus');
     }
 }

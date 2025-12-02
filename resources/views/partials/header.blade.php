@@ -14,8 +14,8 @@
     <meta property="og:type" content="website">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="{{  asset("assets/favicon-CvUZKS4z.svg") }}">
-    <link rel="icon" type="image/png" href="{{  asset("assets/favicon-B_cwPWBd.png") }}">
+    <link rel="icon" type="image/svg+xml" href="{{  asset("assets/logo-bnn.png") }}">
+    <link rel="icon" type="image/png" href="{{  asset("assets/logo-bnn.png") }}">
     
     <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

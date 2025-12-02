@@ -10,10 +10,12 @@
                     <p class="text-muted mb-0">Master Data P2M</p>
                 </div>
             </div>
+            
+            @include('p2m.partials.select-p2m-index')
 
             {{-- LOGIKA HITUNG JUMLAH FILTER AKTIF (Define variable di sini) --}}
             @php
-                // 1. Ambil semua input dari request
+                // 1. Ambil semua input dari request (Kecuali pegawai_logic)
                 $allFilters = request()->only([
                     'satuan_kerja_id', 
                     'bulan', 
@@ -25,15 +27,15 @@
                 ]);
 
                 // 2. LOGIC DEFAULT TAHUN:
-                // Jika filter 'tahun' kosong di request, sistem (Controller) otomatis pakai tahun sekarang.
-                // Maka kita manual masukkan tahun sekarang ke array agar terhitung sebagai "1 Aktif".
                 if (empty($allFilters['tahun'])) {
                     $allFilters['tahun'] = [date('Y')];
                 }
 
-                // 3. Hitung total item (Flatten array multidimensi -> Hapus nilai kosong -> Hitung)
-                $activeFilters = collect($allFilters)->flatten()->filter(function($value) {
-                    return !is_null($value) && $value !== '';
+                // 3. HITUNG JUMLAH KATEGORI YANG AKTIF
+                // Hapus flatten() agar array (seperti pegawai/satker) dihitung 1 kategori
+                $activeFilters = collect($allFilters)->filter(function($value) {
+                    // Cek apakah value ada isinya (tidak null, tidak array kosong, tidak string kosong)
+                    return !empty($value);
                 })->count(); 
             @endphp
             
@@ -56,6 +58,11 @@
                             {{-- FORM PEMBUNGKUS UTAMA --}}
                             <form action="{{ route('p2m.sosialisasi.index') }}" method="GET">
                                 
+                                {{-- TAMBAHAN: HIDDEN INPUT UNTUK MENJAGA SORTING SAAT EXPORT/FILTER --}}
+                                {{-- Ini mengambil nilai dari URL dan memasukkannya ke dalam form --}}
+                                <input type="hidden" name="sort_by" value="{{ request('sort_by') }}">
+                                <input type="hidden" name="sort_order" value="{{ request('sort_order') }}">
+
                                 {{-- TOOLBAR ATAS --}}
                                 <div class="row mb-5 align-items-center">
                                     <div class="col-auto">
@@ -79,12 +86,22 @@
                                             </button>
 
                                             {{-- 2. TOMBOL HAPUS FILTER (Hanya muncul jika ada filter/search aktif) --}}
-                                            @if($activeFilters > 0)
+                                            {{-- @if($activeFilters > 0)
                                                 <a href="{{ route('p2m.sosialisasi.index') }}" 
                                                    class="btn btn-danger btn-sm text-white d-flex align-items-center gap-1">
                                                     <i class="bi bi-x-circle"></i> Hapus Filter
                                                 </a>
-                                            @endif
+                                            @endif --}}
+
+                                            {{-- 3. TOMBOL EXPORT EXCEL --}}
+                                            {{-- Tombol ini akan mengirim semua input filter meskipun panel filter sedang tertutup --}}
+                                            <button type="submit" 
+                                                    formaction="{{ route('p2m.sosialisasi.export') }}"
+                                                    class="btn btn-success btn-sm text-white d-flex align-items-center gap-2"
+                                                    title="Export data sesuai filter yang aktif">
+                                                <i class="bi bi-file-earmark-excel"></i> 
+                                                <span class="d-none d-md-inline">Export Excel</span> {{-- Text sembunyi di HP biar rapi --}}
+                                            </button>
 
                                         </div>
                                     </div>
@@ -96,17 +113,18 @@
                                             <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Cari</button>
                                         </div>
                                     </div>
+                                    
                                 </div>
 
                                 {{-- PANEL FILTER --}}
                                 <div x-show="showFilter" 
-                                     x-transition:enter="transition ease-out duration-300"
-                                     x-transition:enter-start="opacity-0 transform scale-95"
-                                     x-transition:enter-end="opacity-100 transform scale-100"
-                                     x-transition:leave="transition ease-in duration-200"
-                                     x-transition:leave-start="opacity-100 transform scale-100"
-                                     x-transition:leave-end="opacity-0 transform scale-95"
-                                     class="mb-4">
+                                    x-transition:enter="transition ease-out duration-300"
+                                    x-transition:enter-start="opacity-0 transform scale-95"
+                                    x-transition:enter-end="opacity-100 transform scale-100"
+                                    x-transition:leave="transition ease-in duration-200"
+                                    x-transition:leave-start="opacity-100 transform scale-100"
+                                    x-transition:leave-end="opacity-0 transform scale-95"
+                                    class="mb-4">
 
                                     <div class="bg-light p-4 rounded-3 border">
                                         <div class="row g-3">
@@ -223,7 +241,7 @@
                             </form>
                             
                             {{-- TABEL DATA --}}
-                            <div class="table-responsive">
+                            <div class="custom-table-scroll mb-3">
                                 <table class="table table-hover mb-0" x-data="{ expanded: [] }">
                                     <thead class="table-light">
                                         <tr class="text-center align-middle">
@@ -323,7 +341,19 @@
                                                     @endif
                                                 </a>
                                             </th>
-
+                                            
+                                            <th>
+                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_at', 'sort_order' => (request('sort_by') == 'created_at' && request('sort_order') == 'asc') ? 'desc' : 'asc']) }}" 
+                                                class="text-decoration-none text-dark d-block text-nowrap">
+                                                    Dibuat
+                                                    @if(!request('sort_by') || request('sort_by') == 'created_at')
+                                                        {{-- Icon Aktif (Default) --}}
+                                                        <i class="bi bi-caret-{{ request('sort_order', 'desc') == 'asc' ? 'up' : 'down' }}-fill small ms-1"></i>
+                                                    @else
+                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small ms-1"></i>
+                                                    @endif
+                                                </a>
+                                            </th>
                                             {{-- 10. AKSI (Tidak di-sort) --}}
                                             <th>Aksi</th>
                                         </tr>
@@ -344,6 +374,10 @@
                                                     @endforeach
                                                 </td>
                                                 <td>{{ $data->jumlah_peserta }}</td>
+                                                <td class="small text-muted">
+                                                    {{ $data->created_at->locale('id')->translatedFormat('d M Y') }}<br>
+                                                    {{ $data->created_at->format('H:i') }}
+                                                </td>
                                                 <td>
                                                     <div class="d-flex gap-2 justify-content-center">
                                                         <button type="button" class="btn btn-info btn-sm text-white" 
@@ -412,10 +446,37 @@
                                     </tbody>
                                 </table>
                             </div>
-                            
-                            <div class="mt-4">
-                                {{ $sosialisasis->links() }}
+
+                            <div class="d-flex justify-content-between align-items-center mt-4">
+                                
+                                {{-- BAGIAN KIRI: Dropdown Jumlah Data --}}
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="text-muted small text-nowrap">Tampilkan</span>
+                                    
+                                    <select class="form-select form-select-sm border-secondary-subtle" 
+                                            style="width: auto;" 
+                                            onchange="window.location.href = this.value">
+                                        
+                                        {{-- Loop untuk membuat opsi 10, 25, 50, 100 --}}
+                                        @foreach([10, 25, 50, 100] as $num)
+                                            <option value="{{ request()->fullUrlWithQuery(['per_page' => $num, 'page' => 1]) }}"
+                                                    {{ request('per_page') == $num ? 'selected' : '' }}>
+                                                {{ $num }}
+                                            </option>
+                                        @endforeach
+                                        
+                                    </select>
+                                    
+                                    <span class="text-muted small text-nowrap">data / halaman</span>
+                                </div>
+
+                                {{-- BAGIAN KANAN: Pagination Links (Halaman 1, 2, 3...) --}}
+                                <div>
+                                    {{ $sosialisasis->links() }}
+                                </div>
+                                
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -441,6 +502,28 @@
         display: flex;
         align-items: center;
     }
+
+    /* CSS KHUSUS UNTUK TABEL SCROLL & STICKY */
+    .custom-table-scroll {
+        max-height: 70vh;       /* Batasi tinggi tabel */
+        overflow-y: auto;       /* Munculkan scrollbar vertikal */
+        position: relative;     /* Agar posisi sticky relative terhadap kotak ini */
+        border: 1px solid #dee2e6; /* Border tipis pembatas area scroll */
+    }
+
+    /* Memaksa Header Diam di Tempat */
+    .custom-table-scroll thead th {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 2;
+        
+        /* PENTING: Warna background header agar tidak tembus pandang */
+        background-color: #f8f9fa !important; 
+        
+        /* Garis bawah header agar tegas */
+        box-shadow: inset 0 -1px 0 #dee2e6;
+    }
+
 </style>
 @endpush
 

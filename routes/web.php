@@ -27,6 +27,7 @@ Route::prefix('p2m')
             return view('p2m.index');
         })->name("index");
         
+        Route::get('/sosialisasi/export', [SosialisasiController::class, 'export'])->name('sosialisasi.export');
         Route::get('/sosialisasi', [SosialisasiController::class, 'index'])->name("sosialisasi.index");
         Route::get('/sosialisasi/create', [SosialisasiController::class, 'create'])->name("sosialisasi.create");
         Route::post('/sosialisasi/store', [SosialisasiController::class, 'store'])->name("sosialisasi.store");

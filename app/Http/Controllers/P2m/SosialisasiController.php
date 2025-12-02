@@ -8,37 +8,23 @@ use App\Models\SatuanKerja;
 use App\Models\Pegawai;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
+use App\Exports\SosialisasiExport; // Import Export Class
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel; // Import Facade Excel
 
 class SosialisasiController extends Controller
 {
-    public function index(Request $request): View {
-        
-        // 1. DATA MASTER UNTUK FILTER
-        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
-
-        $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
-        
-        $years = P2mSosialisasi::selectRaw('YEAR(tanggal_pelaksanaan) as year')
-            ->distinct()
-            ->orderBy('year', 'desc')
-            ->pluck('year');
-        
-        // --- TENTUKAN TAHUN AKTIF (UNTUK DEFAULT QUERY) ---
-        // Jika request tahun kosong, gunakan tahun saat ini sebagai nilai default query.
+    // 1. FUNGSI KHUSUS UNTUK BUILD QUERY (Re-usable)
+    private function getFilteredQuery(Request $request)
+    {
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
-
-        // 2. MULAI QUERY DATA
+        
         $query = P2mSosialisasi::with('pegawai', 'satuanKerja');
 
-        // --- LOGIKA FILTERING (MULTIPLE) ---
-
-        // A. Filter Satuan Kerja
+        // --- FILTER SAMA PERSIS SEPERTI SEBELUMNYA ---
         if ($request->filled('satuan_kerja_id')) {
             $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
         }
-
-        // B. Filter Bulan
         if ($request->filled('bulan')) {
             $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
@@ -46,46 +32,36 @@ class SosialisasiController extends Controller
                 }
             });
         }
-        
-        // C. Filter TAHUN (Wajib ada, defaultnya tahun saat ini)
         $query->where(function($q) use ($activeYears) {
             foreach ($activeYears as $y) {
                 $q->orWhereYear('tanggal_pelaksanaan', $y);
             }
         });
-
-        // D. Filter Anggaran
         if ($request->filled('anggaran_pelaksanaan')) {
             $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
         }
-
-        // E. Filter Sasaran
         if ($request->filled('sasaran_kegiatan')) {
             $query->whereIn('sasaran_kegiatan', $request->sasaran_kegiatan);
         }
-
+        
+        // Filter Pegawai
         if ($request->filled('pegawai_nips')) {
             $nips = $request->pegawai_nips;
-            $logic = $request->input('pegawai_logic', 'OR'); // Default OR jika tidak ada
-
+            $logic = $request->input('pegawai_logic', 'OR');
             if ($logic === 'AND') {
-                // LOGIKA AND (Irisan/Intersection)
-                // Loop setiap NIP, pastikan kegiatan memiliki relasi ke SETIAP NIP tersebut
                 foreach ($nips as $nip) {
                     $query->whereHas('pegawai', function($q) use ($nip) {
                         $q->where('pegawai.nip', $nip);
                     });
                 }
             } else {
-                // LOGIKA OR (Gabungan/Union)
-                // Cukup cek apakah kegiatan memiliki SALAH SATU dari NIP tersebut
                 $query->whereHas('pegawai', function($q) use ($nips) {
                     $q->whereIn('pegawai.nip', $nips);
                 });
             }
         }
 
-        // --- LOGIKA PENCARIAN UMUM (LIKE QUERY) ---
+        // Search
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -94,41 +70,65 @@ class SosialisasiController extends Controller
                     ->orWhere('sasaran_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhereHas('satuanKerja', function($subQ) use ($search) {
                         $subQ->where('satuan_kerja', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('pegawai', function($subQ) use ($search) {
+                        $subQ->where('nama', 'LIKE', "%{$search}%");
                     });
             });
         }
 
-        // --- G. LOGIKA SORTING (BARU) ---
-        // Default: created_at, desc (sama dengan latest())
+        // Sorting
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
-
-        // Daftar kolom yang diizinkan untuk sorting (Security practice)
-        $allowSort = [
-            'anggaran_pelaksanaan', 'nama_kegiatan', 'sasaran_kegiatan', 
-            'tanggal_pelaksanaan', 'tempat_kegiatan', 'jumlah_peserta', 
-            'created_at', 'satuan_kerja' // satuan_kerja butuh penanganan khusus
-        ];
+        $allowSort = ['anggaran_pelaksanaan', 'nama_kegiatan', 'sasaran_kegiatan', 'tanggal_pelaksanaan', 'tempat_kegiatan', 'jumlah_peserta', 'created_at', 'satuan_kerja'];
 
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {
-                // Khusus Satuan Kerja (Relasi): Join tabel agar bisa sort by nama satker
                 $query->join('satuan_kerja', 'p2m_sosialisasi.satuan_kerja_id', '=', 'satuan_kerja.id')
-                    ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
-                    ->select('p2m_sosialisasi.*'); // Select p2m saja agar id tidak bentrok
+                        ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
+                        ->select('p2m_sosialisasi.*');
             } else {
-                // Kolom Biasa
                 $query->orderBy($sortBy, $sortOrder);
             }
         } else {
-            // Fallback default
-            $query->latest(); 
+            $query->latest();
         }
 
-        // 3. EKSEKUSI
-        $sosialisasis = $query->paginate(10)->withQueryString();
+        return $query;
+    }
+
+    public function index(Request $request): View {
+        // Data Master
+        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
+        $years = P2mSosialisasi::selectRaw('YEAR(tanggal_pelaksanaan) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
+
+        // Panggil fungsi query di atas
+        $query = $this->getFilteredQuery($request);
+
+        // Paginate untuk tampilan web
+        $perPage = $request->input('per_page', 10);
+
+        // 2. Validasi keamanan (agar user tidak iseng input angka 1000000 bikin server down)
+        // Hanya izinkan angka: 10, 25, 50, 100
+        if (!in_array($perPage, [10, 25, 50, 100])) {
+            $perPage = 10;
+        }
+
+        // 3. EKSEKUSI DENGAN ANGKA DINAMIS
+        $sosialisasis = $query->paginate($perPage)->withQueryString();
                         
         return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years', 'pegawais'));
+    }
+
+    // 3. METHOD EXPORT (DOWNLOAD EXCEL)
+    public function export(Request $request) 
+    {
+        // Panggil fungsi query yang SAMA PERSIS dengan index
+        // Bedanya: Kita tidak pakai paginate(), tapi langsung lempar ke Class Export
+        $query = $this->getFilteredQuery($request);
+
+        return Excel::download(new SosialisasiExport($query), 'Laporan_P2M_Sosialisasi.xlsx');
     }
 
     public function create(): View {

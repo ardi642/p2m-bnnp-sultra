@@ -40,7 +40,7 @@
             @endphp
             
             {{-- ALPINE JS STATE: showFilter selalu true agar filter terbuka default --}}
-            <div class="row justify-content-center" 
+            <div class="row justify-content-center mb-10" 
                  x-data="{ showFilter: true }">
                 
                 <div class="col-12 col-lg-12">
@@ -228,7 +228,7 @@
                                             {{-- BUTTONS ACTION --}}
                                             <div class="col-12 text-end mt-4 pt-2 border-top border-secondary-subtle">
                                                 <a href="{{ route('p2m.sosialisasi.index') }}" 
-                                                   class="btn btn-outline-secondary btn-sm me-2 px-3">
+                                                    class="btn btn-outline-secondary btn-sm me-2 px-3">
                                                     <i class="bi bi-arrow-counterclockwise"></i> Reset
                                                 </a>
                                                 <button type="submit" class="btn btn-primary btn-sm px-4">
@@ -241,7 +241,7 @@
                             </form>
                             
                             {{-- TABEL DATA --}}
-                            <div class="custom-table-scroll mb-3">
+                            <div class="custom-table-scroll mb-3" id="data-table">
                                 <table class="table table-hover mb-0" x-data="{ expanded: [] }">
                                     <thead class="table-light">
                                         <tr class="text-center align-middle">
@@ -392,7 +392,7 @@
                                                     </div>
                                                 </td>
                                             </tr>
-                                            <tr x-show="expanded.includes({{ $data->id }})" x-transition.duration.300ms class="bg-light">
+                                            <tr x-show="expanded.includes({{ $data->id }})" x-transition.duration.200ms class="bg-light">
                                                 <td colspan="10" class="text-start p-4">
                                                     <div class="card border-0">
                                                         <div class="card-body">
@@ -472,11 +472,11 @@
 
                                 {{-- BAGIAN KANAN: Pagination Links (Halaman 1, 2, 3...) --}}
                                 <div>
-                                    {{ $sosialisasis->links() }}
+                                    {{ $sosialisasis->fragment('data-table')->links() }}
                                 </div>
                                 
                             </div>
-
+                                                        
                         </div>
                     </div>
                 </div>

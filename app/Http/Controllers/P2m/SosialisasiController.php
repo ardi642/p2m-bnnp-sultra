@@ -103,19 +103,15 @@ class SosialisasiController extends Controller
         $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
         $years = P2mSosialisasi::selectRaw('YEAR(tanggal_pelaksanaan) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
 
-        // Panggil fungsi query di atas
         $query = $this->getFilteredQuery($request);
 
-        // Paginate untuk tampilan web
         $perPage = $request->input('per_page', 10);
-
-        // 2. Validasi keamanan (agar user tidak iseng input angka 1000000 bikin server down)
+        
+        // Validasi keamanan (agar user tidak iseng input angka 1000000 bikin server down)
         // Hanya izinkan angka: 10, 25, 50, 100
         if (!in_array($perPage, [10, 25, 50, 100])) {
             $perPage = 10;
         }
-
-        // 3. EKSEKUSI DENGAN ANGKA DINAMIS
         $sosialisasis = $query->paginate($perPage)->withQueryString();
                         
         return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years', 'pegawais'));

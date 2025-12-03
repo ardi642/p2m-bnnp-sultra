@@ -14,8 +14,8 @@
     <meta property="og:type" content="website">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="{{  asset("assets/logo-bnn.png") }}">
-    <link rel="icon" type="image/png" href="{{  asset("assets/logo-bnn.png") }}">
+    <link rel="icon" type="image/svg+xml" href="{{  asset("assets/favicon-CvUZKS4z.svg") }}">
+    <link rel="icon" type="image/png" href="{{  asset("assets/favicon-B_cwPWBd.png") }}">
     
     <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,11 +32,11 @@
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{  asset("assets/manifest-DTaoG9pG.json") }}">
+    <script type="module" crossorigin src="{{  asset("assets/main-f0Mg-34g.js") }}"></script>
     @vite(['resources/js/app.js'])
-
-  <script type="module" crossorigin src="{{  asset("assets/main-f0Mg-34g.js") }}"></script>
-  <link rel="stylesheet" crossorigin href="{{  asset("assets/main-DLfE7m78.css") }}">
-  @stack('styles')
+    <link rel="stylesheet" crossorigin href="{{  asset("assets/main-DLfE7m78.css") }}">
+    @stack("styles")
+    @vite('resources/css/tom-select.css')
 </head>
 
 <body data-page="dashboard" class="admin-layout">

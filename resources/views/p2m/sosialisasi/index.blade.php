@@ -487,7 +487,6 @@
 
 {{-- STYLE & SCRIPT TETAP SAMA SEPERTI SEBELUMNYA --}}
 @push('styles')
-@vite('resources/css/tom-select.css')
 <style>
     .ts-control { border-radius: 0.375rem !important; border-color: #dee2e6 !important; box-shadow: none !important; }
     .ts-wrapper.focus .ts-control { box-shadow: none !important; border-color: #dee2e6 !important; }
@@ -528,7 +527,7 @@
 @endpush
 
 @push('scripts')
-<script>
+<script type="module">
     document.addEventListener("DOMContentLoaded", function() {
         const configTomSelect = { plugins: ['remove_button', 'clear_button'], persist: false, create: false, maxOptions: null };
         if(document.getElementById('select-satker')) new TomSelect('#select-satker', configTomSelect);

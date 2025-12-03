@@ -23,7 +23,6 @@ return new class extends Migration
             $table->text('nama_tempat');
             $table->date('tanggal_pelaksanaan');
             $table->integer('jumlah_penggiat');
-            $table->text('nama_penanggungjawab');
             $table->text('nomor_hp');
             $table->text('link_kelengkapan_dokumentasi');
             $table->timestamps();

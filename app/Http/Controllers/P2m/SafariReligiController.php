@@ -18,9 +18,9 @@ class SafariReligiController extends Controller
     }
 
     public function create() {
-    $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
-    $pegawais = Pegawai::orderBy('nama', 'asc')->get();
-    return view('p2m.safari-religi.create', compact('satuanKerjas', 'pegawais'));
+        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        $pegawais = Pegawai::orderBy('nama', 'asc')->get();
+        return view('p2m.safari-religi.create', compact('satuanKerjas', 'pegawais'));
     }
 
     public function store(Request $request) {

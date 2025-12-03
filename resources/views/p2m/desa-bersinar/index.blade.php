@@ -18,7 +18,7 @@
                         <div class="card-header">
                             <div class="row align-items-center">
                                 <div class="col">
-                                    <h5 class="card-title mb-0">Data Safari Religi</h5>
+                                    <h5 class="card-title mb-0">Data Desa Bersinar</h5>
                                 </div>
                             </div>
                         </div>
@@ -29,30 +29,30 @@
                                         <tr class="text-center">
                                             <th>No</th>
                                             <th>Satuan Kerja</th>
-                                            <th>Nama Pegawai</th>
-                                            <th>Tempat Kegiatan</th>
-                                            <th>Tanggal Pelaksanaan</th>
-                                            <th>Bulan Pelaksanaan</th>
-                                            <th>Jumlah Masyarakat</th>
-                                            <th>Link Kelengkapan atau Dokumentasi</th>
+                                            <th>Nama Desa</th>
+                                            <th>Nama Kecamatan</th>
+                                            <th>Kota/Kabupaten</th>
+                                            <th>Tanggal Pencanangan</th>
+                                            <th>Jumlah Penggiat P4GM</th>
+                                            <th>Keberadaan IBM</th>
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse ($safarireligis as $safarireligi)
+                                        @forelse ($desabersinars as $desabersinar)
                                             <tr class="text-center">
                                                 <td>{{ $loop->iteration }}</td>
-                                                <td>{{ $safarireligi->satuanKerja->satuan_kerja }}</td>
-                                                <td>{{ $safarireligi->namapegawai->nama }}</td>
-                                                <td>{{ $safarireligi->tempat_kegiatan }}</td>
-                                                <td>{{ $safarireligi->tanggal_pelaksanaan }}</td>
-                                                <td>{{ $safarireligi->bulan_pelaksanaan }}</td>
-                                                <td>{{ $safarireligi->jumlah_masyarakat }}</td>
-                                                <td>{{ $safarireligi->link_dokumentasi }}</td>
+                                                <td>{{ $desabersinar->satuanKerja->satuan_kerja }}</td>
+                                                <td>{{ $desabersinar->nama_desa }}</td>
+                                                <td>{{ $desabersinar->nama_kecamatan }}</td>
+                                                <td>{{ $desabersinar->kabupaten_kota }}</td>
+                                                <td>{{ \Carbon\Carbon::parse($desabersinar->tanggal_pencanangan)->format('d/m/Y') }}</td>
+                                                <td>{{ $desabersinar->jumlah_penggiat_p4gn }}</td>
+                                                <td>{{ $desabersinar->keberadaan_ibm }}</td>
                                                 <td>
                                                     <div class="d-flex gap-4">
-                                                        <a href="#" class="btn btn-success btn-small">perbarui</a>
-                                                        <a href="#" class="btn btn-danger">hapus</a>
+                                                        <a href="#" class="btn btn-success btn-small">Perbarui</a>
+                                                        <a href="#" class="btn btn-danger">Hapus</a>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -60,7 +60,7 @@
                                             <tr>
                                                 <td colspan="9" class="text-center p-4">
                                                     <div class="text-muted">
-                                                        Belum ada data kegiatan safari religi
+                                                        Belum ada data kegiatan desa bersinar
                                                     </div>
                                                 <td>
                                             </tr>

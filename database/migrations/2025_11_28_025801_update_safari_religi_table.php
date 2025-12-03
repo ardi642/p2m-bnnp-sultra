@@ -10,39 +10,47 @@ return new class extends Migration
     {
         Schema::table('safari_religi', function (Blueprint $table) {
 
-            // Hapus kolom lama jika masih enum/string
-            if (Schema::hasColumn('safari_religi', 'satker')) {
-                $table->dropColumn('satker');
+            // Tambah kolom satker jika belum ada
+            if (!Schema::hasColumn('safari_religi', 'satker')) {
+                $table->unsignedBigInteger('satker')->after('id');
+                $table->foreign('satker')
+                    ->references('id')
+                    ->on('satuan_kerja')
+                    ->onDelete('cascade');
             }
 
+            // Tambah kolom pegawai jika belum ada
+            if (!Schema::hasColumn('safari_religi', 'pegawai')) {
+                // Kolom NIP bertipe VARCHAR(255) → maka FK juga harus VARCHAR(255)
+                $table->string('pegawai', 255)->after('satker');
+
+                $table->foreign('pegawai')
+                    ->references('nip')
+                    ->on('pegawai')
+                    ->onDelete('cascade');
+            }
+
+            // Hapus kolom nama_pegawai lama
             if (Schema::hasColumn('safari_religi', 'nama_pegawai')) {
                 $table->dropColumn('nama_pegawai');
             }
-
-            // Tambahkan kolom relasi satker
-            $table->unsignedBigInteger('satker')->after('id');
-            $table->foreign('satker')
-                  ->references('id')
-                  ->on('satuan_kerja')
-                  ->onDelete('cascade');
-
-            // Tambahkan kolom relasi pegawai
-            $table->unsignedBigInteger('pegawai')->after('satker');
-            $table->foreign('pegawai')
-                  ->references('nip')
-                  ->on('pegawai')
-                  ->onDelete('cascade');
         });
     }
 
     public function down(): void
     {
         Schema::table('safari_religi', function (Blueprint $table) {
-            $table->dropForeign(['satker']);
-            $table->dropForeign(['pegawai']);
+
+            if (Schema::hasColumn('safari_religi', 'pegawai')) {
+                try { $table->dropForeign(['pegawai']); } catch (\Exception $e) {}
+            }
+            if (Schema::hasColumn('safari_religi', 'satker')) {
+                try { $table->dropForeign(['satker']); } catch (\Exception $e) {}
+            }
+
             $table->dropColumn(['satker', 'pegawai']);
 
-            // Optional: tambahkan kembali kolom lama jika rollback
+            // Kembalikan enum satker lama
             $table->enum('satker', [
                 'BNNK Kabupaten Muna',
                 'BNNK Kabupaten Kolaka',
@@ -50,6 +58,7 @@ return new class extends Migration
                 'BNNK Bau Bau'
             ])->nullable();
 
+            // Kembalikan kolom nama_pegawai
             $table->string('nama_pegawai')->nullable();
         });
     }

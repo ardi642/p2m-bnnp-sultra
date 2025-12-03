@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\P2m\DesaBersinarController;
 use App\Http\Controllers\P2m\SosialisasiController;
 use App\Http\Controllers\P2m\SafariReligiController;
 use App\Models\P2mSosialisasi;
@@ -27,4 +28,10 @@ Route::prefix('p2m')
         Route::get('/safarireligi/create', [SafariReligiController::class, 'create'])->name("safarireligi.create");
 
         Route::post('/safarireligi/store', [SafariReligiController::class, 'store'])->name("safarireligi.store");
+
+        Route::get('/desabersinar', [DesaBersinarController::class, 'index'])->name("desabersinar.index");
+
+        Route::get('/desabersinar/create', [DesaBersinarController::class, 'create'])->name("desabersinar.create");
+
+        Route::post('/desabersinar/store', [DesaBersinarController::class, 'store'])->name("desabersinar.store");
     });

@@ -13,6 +13,8 @@
                             </option>
                             <option {{ Route::is('p2m.safarireligi.*') ? 'selected' : '' }} data-url="{{
                                 route('p2m.safarireligi.index') }}">Safari Religi</option>
+                            <option {{ Route::is('p2m.desabersinar.*') ? 'selected' : '' }} data-url="{{
+                                route('p2m.desabersinar.index') }}">Desa Bersinar</option>
                         </select>
                     </div>
                     <div class="col">

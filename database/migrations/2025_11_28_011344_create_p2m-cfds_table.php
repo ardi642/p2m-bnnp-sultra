@@ -21,7 +21,6 @@ return new class extends Migration
                     ->onDelete('cascade');
             $table->text('tempat_kegiatan');
             $table->date('tanggal_pelaksanaan');
-            $table->text('nama_pegawai');
             $table->integer('jumlah_peserta');
             $table->text('link_kelengkapan_dokumentasi');
             $table->timestamps();

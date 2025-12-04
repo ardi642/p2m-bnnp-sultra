@@ -36,7 +36,6 @@
     @vite(['resources/js/app.js'])
     <link rel="stylesheet" crossorigin href="{{  asset("assets/main-DLfE7m78.css") }}">
     @stack("styles")
-    @vite('resources/css/tom-select.css')
 </head>
 
 <body data-page="dashboard" class="admin-layout">
@@ -156,7 +155,14 @@
                                 <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Profile</a></li>
                                 {{-- <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li> --}}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                                <li>
+                                    <form action="{{ route('logout') }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-box-arrow-right me-2"></i> Logout
+                                        </button>
+                                    </form>
+                                </li>
                             </ul>
                         </div>
                     </div>

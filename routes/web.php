@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\P2m\SosialisasiController;
 use App\Http\Controllers\P2m\UpacaraController;
 use App\Http\Controllers\P2m\KieController;
@@ -16,11 +17,19 @@ use App\Models\p2mOnline;
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [LoginController::class, 'index'])->name('login');
+    Route::post('/login', [LoginController::class, 'authenticate'])->name('login.authenticate');
 });
 
-Route::prefix('p2m')
+Route::middleware('auth')->group(function() {
+    Route::get('/', function () {
+        return view('welcome');
+    });
+
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    Route::prefix('p2m')
     ->name('p2m.')
     ->group(function() {
         Route::get('/', function() {
@@ -67,3 +76,4 @@ Route::prefix('p2m')
 
     });
 
+});

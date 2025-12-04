@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Pegawai extends Model
 {
@@ -23,6 +24,14 @@ class Pegawai extends Model
     protected $keyType = 'string';
 
     protected $guarded = [];
+
+    /**
+     * Relasi Balik: Pegawai memiliki satu Akun User
+     */
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class, 'pegawai_nip', 'nip');
+    }
 
     /**
      * Relasi ke Satuan Kerja (Many to One)

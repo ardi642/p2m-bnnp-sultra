@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -21,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'pegawai_nip'
     ];
 
     /**
@@ -45,4 +47,34 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    // --- LOGIKA DATA SCOPING ---
+
+    /**
+     * Relasi: User terhubung ke data Pegawai mana?
+     */
+    public function pegawai(): BelongsTo
+    {
+        return $this->belongsTo(Pegawai::class, 'pegawai_nip', 'nip');
+    }
+
+    /**
+     * Cek apakah User adalah Super Admin (Pusat)
+     * Logic: Admin adalah user yang kolom pegawai_nip-nya KOSONG (NULL)
+     */
+    public function isSuperAdmin(): bool
+    {
+        return is_null($this->pegawai_nip);
+    }
+
+    /**
+     * Helper Penting: Ambil ID Satker user ini.
+     * - Mengembalikan ID Satker (jika user biasa)
+     * - Mengembalikan NULL (jika Super Admin)
+     */
+    public function getSatkerId()
+    {
+        return $this->pegawai ? $this->pegawai->satuan_kerja_id : null;
+    }
+
 }

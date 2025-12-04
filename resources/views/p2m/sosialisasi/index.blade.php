@@ -476,7 +476,6 @@
                                 </div>
                                 
                             </div>
-                                                        
                         </div>
                     </div>
                 </div>
@@ -487,6 +486,7 @@
 
 {{-- STYLE & SCRIPT TETAP SAMA SEPERTI SEBELUMNYA --}}
 @push('styles')
+@vite('resources/css/tom-select.css')
 <style>
     .ts-control { border-radius: 0.375rem !important; border-color: #dee2e6 !important; box-shadow: none !important; }
     .ts-wrapper.focus .ts-control { box-shadow: none !important; border-color: #dee2e6 !important; }

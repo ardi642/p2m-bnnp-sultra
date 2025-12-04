@@ -9,6 +9,7 @@ use App\Models\Pegawai;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
 use App\Exports\SosialisasiExport; // Import Export Class
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel; // Import Facade Excel
 
@@ -17,11 +18,12 @@ class SosialisasiController extends Controller
     // 1. FUNGSI KHUSUS UNTUK BUILD QUERY (Re-usable)
     private function getFilteredQuery(Request $request)
     {
+        $user = Auth::user();
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
         $query = P2mSosialisasi::with('pegawai', 'satuanKerja');
 
-        // --- FILTER SAMA PERSIS SEPERTI SEBELUMNYA ---
+        // dd(get_class($user->isSuperAdmin));
         if ($request->filled('satuan_kerja_id')) {
             $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
         }

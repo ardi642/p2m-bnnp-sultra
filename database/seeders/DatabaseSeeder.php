@@ -53,5 +53,9 @@ class DatabaseSeeder extends Seeder
             // Hubungkan (Attach) ke kegiatan
             $kegiatan->pegawai()->attach($pegawaiAcak);
         });
+
+        $this->call([
+            UserSeeder::class
+        ]);
     }
 }

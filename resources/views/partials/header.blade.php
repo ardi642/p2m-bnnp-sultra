@@ -34,6 +34,9 @@
     <link rel="manifest" href="{{  asset("assets/manifest-DTaoG9pG.json") }}">
     @vite(['resources/js/app.js'])
 
+    <!-- Alert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <script type="module" crossorigin src="{{  asset("assets/main-f0Mg-34g.js") }}"></script>
   <link rel="stylesheet" crossorigin href="{{  asset("assets/main-DLfE7m78.css") }}">
   @stack('styles')

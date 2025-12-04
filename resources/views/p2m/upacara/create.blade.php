@@ -80,12 +80,6 @@
                                             @error('pegawai_nips') 
                                                 <div class="invalid-feedback d-block">{{ $message }}</div> 
                                             @enderror
-
-                                            {{-- <label for="exampleFormControlInput1" class="form-label">Nama Pegawai yang ditugaskan</label>
-                                            <input type="text" class="form-control @error('nama_pegawai') is-invalid @enderror" placeholder="masukkan nama pegawai" name="nama_pegawai" value="{{ old('nama_pegawai') }}">
-                                            @error('nama_pegawai')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror --}}
                                         </div>
                                     </div>
                                 </div>

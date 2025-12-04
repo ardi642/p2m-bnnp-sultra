@@ -8,15 +8,113 @@ use App\Models\SatuanKerja;
 use App\Models\Pegawai; // Import Model Pegawai
 use Illuminate\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB; // Import DB untuk transaksi (opsional tapi bagus)
+use Illuminate\Support\Facades\DB;
+use App\Exports\UpacaraExport; // Import Export Class
+use Maatwebsite\Excel\Facades\Excel; // Import Facade Excel
 
 class UpacaraController extends Controller
 {
-    public function index(): View {
-        $upacaras = P2mUpacara::with('pegawai', 'satuanKerja')
-            ->latest()
-            ->paginate(10);
-        return view('p2m.upacara.index', compact('upacaras'));
+    private function getFilteredQuery(Request $request)
+    {
+        $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
+        
+        $query = P2mUpacara::with('pegawai', 'satuanKerja');
+
+        // --- FILTER SAMA PERSIS SEPERTI SEBELUMNYA ---
+        if ($request->filled('satuan_kerja_id')) {
+            $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+        }
+        if ($request->filled('bulan')) {
+            $query->where(function($q) use ($request) {
+                foreach ($request->bulan as $b) {
+                    $q->orWhereMonth('tanggal_pelaksanaan', $b);
+                }
+            });
+        }
+        $query->where(function($q) use ($activeYears) {
+            foreach ($activeYears as $y) {
+                $q->orWhereYear('tanggal_pelaksanaan', $y);
+            }
+        });
+        
+        // Filter Pegawai
+        if ($request->filled('pegawai_nips')) {
+            $nips = $request->pegawai_nips;
+            $logic = $request->input('pegawai_logic', 'OR');
+            if ($logic === 'AND') {
+                foreach ($nips as $nip) {
+                    $query->whereHas('pegawai', function($q) use ($nip) {
+                        $q->where('pegawai.nip', $nip);
+                    });
+                }
+            } else {
+                $query->whereHas('pegawai', function($q) use ($nips) {
+                    $q->whereIn('pegawai.nip', $nips);
+                });
+            }
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('nama_sekolah', 'LIKE', "%{$search}%")
+                    ->orWhereHas('satuanKerja', function($subQ) use ($search) {
+                        $subQ->where('satuan_kerja', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('pegawai', function($subQ) use ($search) {
+                        $subQ->where('nama', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        // Sorting
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $allowSort = ['nama_Sekolah', 'tanggal_pelaksanaan', 'jumlah_peserta', 'created_at', 'satuan_kerja'];
+
+        if (in_array($sortBy, $allowSort)) {
+            if ($sortBy === 'satuan_kerja') {
+                $query->join('satuan_kerja', 'p2m_upacara.satuan_kerja_id', '=', 'satuan_kerja.id')
+                        ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
+                        ->select('p2m_upacara.*');
+            } else {
+                $query->orderBy($sortBy, $sortOrder);
+            }
+        } else {
+            $query->latest();
+        }
+
+        return $query;
+    }
+
+    public function index(Request $request): View {
+        // Data Master
+        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
+        $years = P2mUpacara::selectRaw('YEAR(tanggal_pelaksanaan) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
+
+        $query = $this->getFilteredQuery($request);
+
+        $perPage = $request->input('per_page', 10);
+        
+        // Validasi keamanan (agar user tidak iseng input angka 1000000 bikin server down)
+        // Hanya izinkan angka: 10, 25, 50, 100
+        if (!in_array($perPage, [10, 25, 50, 100])) {
+            $perPage = 10;
+        }
+        $upacaras = $query->paginate($perPage)->withQueryString();
+
+        return view('p2m.upacara.index', compact('upacaras', 'satuanKerjas', 'years', 'pegawais'));
+    }
+
+    public function export(Request $request) 
+    {
+        // Panggil fungsi query yang SAMA PERSIS dengan index
+        // Bedanya: Kita tidak pakai paginate(), tapi langsung lempar ke Class Export
+        $query = $this->getFilteredQuery($request);
+
+        return Excel::download(new UpacaraExport($query), 'Laporan_P2M_Upacara.xlsx');
     }
 
     public function create(): View {
@@ -46,7 +144,7 @@ class UpacaraController extends Controller
         DB::transaction(function () use ($validasi) {
             
             // 2. Pisahkan data pegawai dari data utama
-            // Kita hapus 'pegawai_nips' dari array validasi karena kolom ini tidak ada di tabel p2m_sosialisasi
+            // Kita hapus 'pegawai_nips' dari array validasi karena kolom ini tidak ada di tabel p2m_upacara
             $dataKegiatan = collect($validasi)->except('pegawai_nips')->toArray();
             $pegawaiNips = $validasi['pegawai_nips'];
 

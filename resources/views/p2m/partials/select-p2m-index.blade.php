@@ -14,6 +14,8 @@
                             <option {{ Route::is('p2m.cfd.*') ? 'selected' : '' }} data-url="{{ route('p2m.cfd.index') }}">Sosialisasi di lokasi Car Free Days (CFD)</option>
                             <option {{ Route::is('p2m.elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.elektronik.index') }}">Informasi dan Edukasi Melalui Media Elektronik</option>
                             <option {{ Route::is('p2m.online.*') ? 'selected' : '' }} data-url="{{ route('p2m.online.index') }}">Informasi dan Edukasi Melalui Media Online</option>
+                            <option {{ Route::is('p2m.desabersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desabersinar.index') }}">Desa Bersinar</option>
+                            <option {{ Route::is('p2m.safarireligi.*') ? 'selected' : '' }} data-url="{{ route('p2m.safarireligi.index') }}">Safari Religi</option>
                         </select>
                     </div>
                     <div class="col">
@@ -36,13 +38,13 @@
 
 @push('scripts')
 <script>
-    
+
     const p2mSelect = document.getElementById("p2m-select")
     p2mSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const targetUrl = selectedOption.getAttribute('data-url');
         if (targetUrl == window.location.href) return
-        
+
         window.location.href = targetUrl
     })
 

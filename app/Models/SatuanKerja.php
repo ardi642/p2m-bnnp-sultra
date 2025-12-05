@@ -12,4 +12,10 @@ class SatuanKerja extends Model
     public function p2mSosialisasis() {
         return $this->hasMany(P2mSosialisasi::class);
     }
+
+    public function desaBersinar()
+    {
+        return $this->hasMany(DesaBersinar::class, 'satker_id');
+    }
+
 }

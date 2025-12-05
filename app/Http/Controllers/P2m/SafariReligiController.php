@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\p2m;
 
+use App\Http\Controllers\Controller;
 use App\Models\SafariReligi;
 use App\Models\SatuanKerja;
 use Illuminate\Http\Request;

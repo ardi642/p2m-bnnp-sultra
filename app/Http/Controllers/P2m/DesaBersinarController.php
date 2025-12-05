@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\p2m;
 
-use App\Http\Controllers\Controller;
 use App\Models\DesaBersinar;
 use App\Models\SatuanKerja;
 use Illuminate\Http\Request;

@@ -14,7 +14,8 @@ use App\Http\Controllers\P2m\ElektronikController;
 use App\Models\p2mElektronik;
 
 use App\Http\Controllers\P2m\OnlineController;
-use App\Http\Controllers\SafariReligiController;
+use App\Http\Controllers\P2m\SafariReligiController;
+use App\Http\Controllers\TesUrinController;
 use App\Models\p2mOnline;
 
 use Illuminate\Support\Facades\Route;
@@ -77,5 +78,10 @@ Route::prefix('p2m')
         Route::get('/safari-religi/create', [SafariReligiController::class, 'create'])->name("safarireligi.create");
         Route::post('/safari-religi/store', [SafariReligiController::class, 'store'])->name("safarireligi.store");
         Route::delete('/safari-religi/destroy/{id}', [SafariReligiController::class, 'destroy'])->name("safarireligi.destroy");
+
+        Route::get('/tes-urine', [TesUrinController::class, 'index'])->name("tesurine.index");
+        Route::get('/tes-urine/create', [TesUrinController::class, 'create'])->name("tesurine.create");
+        Route::post('/tes-urine/store', [TesUrinController::class, 'store'])->name("tesurine.store");
+        Route::delete('/tes-urine/destroy/{id}', [TesUrinController::class, 'destroy'])->name("tesurine.destroy");
 
     });

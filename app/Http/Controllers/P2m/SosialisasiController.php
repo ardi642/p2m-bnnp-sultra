@@ -18,15 +18,26 @@ class SosialisasiController extends Controller
     // 1. FUNGSI KHUSUS UNTUK BUILD QUERY (Re-usable)
     private function getFilteredQuery(Request $request)
     {
+
+        /** @var \App\Models\User $user */
         $user = Auth::user();
+        
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
         $query = P2mSosialisasi::with('pegawai', 'satuanKerja');
 
-        // dd(get_class($user->isSuperAdmin));
-        if ($request->filled('satuan_kerja_id')) {
-            $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+        // --- FILTER SAMA PERSIS SEPERTI SEBELUMNYA ---
+
+        if ($user->isAdmin()) {
+            if ($request->filled('satuan_kerja_id')) {
+                $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+            }
         }
+        else if ($user->isOperator()){
+            $satkerId = $user->pegawai->satuan_kerja_id;
+            $query->where('satuan_kerja_id', $satkerId);
+        }
+
         if ($request->filled('bulan')) {
             $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
@@ -101,8 +112,22 @@ class SosialisasiController extends Controller
 
     public function index(Request $request): View {
         // Data Master
-        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
-        $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if ($user->isAdmin()) {
+            $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        }
+        else if ($user->isOperator()) {
+            $satkerId = $user->pegawai->satuan_kerja_id;
+            $pegawais = Pegawai::where('satuan_kerja_id', $satkerId)
+                                ->orderBy('nama', 'asc')
+                                ->get(['nip', 'nama']);
+            $satuanKerjas = [];
+        }
+
         $years = P2mSosialisasi::selectRaw('YEAR(tanggal_pelaksanaan) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
@@ -116,7 +141,7 @@ class SosialisasiController extends Controller
         }
         $sosialisasis = $query->paginate($perPage)->withQueryString();
                         
-        return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years', 'pegawais'));
+        return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years', 'pegawais', 'user'));
     }
 
     // 3. METHOD EXPORT (DOWNLOAD EXCEL)
@@ -130,10 +155,22 @@ class SosialisasiController extends Controller
     }
 
     public function create(): View {
-        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
-        
-        // Ambil data pegawai untuk dropdown (urutkan nama a-z)
-        $pegawais = Pegawai::with('satuanKerja')->orderBy('nama', 'asc')->get();
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if ($user->isAdmin()) {
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+            $pegawais = Pegawai::with('satuanKerja')->orderBy('nama', 'asc')->get();
+        }
+        else if ($user->isOperator()){
+            $satuanKerjas = [];
+            $satkerId = $user->pegawai->satuan_kerja_id;
+            $pegawais = Pegawai::with('satuanKerja')
+                ->where('satuan_kerja_id', $satkerId)
+                ->orderBy('nama', 'asc')
+                ->get();
+        }
 
         return view('p2m.sosialisasi.create', compact('satuanKerjas', 'pegawais'));
     }

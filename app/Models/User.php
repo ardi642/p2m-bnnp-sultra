@@ -13,23 +13,17 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    const ROLE_ADMIN = 'admin';
+    const ROLE_OPERATOR = 'operator';
+    
     protected $fillable = [
         'name',
         'email',
         'password',
+        'role',
         'pegawai_nip'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
@@ -58,13 +52,14 @@ class User extends Authenticatable
         return $this->belongsTo(Pegawai::class, 'pegawai_nip', 'nip');
     }
 
-    /**
-     * Cek apakah User adalah Super Admin (Pusat)
-     * Logic: Admin adalah user yang kolom pegawai_nip-nya KOSONG (NULL)
-     */
-    public function isSuperAdmin(): bool
+    public function isAdmin(): bool
     {
-        return is_null($this->pegawai_nip);
+        return $this->role === self::ROLE_ADMIN;
+    }
+
+    public function isOperator(): bool
+    {
+        return $this->role === self::ROLE_OPERATOR;
     }
 
     /**

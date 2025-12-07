@@ -130,16 +130,18 @@
                                         <div class="row g-3">
                                             
                                             {{-- 1. SATUAN KERJA --}}
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Satuan Kerja</label>
-                                                <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satuan Kerja..." autocomplete="off">
-                                                    @foreach($satuanKerjas as $satker)
-                                                        <option value="{{ $satker->id }}" {{ in_array($satker->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>
-                                                            {{ $satker->satuan_kerja }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
+                                            @if ($user->isAdmin())
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">Satuan Kerja</label>
+                                                    <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satuan Kerja..." autocomplete="off">
+                                                        @foreach($satuanKerjas as $satker)
+                                                            <option value="{{ $satker->id }}" {{ in_array($satker->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>
+                                                                {{ $satker->satuan_kerja }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            @endif
 
                                             {{-- 2. ANGGARAN --}}
                                             <div class="col-md-6">
@@ -217,7 +219,7 @@
                                                             @php $selectedNips = request('pegawai_nips', []); @endphp
                                                             @foreach($pegawais as $pgw)
                                                                 <option value="{{ $pgw->nip }}" {{ in_array($pgw->nip, $selectedNips) ? 'selected' : '' }}>
-                                                                    {{ $pgw->nama }}
+                                                                    {{ $pgw->nama }} - NIP: {{ $pgw->nip }}
                                                                 </option>
                                                             @endforeach
                                                         </select>
@@ -393,7 +395,7 @@
                                                 </td>
                                             </tr>
                                             <tr x-show="expanded.includes({{ $data->id }})" x-transition.duration.200ms class="bg-light">
-                                                <td colspan="10" class="text-start p-4">
+                                                <td colspan="11" class="text-start p-4">
                                                     <div class="card border-0">
                                                         <div class="card-body">
                                                             <h5 class="card-title fw-bold text-primary mb-3">Informasi Tambahan</h5>

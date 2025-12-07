@@ -57,7 +57,7 @@
                     <!-- Logo/Brand - Now first on the left -->
                     <a class="navbar-brand d-flex align-items-center" href="./index.html">
                         <img src="{{  asset("assets/logo-bnn.png") }}" alt="Logo" height="64" class="d-inline-block align-text-top me-2">
-                        <h1 class="h4 mb-0 fw-bold text-primary">BNNP Sultra</h1>
+                        <h1 class="h4 mb-0 fw-bold text-primary">{{ $satuanKerja }}</h1>
                     </a>
 
                     <!-- Search Bar with Alpine.js -->
@@ -148,7 +148,7 @@
                                      width="24" 
                                      height="24" 
                                      class="rounded-circle me-2">
-                                <span class="d-none d-md-inline">Agustinus Widdy Harsono</span>
+                                <span class="d-none d-md-inline">{{ $pegawai != null ? $pegawai->nama : "Admin" }}</span>
                                 <i class="bi bi-chevron-down ms-1"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">

@@ -36,11 +36,16 @@ Route::middleware('auth')->group(function() {
             return view('p2m.index');
         })->name("index");
         
-        Route::get('/sosialisasi/export', [SosialisasiController::class, 'export'])->name('sosialisasi.export');
-        Route::get('/sosialisasi', [SosialisasiController::class, 'index'])->name("sosialisasi.index");
-        Route::get('/sosialisasi/create', [SosialisasiController::class, 'create'])->name("sosialisasi.create");
-        Route::post('/sosialisasi/store', [SosialisasiController::class, 'store'])->name("sosialisasi.store");
-        Route::delete('/sosialisasi/destroy/{id}', [SosialisasiController::class, 'destroy'])->name("sosialisasi.destroy");
+        Route::middleware(['role:admin,operator'])->group(function() {
+            Route::get('/sosialisasi/export', [SosialisasiController::class, 'export'])->name('sosialisasi.export');
+            Route::get('/sosialisasi', [SosialisasiController::class, 'index'])->name("sosialisasi.index");
+        });
+
+        Route::middleware(['role:operator'])->group(function() {
+            Route::get('/sosialisasi/create', [SosialisasiController::class, 'create'])->name("sosialisasi.create");
+            Route::post('/sosialisasi/store', [SosialisasiController::class, 'store'])->name("sosialisasi.store");
+            Route::delete('/sosialisasi/destroy/{id}', [SosialisasiController::class, 'destroy'])->name("sosialisasi.destroy");
+        });
 
         Route::get('/upacara', [UpacaraController::class, 'index'])->name("upacara.index");
         Route::get('/upacara/create', [UpacaraController::class, 'create'])->name("upacara.create");

@@ -19,16 +19,17 @@ class UserSeeder extends Seeder
         // ==========================================
         // Akun ini tidak terikat ke pegawai manapun (pegawai_nip = null)
         User::firstOrCreate(
-            ['email' => 'superadmin@bnn.go.id'], // Cek email biar gak duplikat
+            ['email' => 'admin@bnn.go.id'], // Cek email biar gak duplikat
             [
-                'name'              => 'Super Administrator',
+                'name'              => 'Administrator',
                 'password'          => $passwordDefault,
                 'pegawai_nip'       => null, 
+                'role'              => 'admin',
                 'email_verified_at' => now(),
             ]
         );
         
-        $this->command->info('✅ Super Admin Created.');
+        $this->command->info('✅Admin Created.');
 
         // ==========================================
         // 2. BUAT USER DARI PEGAWAI PER SATKER
@@ -53,6 +54,7 @@ class UserSeeder extends Seeder
                         'email'             => $pegawai->email, // Pakai email asli pegawai
                         'password'          => $passwordDefault,
                         'pegawai_nip'       => $pegawai->nip, // Link ke data pegawai
+                        'role'              => 'operator',
                         'email_verified_at' => now(),
                     ]);
 

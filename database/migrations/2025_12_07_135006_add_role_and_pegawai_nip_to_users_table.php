@@ -12,8 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('pegawai_nip')->nullable()->unique()->after('id');
+            // Tambah Kolom Role
+            // Kita taruh 'after' password biar rapi di database
+            $table->enum('role', ['admin', 'operator'])
+                ->default('operator')
+                ->after('password'); 
 
+            // Tambah Kolom Pegawai NIP
+            $table->string('pegawai_nip')
+                ->nullable()
+                ->after('role');
+
+            // Tambah Foreign Key
             $table->foreign('pegawai_nip')
                 ->references('nip')->on('pegawai')
                 ->onUpdate('cascade')
@@ -28,7 +38,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->dropForeign(['pegawai_nip']);
-            $table->dropColumn(['pegawai_nip']);
+            $table->dropColumn(['role', 'pegawai_nip']);
         });
     }
 };

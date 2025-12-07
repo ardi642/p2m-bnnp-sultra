@@ -34,7 +34,7 @@ class SosialisasiController extends Controller
             }
         }
         else if ($user->isOperator()){
-            $satkerId = $user->pegawai->satuan_kerja_id;
+            $satkerId = $user->getSatkerId();
             $query->where('satuan_kerja_id', $satkerId);
         }
 
@@ -121,7 +121,7 @@ class SosialisasiController extends Controller
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
         }
         else if ($user->isOperator()) {
-            $satkerId = $user->pegawai->satuan_kerja_id;
+            $satkerId = $user->getSatkerId();
             $pegawais = Pegawai::where('satuan_kerja_id', $satkerId)
                                 ->orderBy('nama', 'asc')
                                 ->get(['nip', 'nama']);
@@ -165,7 +165,7 @@ class SosialisasiController extends Controller
         }
         else if ($user->isOperator()){
             $satuanKerjas = [];
-            $satkerId = $user->pegawai->satuan_kerja_id;
+            $satkerId = $user->getSatkerId();
             $pegawais = Pegawai::with('satuanKerja')
                 ->where('satuan_kerja_id', $satkerId)
                 ->orderBy('nama', 'asc')
@@ -177,9 +177,10 @@ class SosialisasiController extends Controller
 
     public function store(Request $request) {
         
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         // 1. Validasi Input
         $validasi = $request->validate([
-            'satuan_kerja_id' => 'required',
             'anggaran_pelaksanaan' => 'required',
             'nama_kegiatan' => 'required',
             'sasaran_kegiatan' => 'required',
@@ -193,13 +194,21 @@ class SosialisasiController extends Controller
             'pegawai_nips.*' => 'exists:pegawai,nip', // Pastikan NIP valid di DB
         ]);
 
+        if ($user->isAdmin()) {
+            $rules['satuan_kerja_id'] = 'required';
+        }
+
         // Gunakan Database Transaction agar data aman (jika gagal simpan pivot, data utama batal)
-        DB::transaction(function () use ($validasi) {
+        DB::transaction(function () use ($user, $validasi) {
             
             // 2. Pisahkan data pegawai dari data utama
             // Kita hapus 'pegawai_nips' dari array validasi karena kolom ini tidak ada di tabel p2m_sosialisasi
             $dataKegiatan = collect($validasi)->except('pegawai_nips')->toArray();
             $pegawaiNips = $validasi['pegawai_nips'];
+
+            if ($user->isOperator()) {
+                $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
+            }
 
             // 3. Simpan Data Kegiatan (Tabel Utama)
             $kegiatan = P2mSosialisasi::create($dataKegiatan);

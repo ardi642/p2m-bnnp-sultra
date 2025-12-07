@@ -223,6 +223,97 @@ class SosialisasiController extends Controller
             ->with('message', 'Berhasil menambahkan data');
     }
 
+    public function edit($id): View 
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Ambil Data Kegiatan beserta relasi Pegawai (untuk pre-fill input)
+        $kegiatan = P2mSosialisasi::with('pegawai')->findOrFail($id);
+
+        // Proteksi Hak Akses
+        // Jika Operator mencoba edit data milik Satker lain -> 403 Forbidden
+        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+            abort(403, 'Anda tidak berhak mengubah data Satuan Kerja lain.');
+        }
+
+        // Siapkan Data Master (Logic sama seperti Create)
+        if ($user->isAdmin()) {
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+            $pegawais = Pegawai::orderBy('nama', 'asc')->get();
+        } 
+        else {
+            $satuanKerjas = []; // Tidak dipakai di view operator
+            $satkerId = $user->getSatkerId();
+            $pegawais = Pegawai::where('satuan_kerja_id', $satkerId)
+                ->orderBy('nama', 'asc')
+                ->get();
+        }
+
+        // Ambil Array NIP Pegawai yang sudah terpilih sebelumnya
+        // Ini penting untuk mengisi Tom Select nanti
+        $selectedPegawaiNips = $kegiatan->pegawai->pluck('nip')->toArray();
+
+        return view('p2m.sosialisasi.edit', compact('kegiatan', 'satuanKerjas', 'pegawais', 'selectedPegawaiNips'));
+    }
+
+    public function update(Request $request, $id) 
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $kegiatan = P2mSosialisasi::findOrFail($id);
+
+        // Proteksi Update
+        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+            abort(403);
+        }
+
+        // Validasi
+        $rules = [
+            'anggaran_pelaksanaan' => 'required',
+            'nama_kegiatan' => 'required',
+            'sasaran_kegiatan' => 'required',
+            'tanggal_pelaksanaan' => 'required|date',
+            'tempat_kegiatan' => 'required',
+            'jumlah_peserta' => 'required|numeric',
+            'link_kelengkapan_dokumentasi' => 'required',
+            'pegawai_nips' => 'required|array',
+            'pegawai_nips.*' => 'exists:pegawai,nip',
+        ];
+
+        // Jika Admin edit, validasi satker. Jika Operator, abaikan (pakai data lama)
+        if ($user->isAdmin()) {
+            $rules['satuan_kerja_id'] = 'required';
+        }
+
+        $validasi = $request->validate($rules);
+
+        DB::transaction(function () use ($validasi, $kegiatan, $user) {
+            
+            $pegawaiNips = $validasi['pegawai_nips'];
+            $dataUpdate = collect($validasi)->except('pegawai_nips')->toArray();
+
+            // PENTING: Untuk Operator, JANGAN update satuan_kerja_id (biarkan yang lama)
+            // Untuk Admin, update sesuai input form
+            if ($user->isOperator()) {
+                unset($dataUpdate['satuan_kerja_id']); 
+            }
+
+            // Update Data Utama
+            $kegiatan->update($dataUpdate);
+
+            // Update Relasi Pegawai (SYNC)
+            // sync() akan menghapus yang tidak dipilih, dan menambah yang baru dipilih
+            $kegiatan->pegawai()->sync($pegawaiNips);
+        });
+
+        return redirect()->route('p2m.sosialisasi.index')
+            ->with('success', 'update') // Ubah wording session di JS index jika perlu
+            ->with('message', 'Data berhasil diperbarui');
+    }
+
+
+
     public function destroy($id) {
         $data = P2mSosialisasi::findOrFail($id);
 

@@ -43,8 +43,12 @@ Route::middleware('auth')->group(function() {
 
         Route::middleware(['role:operator'])->group(function() {
             Route::get('/sosialisasi/create', [SosialisasiController::class, 'create'])->name("sosialisasi.create");
-            Route::post('/sosialisasi/store', [SosialisasiController::class, 'store'])->name("sosialisasi.store");
-            Route::delete('/sosialisasi/destroy/{id}', [SosialisasiController::class, 'destroy'])->name("sosialisasi.destroy");
+            Route::post('/sosialisasi', [SosialisasiController::class, 'store'])->name("sosialisasi.store");
+
+            Route::get('/sosialisasi/{id}/edit', [SosialisasiController::class, 'edit'])->name('sosialisasi.edit');
+            Route::put('/sosialisasi/{id}', [SosialisasiController::class, 'update'])->name('sosialisasi.update');
+
+            Route::delete('/sosialisasi/{id}', [SosialisasiController::class, 'destroy'])->name("sosialisasi.destroy");
         });
 
         Route::get('/upacara', [UpacaraController::class, 'index'])->name("upacara.index");

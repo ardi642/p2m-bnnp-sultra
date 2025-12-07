@@ -15,43 +15,51 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // 1. Buat Data Master
         $this->call([
             SatuanKerjaSeeder::class, 
         ]);
-        Pegawai::factory(50)->create();
+        
+        // Saran: Tambah jumlah pegawai agar tiap satker kebagian orang
+        Pegawai::factory(200)->create(); 
 
-        p2mElektronik::factory((100))->create();
-        p2mOnline::factory((100))->create();
+        p2mElektronik::factory(50)->create();
+        p2mOnline::factory(50)->create();
 
+        // 2. Seeding P2M Sosialisasi (DIPERBAIKI)
         P2mSosialisasi::factory(100)
         ->create()
         ->each(function ($kegiatan) {
-            // Ambil 3 sampai 5 pegawai acak
-            $pegawaiAcak = Pegawai::inRandomOrder()->take(rand(3, 5))->pluck('nip');
             
-            // Hubungkan (Attach) ke kegiatan
-            $kegiatan->pegawai()->attach($pegawaiAcak);
+            // --- LOGIKA PERBAIKAN ---
+            // Ambil pegawai yang SATUAN KERJA-nya SAMA dengan KEGIATAN ini
+            $pegawaiSesuaiSatker = Pegawai::where('satuan_kerja_id', $kegiatan->satuan_kerja_id)
+                ->inRandomOrder()
+                ->take(rand(3, 5))
+                ->pluck('nip');
+            
+            // Hanya attach jika ada pegawainya
+            if ($pegawaiSesuaiSatker->isNotEmpty()) {
+                $kegiatan->pegawai()->attach($pegawaiSesuaiSatker);
+            }
         });
-        // User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
 
-
+        // 3. Seeding P2M CFD (DIPERBAIKI)
         p2mcfd::factory(100)
         ->create()
         ->each(function ($kegiatan) {
-            // Ambil 3 sampai 5 pegawai acak
-            $pegawaiAcak = Pegawai::inRandomOrder()->take(rand(3, 5))->pluck('nip');
             
-            // Hubungkan (Attach) ke kegiatan
-            $kegiatan->pegawai()->attach($pegawaiAcak);
+            // --- LOGIKA PERBAIKAN (Sama) ---
+            $pegawaiSesuaiSatker = Pegawai::where('satuan_kerja_id', $kegiatan->satuan_kerja_id)
+                ->inRandomOrder()
+                ->take(rand(3, 5))
+                ->pluck('nip');
+            
+            if ($pegawaiSesuaiSatker->isNotEmpty()) {
+                $kegiatan->pegawai()->attach($pegawaiSesuaiSatker);
+            }
         });
 
         $this->call([

@@ -2,10 +2,14 @@
 @section('content')
     <main class="admin-main">
         <div class="container-fluid p-4 p-lg-5">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 mb-0">Kegiatan P2M</h1>
-                    <p class="text-muted mb-0">Input Data Kegiatan P2M</p>
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-10">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h1 class="h3 mb-0">Kegiatan P2M</h1>
+                            <p class="text-muted mb-0">Input Data Kegiatan P2M</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             @include('p2m.partials.select-p2m-create')

@@ -56,7 +56,7 @@
                         <div class="card-body">
                             
                             {{-- FORM PEMBUNGKUS UTAMA --}}
-                            <form action="{{ route('p2m.sosialisasi.index') }}" method="GET">
+                            <form action="{{ route('p2m.sosialisasi.index') }}" method="GET" class="mb-8">
                                 
                                 {{-- TAMBAHAN: HIDDEN INPUT UNTUK MENJAGA SORTING SAAT EXPORT/FILTER --}}
                                 {{-- Ini mengambil nilai dari URL dan memasukkannya ke dalam form --}}
@@ -386,7 +386,7 @@
                                                                 @click="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">
                                                             <i class="bi" :class="expanded.includes({{ $data->id }}) ? 'bi-eye-slash' : 'bi-eye'"></i> Detail
                                                         </button>
-                                                        <a href="#" class="btn btn-success btn-sm"><i class="bi bi-pencil-square"></i> Perbarui</a>
+                                                        <a href="{{ route('p2m.sosialisasi.edit', $data->id) }}" class="btn btn-success btn-sm"><i class="bi bi-pencil-square"></i> Perbarui</a>
                                                         <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.sosialisasi.destroy', $data->id) }}" method="POST" class="d-inline">
                                                             @csrf @method('DELETE')
                                                             <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ $data->id }})"><i class="bi bi-trash"></i> Hapus</button>

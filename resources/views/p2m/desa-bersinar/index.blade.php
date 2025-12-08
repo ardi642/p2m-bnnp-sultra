@@ -1,4 +1,5 @@
 @extends('admin')
+
 @section('content')
     <main class="admin-main">
         <div class="container-fluid p-4 p-lg-5">
@@ -9,24 +10,25 @@
                     <p class="text-muted mb-0">Master Data Desa Bersinar</p>
                 </div>
             </div>
-
+            
+            {{-- Tombol Navigasi / Create --}}
             @include('p2m.partials.select-p2m-index')
 
             @php
                 $allFilters = request()->only([
-                    'satuan_kerja_id',
-                    'bulan',
-                    'tahun',
-                    'anggaran_pembentukan',
-                    'kabupaten_kota_id',
-                    'pegawai_nips',
+                    'satuan_kerja_id', 
+                    'bulan', 
+                    'tahun', 
+                    'anggaran_pembentukan', 
+                    'kabupaten_kota_id', 
+                    'pegawai_nips', 
                     'search'
                 ]);
                 if (empty($allFilters['tahun'])) $allFilters['tahun'] = [date('Y')];
-                $activeFilters = collect($allFilters)->filter(fn($v) => !empty($v))->count();
+                $activeFilters = collect($allFilters)->filter(fn($v) => !empty($v))->count(); 
             @endphp
-
-            <div class="row justify-content-center mb-10" x-data="{ showFilter: true, expanded: [] }">
+            
+            <div class="row justify-content-center mb-10" x-data="{ showFilter: true }">
                 <div class="col-12 col-lg-12">
                     <div class="card shadow-lg p-5">
                         <div class="card-header bg-white border-0">
@@ -34,6 +36,7 @@
                         </div>
 
                         <div class="card-body">
+                            {{-- FORM FILTER --}}
                             <form action="{{ route('p2m.desa_bersinar.index') }}" method="GET" class="mb-8">
                                 <input type="hidden" name="sort_by" value="{{ request('sort_by') }}">
                                 <input type="hidden" name="sort_order" value="{{ request('sort_order') }}">
@@ -41,10 +44,10 @@
                                 <div class="row mb-5 align-items-center">
                                     <div class="col-auto">
                                         <div class="d-flex gap-2">
-                                            <button type="button" @click="showFilter = !showFilter"
+                                            <button type="button" @click="showFilter = !showFilter" 
                                                     class="btn btn-sm transition-all d-flex align-items-center gap-2"
                                                     :class="showFilter ? 'btn-secondary' : 'btn-primary'">
-                                                <i class="bi" :class="showFilter ? 'bi-x-lg' : 'bi-sliders'"></i>
+                                                <i class="bi" :class="showFilter ? 'bi-x-lg' : 'bi-sliders'"></i> 
                                                 <span x-text="showFilter ? 'Tutup Filter' : 'Filter Pencarian Lanjutan'"></span>
                                                 @if($activeFilters > 0)
                                                     <span class="badge bg-warning text-dark border border-dark rounded-pill px-2 ms-1">{{ $activeFilters }} Aktif</span>
@@ -60,31 +63,33 @@
 
                                     <div class="col-auto ms-auto">
                                         <div class="input-group input-group-sm">
-                                            <input type="text" name="search" class="form-control" placeholder="Cari desa, kelurahan, atau penanggung jawab..." value="{{ request('search') }}">
+                                            <input type="text" name="search" class="form-control" placeholder="Cari desa, kelurahan, personil..." value="{{ request('search') }}">
                                             <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Cari</button>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div x-show="showFilter" x-transition class="mb-4">
+                                {{-- PANEL FILTER ITEMS --}}
+                                <div x-show="showFilter" x-transition.duration.300ms class="mb-4">
                                     <div class="bg-light p-4 rounded-3 border">
                                         <div class="row g-3">
+                                            {{-- Filter Satker --}}
                                             @if ($user->isAdmin())
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Satuan Kerja</label>
-                                                <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satuan Kerja...">
-                                                    @foreach($satuanKerjas as $s)
-                                                        <option value="{{ $s->id }}" {{ in_array($s->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>
-                                                            {{ $s->satuan_kerja }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">Satuan Kerja</label>
+                                                    <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satker...">
+                                                        @foreach($satuanKerjas as $s)
+                                                            <option value="{{ $s->id }}" {{ in_array($s->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>
+                                                                {{ $s->satuan_kerja }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
                                             @endif
 
                                             <div class="col-md-6">
                                                 <label class="form-label fw-bold small text-muted text-uppercase mb-1">Anggaran Pembentukan</label>
-                                                <select id="select-anggaran" name="anggaran_pembentukan[]" multiple placeholder="Pilih Anggaran Pembentukan...">
+                                                <select id="select-anggaran" name="anggaran_pembentukan[]" multiple placeholder="Pilih Anggaran...">
                                                     <option value="DIPA" {{ in_array('DIPA', request('anggaran_pembentukan', [])) ? 'selected' : '' }}>DIPA</option>
                                                     <option value="NON DIPA" {{ in_array('NON DIPA', request('anggaran_pembentukan', [])) ? 'selected' : '' }}>NON DIPA</option>
                                                 </select>
@@ -105,9 +110,7 @@
                                                 <label class="form-label fw-bold small text-muted text-uppercase mb-1">Bulan Pencanangan</label>
                                                 <select id="select-bulan" name="bulan[]" multiple placeholder="Pilih Bulan...">
                                                     @foreach(range(1, 12) as $m)
-                                                        <option value="{{ $m }}" {{ in_array($m, request('bulan', [])) ? 'selected' : '' }}>
-                                                            {{ \Carbon\Carbon::create()->month($m)->locale('id')->translatedFormat('F') }}
-                                                        </option>
+                                                        <option value="{{ $m }}" {{ in_array($m, request('bulan', [])) ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($m)->locale('id')->translatedFormat('F') }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
@@ -116,26 +119,32 @@
                                                 <label class="form-label fw-bold small text-muted text-uppercase mb-1">Tahun Pencanangan</label>
                                                 <select id="select-tahun" name="tahun[]" multiple placeholder="Pilih Tahun...">
                                                     @foreach($years as $y)
-                                                        <option value="{{ $y }}" {{ in_array($y, request('tahun', [])) ? 'selected' : '' }}>{{ $y }}</option>
+                                                        <option value="{{ $y }}" {{ in_array($y, request('tahun', []) ?: [date('Y')]) ? 'selected' : '' }}>{{ $y }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
 
+                                            {{-- FILTER PENANGGUNG JAWAB (DISAMAKAN DENGAN SOSIALISASI) --}}
                                             <div class="col-md-6">
                                                 <label class="form-label fw-bold small text-muted text-uppercase mb-1">Penanggung Jawab</label>
+                                                
                                                 <div class="input-group" x-data="{ logic: '{{ request('pegawai_logic', 'OR') }}' }">
-                                                    <button type="button" class="btn fw-bold"
-                                                            :class="logic === 'AND' ? 'btn-danger text-white' : 'btn-outline-secondary bg-white text-secondary'"
-                                                            @click="logic = logic === 'OR' ? 'AND' : 'OR'">
+                                                    {{-- Tombol Logic --}}
+                                                    <button type="button" 
+                                                            class="btn fw-bold" 
+                                                            :class="logic === 'AND' ? 'btn-danger text-white' : 'btn-outline-secondary bg-white text-secondary'" 
+                                                            @click="logic = logic === 'OR' ? 'AND' : 'OR'"
+                                                            style="border-top-right-radius: 0; border-bottom-right-radius: 0;">
                                                         <span x-text="logic === 'AND' ? 'AND' : 'OR'"></span>
                                                     </button>
                                                     <input type="hidden" name="pegawai_logic" :value="logic">
+                                                    
+                                                    {{-- Dropdown TomSelect DI DALAM WRAPPER FLEX-GROW --}}
+                                                    {{-- Ini yang bikin dia FULL WIDTH seperti di Sosialisasi --}}
                                                     <div style="flex-grow: 1;">
                                                         <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih Pegawai...">
                                                             @foreach($pegawais as $pgw)
-                                                                <option value="{{ $pgw->nip }}" {{ in_array($pgw->nip, request('pegawai_nips', [])) ? 'selected' : '' }}>
-                                                                    {{ $pgw->nama }} - NIP: {{ $pgw->nip }}
-                                                                </option>
+                                                                <option value="{{ $pgw->nip }}" {{ in_array($pgw->nip, request('pegawai_nips', [])) ? 'selected' : '' }}>{{ $pgw->nama }}</option>
                                                             @endforeach
                                                         </select>
                                                     </div>
@@ -143,92 +152,40 @@
                                             </div>
 
                                             <div class="col-12 text-end mt-4 pt-2 border-top border-secondary-subtle">
-                                                <a href="{{ route('p2m.desa_bersinar.index') }}" class="btn btn-outline-secondary btn-sm me-2 px-3">
-                                                    <i class="bi bi-arrow-counterclockwise"></i> Reset
-                                                </a>
-                                                <button type="submit" class="btn btn-primary btn-sm px-4">
-                                                    <i class="bi bi-funnel-fill"></i> Terapkan
-                                                </button>
+                                                <a href="{{ route('p2m.desa_bersinar.index') }}" class="btn btn-outline-secondary btn-sm me-2 px-3"><i class="bi bi-arrow-counterclockwise"></i> Reset</a>
+                                                <button type="submit" class="btn btn-primary btn-sm px-4"><i class="bi bi-funnel-fill"></i> Terapkan</button>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </form>
-
+                            
+                            {{-- TABEL DATA --}}
                             <div class="custom-table-scroll mb-3" id="data-table">
                                 <table class="table table-hover mb-0" x-data="{ expanded: [] }">
                                     <thead class="table-light">
                                         <tr class="text-center align-middle">
                                             <th>No</th>
+                                            @foreach([
+                                                'satuan_kerja' => 'Satker',
+                                                'anggaran_pembentukan' => 'Anggaran',
+                                                'nama_desa' => 'Lokasi', // Gabungan Desa/Kel/Kab
+                                                'tanggal_pencanangan' => 'Tanggal',
+                                                'jumlah_penggiat' => 'Penggiat',
+                                                'keberadaan_ibm' => 'IBM'
+                                            ] as $field => $label)
+                                                <th>
+                                                    <a href="{{ request()->fullUrlWithQuery(['sort_by' => $field, 'sort_order' => request('sort_by') == $field && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
+                                                        {{ $label }}
+                                                        @if(request('sort_by') == $field) <i class="bi bi-sort-{{ request('sort_order') == 'asc' ? 'down' : 'up' }}"></i> @endif
+                                                    </a>
+                                                </th>
+                                            @endforeach
+                                            <th style="min-width: 150px;">Penanggung Jawab</th>
                                             <th>
-                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'satuan_kerja', 'sort_order' => request('sort_by')=='satuan_kerja' && request('sort_order')=='asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
-                                                    Satker
-                                                    @if(request('sort_by') == 'satuan_kerja')
-                                                        <i class="bi bi-sort-{{ request('sort_order') == 'asc' ? 'alpha-down' : 'alpha-down-alt' }}"></i>
-                                                    @else
-                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
-                                                    @endif
-                                                </a>
-                                            </th>
-                                            <th>
-                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'anggaran_pembentukan', 'sort_order' => request('sort_by')=='anggaran_pembentukan' && request('sort_order')=='asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
-                                                    Anggaran
-                                                    @if(request('sort_by') == 'anggaran_pembentukan')
-                                                        <i class="bi bi-sort-{{ request('sort_order') == 'asc' ? 'down' : 'up' }}"></i>
-                                                    @else
-                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
-                                                    @endif
-                                                </a>
-                                            </th>
-                                            <th>
-                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'nama_desa', 'sort_order' => request('sort_by')=='nama_desa' && request('sort_order')=='asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
-                                                    Lokasi <br>(Desa - Kelurahan - Kab/Kota)
-                                                    @if(request('sort_by') == 'nama_desa')
-                                                        <i class="bi bi-sort-alpha-{{ request('sort_order') == 'asc' ? 'down' : 'up-alt' }}"></i>
-                                                    @else
-                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
-                                                    @endif
-                                                </a>
-                                            </th>
-                                            <th>
-                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'tanggal_pencanangan', 'sort_order' => request('sort_by')=='tanggal_pencanangan' && request('sort_order')=='asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
-                                                    Tanggal
-                                                    @if(request('sort_by') == 'tanggal_pencanangan')
-                                                        <i class="bi bi-sort-numeric-{{ request('sort_order') == 'asc' ? 'down' : 'up-alt' }}"></i>
-                                                    @else
-                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
-                                                    @endif
-                                                </a>
-                                            </th>
-                                            <th>
-                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'jumlah_penggiat', 'sort_order' => request('sort_by')=='jumlah_penggiat' && request('sort_order')=='asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
-                                                    Penggiat
-                                                    @if(request('sort_by') == 'jumlah_penggiat')
-                                                        <i class="bi bi-sort-numeric-{{ request('sort_order') == 'asc' ? 'down' : 'up-alt' }}"></i>
-                                                    @else
-                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
-                                                    @endif
-                                                </a>
-                                            </th>
-                                            <th>
-                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'keberadaan_ibm', 'sort_order' => request('sort_by')=='keberadaan_ibm' && request('sort_order')=='asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
-                                                    IBM
-                                                    @if(request('sort_by') == 'keberadaan_ibm')
-                                                        <i class="bi bi-sort-{{ request('sort_order') == 'asc' ? 'down' : 'up' }}"></i>
-                                                    @else
-                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
-                                                    @endif
-                                                </a>
-                                            </th>
-                                            <th>Penanggung Jawab</th>
-                                            <th>
-                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_at', 'sort_order' => (!request('sort_by') || request('sort_by')=='created_at') && request('sort_order','desc')=='asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
+                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_at', 'sort_order' => request('sort_by') == 'created_at' && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
                                                     Dibuat
-                                                    @if(!request('sort_by') || request('sort_by') == 'created_at')
-                                                        <i class="bi bi-sort-numeric-{{ request('sort_order', 'desc') == 'asc' ? 'down' : 'up-alt' }}"></i>
-                                                    @else
-                                                        <i class="bi bi-arrow-down-up text-muted opacity-25 small"></i>
-                                                    @endif
+                                                    @if(request('sort_by') == 'created_at' || !request('sort_by')) <i class="bi bi-sort-numeric-{{ request('sort_order', 'desc') == 'asc' ? 'down' : 'up-alt' }}"></i> @endif
                                                 </a>
                                             </th>
                                             <th>Aksi</th>
@@ -240,37 +197,42 @@
                                                 <td>{{ $desaBersinars->firstItem() + $loop->index }}</td>
                                                 <td>{{ $data->satuanKerja->satuan_kerja ?? '-' }}</td>
                                                 <td>{{ $data->anggaran_pembentukan }}</td>
-                                                <td class="fw-semibold">{{ $data->nama_desa }}<br><small>{{ $data->nama_kelurahan }} – {{ $data->kabupatenKota->nama }}</small></td>
+                                                <td class="fw-semibold">
+                                                    {{ $data->nama_desa }} <br>
+                                                    <small class="text-muted">{{ $data->nama_kelurahan }} - {{ $data->kabupatenKota->nama ?? '-' }}</small>
+                                                </td>
                                                 <td>{{ $data->tanggal_pencanangan->translatedFormat('d M Y') }}</td>
                                                 <td>{{ $data->jumlah_penggiat }}</td>
-                                                <td>{{ $data->keberadaan_ibm === 'ada' ? 'Ya' : 'Belum' }}</td>
+                                                <td>
+                                                    <span class="badge {{ $data->keberadaan_ibm === 'ada' ? 'bg-success' : 'bg-secondary' }}">
+                                                        {{ $data->keberadaan_ibm === 'ada' ? 'Ada' : 'Belum' }}
+                                                    </span>
+                                                </td>
                                                 <td class="text-start">
                                                     @foreach($data->pegawai as $p)
-                                                        <span class="badge bg-primary mb-1">{{ $p->nama }}</span>
+                                                        <span class="badge bg-info text-dark mb-1">{{ $p->nama }}</span>
                                                     @endforeach
                                                 </td>
-                                                <td class="small text-muted">
-                                                    {{ $data->created_at->translatedFormat('d M Y') }}<br>
-                                                    {{ $data->created_at->format('H:i') }}
+                                                <td>
+                                                    <div class="small text-muted">
+                                                        {{ $data->created_at->translatedFormat('d M Y') }} <br>
+                                                        {{ $data->created_at->format('H:i') }}
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     <div class="d-flex gap-2 justify-content-center">
-                                                        <button type="button" class="btn btn-info btn-sm text-white"
-                                                                @click="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">
-                                                            <i class="me-0 bi" :class="expanded.includes({{ $data->id }}) ? 'bi-eye-slash' : 'bi-eye'"></i></button>
-                                                        <a href="{{ route('p2m.desa_bersinar.edit', $data->id) }}" class="btn btn-success btn-sm">
-                                                            <i class="me-0 bi bi-pencil-square"></i>
-                                                        </a>
+                                                        <button type="button" class="btn btn-info btn-sm text-white" @click="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">
+                                                            <i class="bi" :class="expanded.includes({{ $data->id }}) ? 'bi-eye-slash' : 'bi-eye'"></i>
+                                                        </button>
+                                                        <a href="{{ route('p2m.desa_bersinar.edit', $data->id) }}" class="btn btn-success btn-sm"><i class="bi bi-pencil-square"></i></a>
                                                         <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.desa_bersinar.destroy', $data->id) }}" method="POST" class="d-inline">
                                                             @csrf @method('DELETE')
-                                                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ $data->id }})">
-                                                                <i class="me-0 bi bi-trash"></i>
-                                                            </button>
+                                                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ $data->id }})"><i class="bi bi-trash"></i></button>
                                                         </form>
                                                     </div>
                                                 </td>
                                             </tr>
-                                            <tr x-show="expanded.includes({{ $data->id }})" x-transition class="bg-light">
+                                            <tr x-show="expanded.includes({{ $data->id }})" x-transition.duration.200ms class="bg-light">
                                                 <td colspan="10" class="text-start p-4">
                                                     <div class="card border-0">
                                                         <div class="card-body">
@@ -278,7 +240,7 @@
                                                             <div class="row">
                                                                 <div class="col-md-6 mb-3">
                                                                     <label class="fw-bold text-muted small text-uppercase">No HP Penanggung Jawab</label>
-                                                                    <p class="mt-1">{{ $data->nomor_hp_penanggung_jawab }}</p>
+                                                                    <p class="mt-1 text-dark fw-bold">{{ $data->nomor_hp_penanggung_jawab ?: '-' }}</p>
                                                                 </div>
                                                                 <div class="col-md-6 mb-3">
                                                                     <label class="fw-bold text-muted small text-uppercase">Link Dokumentasi</label>
@@ -292,18 +254,23 @@
                                                                         @endif
                                                                     </div>
                                                                 </div>
-                                                                <div class="col-md-6">
-                                                                    <label class="fw-bold text-muted small text-uppercase">Dibuat Pada</label>
-                                                                    <div class="d-flex align-items-center mt-1 text-secondary">
-                                                                        <i class="bi bi-clock me-2"></i>
-                                                                        {{ $data->created_at->locale('id')->translatedFormat('l, d F Y H:i') }}
-                                                                    </div>
-                                                                </div>
-                                                                <div class="col-md-6">
-                                                                    <label class="fw-bold text-muted small text-uppercase">Terakhir Diperbarui</label>
-                                                                    <div class="d-flex align-items-center mt-1 text-secondary">
-                                                                        <i class="bi bi-pencil-square me-2"></i>
-                                                                        {{ $data->updated_at->locale('id')->translatedFormat('l, d F Y H:i') }}
+                                                                
+                                                                <div class="col-md-12 mt-2">
+                                                                    <div class="row">
+                                                                        <div class="col-md-6">
+                                                                            <label class="fw-bold text-muted small text-uppercase">Dibuat Pada</label>
+                                                                            <div class="d-flex align-items-center mt-1 text-secondary">
+                                                                                <i class="bi bi-clock me-2"></i>
+                                                                                {{ $data->created_at->locale('id')->translatedFormat('l, d F Y H:i') }}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-md-6">
+                                                                            <label class="fw-bold text-muted small text-uppercase">Terakhir Diperbarui</label>
+                                                                            <div class="d-flex align-items-center mt-1 text-secondary">
+                                                                                <i class="bi bi-pencil-square me-2"></i>
+                                                                                {{ $data->updated_at->locale('id')->translatedFormat('l, d F Y H:i') }}
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -328,7 +295,7 @@
                                     </select>
                                     <span class="text-muted small">data</span>
                                 </div>
-                                {{ $desaBersinars->fragment('data-table')->links() }}
+                                <div>{{ $desaBersinars->fragment('data-table')->links() }}</div>
                             </div>
                         </div>
                     </div>
@@ -338,12 +305,16 @@
     </main>
 @endsection
 
+{{-- CSS YANG DISAMAKAN PERSIS DENGAN SOSIALISASI --}}
 @push('styles')
     @vite('resources/css/tom-select.css')
     <style>
         .ts-control { border-radius: 0.375rem !important; border-color: #dee2e6 !important; box-shadow: none !important; }
         .ts-wrapper.focus .ts-control { box-shadow: none !important; border-color: #dee2e6 !important; }
-        .input-group .ts-wrapper { height: 100%; }
+
+        .input-group .ts-wrapper {
+            height: 100%;
+        }
         .input-group .ts-control {
             border-top-left-radius: 0 !important;
             border-bottom-left-radius: 0 !important;
@@ -351,26 +322,35 @@
             display: flex;
             align-items: center;
         }
+
+        /* CSS KHUSUS UNTUK TABEL SCROLL & STICKY */
         .custom-table-scroll {
-            max-height: 70vh;
-            overflow-y: auto;
-            position: relative;
-            border: 1px solid #dee2e6;
+            max-height: 70vh;       /* Batasi tinggi tabel */
+            overflow-y: auto;       /* Munculkan scrollbar vertikal */
+            position: relative;     /* Agar posisi sticky relative terhadap kotak ini */
+            border: 1px solid #dee2e6; /* Border tipis pembatas area scroll */
         }
+
+        /* Memaksa Header Diam di Tempat */
         .custom-table-scroll thead th {
             position: sticky !important;
             top: 0 !important;
             z-index: 2;
-            background-color: #f8f9fa !important;
+            
+            /* PENTING: Warna background header agar tidak tembus pandang */
+            background-color: #f8f9fa !important; 
+            
+            /* Garis bawah header agar tegas */
             box-shadow: inset 0 -1px 0 #dee2e6;
         }
+
     </style>
 @endpush
 
 @push('scripts')
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {
-        const cfg = { plugins: ['remove_button', 'clear_button'], create: false };
+        const cfg = { plugins: ['remove_button', 'clear_button'], persist: false, create: false };
         ['select-satker','select-anggaran','select-kabkota','select-bulan','select-tahun','select-pegawai'].forEach(id => {
             if(document.getElementById(id)) new TomSelect('#'+id, cfg);
         });
@@ -394,13 +374,19 @@
     }
 
     @if(session('success'))
-        Swal.mixin({
+        const Toast = Swal.mixin({
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
             timer: 3000,
             timerProgressBar: true,
-        }).fire({
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        Toast.fire({
             icon: 'success',
             title: "{{ session('message') }}"
         });

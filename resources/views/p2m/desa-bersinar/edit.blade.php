@@ -9,7 +9,8 @@
                             <h1 class="h3 mb-0">P2M Desa Bersinar</h1>
                             <p class="text-muted mb-0">Edit Data Desa Bersinar</p>
                         </div>
-                        <a href="{{ url()->previous() }}" class="btn btn-outline-secondary btn-sm">
+                        {{-- KEMBALI KE INDEX MURNI --}}
+                        <a href="{{ route('p2m.desa_bersinar.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
                     </div>
@@ -19,8 +20,10 @@
                             <h5 class="card-title mb-2">Edit Data Desa Bersinar</h5>
                         </div>
                         <div class="card-body">
+                            {{-- Form --}}
                             <form id="form-edit-desabersinar" action="{{ route('p2m.desa_bersinar.update', $desa->id) }}" method="POST">
                                 @csrf @method('PUT')
+
                                 <div class="row g-6 mb-5">
                                     {{-- Anggaran Pembentukan --}}
                                     <div class="col-12 col-lg-6">
@@ -117,7 +120,7 @@
                                             <label for="select-pegawai" class="form-label">Nama Penanggung Jawab</label>
                                             <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih Pegawai..." autocomplete="off" class="form-control @error('pegawai_nips') is-invalid @enderror">
                                                 @foreach ($pegawais as $p)
-                                                    <option value="{{ $p->nip }}" @selected(in_array($p->nip, old('pegawai_nips', $selectedPegawaiNips)))>
+                                                    <option value="{{ $p->nip }}" @selected(in_array($p->nip, old('pegawai_nips', $selectedPegawaiNips ?? [])))>
                                                         {{ $p->nama }} - NIP: {{ $p->nip }}
                                                     </option>
                                                 @endforeach
@@ -156,7 +159,10 @@
                                         <button type="submit" class="btn btn-success w-100 mb-4 mb-lg-0">Simpan Perubahan</button>
                                     </div>
                                     <div class="col-12 col-lg-auto">
-                                        <button type="reset" class="btn btn-secondary w-100 mb-4 mb-lg-0">Reset Data</button>
+                                        {{-- TOMBOL RESET: Me-reload halaman ini sendiri untuk mengambil data awal --}}
+                                        <a href="{{ route('p2m.desa_bersinar.edit', $desa->id) }}" class="btn btn-secondary w-100 mb-4 mb-lg-0">
+                                            Reset Data
+                                        </a>
                                     </div>
                                 </div>
                             </form>
@@ -183,11 +189,7 @@
                 placeholder: "Cari atau pilih pegawai...",
                 plugins: ['remove_button'],
             });
-
-            const form = document.getElementById('form-edit-desabersinar');
-            form.addEventListener('reset', () => {
-                setTimeout(() => tom.sync(), 10);
-            });
+            // Tidak perlu listener 'reset' lagi karena tombol sudah diganti jadi link reload
         }
     });
 </script>

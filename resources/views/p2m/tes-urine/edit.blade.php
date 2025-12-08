@@ -10,7 +10,8 @@
                             <h1 class="h3 mb-0">Edit Tes Urine</h1>
                             <p class="text-muted mb-0">Perbarui Data Deteksi Dini</p>
                         </div>
-                        <a href="{{ url()->previous() }}" class="btn btn-outline-secondary btn-sm">
+                        {{-- PERBAIKAN: Tombol Kembali Langsung ke Index Murni --}}
+                        <a href="{{ route('p2m.tes_urine.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
                     </div>
@@ -24,7 +25,7 @@
                             <h5 class="card-title mb-2">Form Edit</h5>
                         </div>
                         <div class="card-body">
-                            {{-- ID Form untuk Reset JS --}}
+                            {{-- Form Edit --}}
                             <form id="form-edit-p2m" action="{{ route('p2m.tes_urine.update', $kegiatan->id) }}" method="POST">
                                 @csrf
                                 @method('PUT')
@@ -172,8 +173,10 @@
                                         <button type="submit" class="btn btn-success w-100 mb-4 mb-lg-0">Simpan Perubahan</button>
                                     </div>
                                     <div class="col-12 col-lg-auto">
-                                        {{-- Tombol Reset untuk mengembalikan ke nilai awal database --}}
-                                        <button type="reset" class="btn btn-secondary w-100">Reset Data</button>
+                                        {{-- PERBAIKAN: Tombol Reset pakai LINK RELOAD --}}
+                                        <a href="{{ route('p2m.tes_urine.edit', $kegiatan->id) }}" class="btn btn-secondary w-100 mb-4 mb-lg-0">
+                                            Reset Data
+                                        </a>
                                     </div>
                                 </div>
                             </form>
@@ -193,6 +196,7 @@
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {
         if(typeof TomSelect !== 'undefined'){
+            // Init TomSelect seperti biasa (tanpa logic reset manual karena tombol sudah diganti link)
             const tomSelectInstance = new TomSelect("#select-pegawai", {
                 create: false,
                 sortField: { field: "text", direction: "asc" },
@@ -200,16 +204,6 @@
                 placeholder: "Cari pegawai...",
                 plugins: ['remove_button'],
             });
-
-            // Logic Reset: Mengembalikan pilihan TomSelect ke kondisi awal (saat halaman dimuat)
-            const form = document.getElementById('form-edit-p2m');
-            if(form){
-                form.addEventListener('reset', function() {
-                    setTimeout(() => {
-                        tomSelectInstance.sync(); // Sync akan mengembalikan value ke kondisi awal (selected dari DB)
-                    }, 10);
-                });
-            }
         }
     });
 </script>

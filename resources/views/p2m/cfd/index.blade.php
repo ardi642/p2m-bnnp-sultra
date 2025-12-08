@@ -484,9 +484,7 @@
 
 
 @push('scripts')
-<script>
-    
-
+<script type="module">
     document.addEventListener("DOMContentLoaded", function() {
         const configTomSelect = { plugins: ['remove_button', 'clear_button'], persist: false, create: false, maxOptions: null };
         if(document.getElementById('select-satker')) new TomSelect('#select-satker', configTomSelect);

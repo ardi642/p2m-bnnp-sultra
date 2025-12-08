@@ -141,7 +141,7 @@
 @endsection
 
 @section('scripts')
-<script>
+<script type="module">
     
     const p2mSelect = document.getElementById("p2m-select")
     const selectedOption = this.options[this.selectedIndex];

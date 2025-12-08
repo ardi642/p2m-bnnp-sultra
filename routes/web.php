@@ -45,53 +45,67 @@ Route::middleware('auth')->group(function() {
             // P2M cfd
             Route::get('/cfd', [CfdController::class, 'index'])->name("cfd.index");
             Route::get('/cfd/export', [CfdController::class, 'export'])->name('cfd.export');
+
+            // P2M elektronik
+            Route::get('/elektronik', [ElektronikController::class, 'index'])->name("elektronik.index");
+            Route::get('/elektronik/export', [ElektronikController::class, 'export'])->name('elektronik.export');
+
+            // P2M online
+            Route::get('/online', [OnlineController::class, 'index'])->name("online.index");
+            Route::get('/online/export', [OnlineController::class, 'export'])->name('online.export');
+
+            // P2M upacara
+            Route::get('/upacara', [UpacaraController::class, 'index'])->name("upacara.index");
+            Route::get('/upacara/export', [UpacaraController::class, 'export'])->name('upacara.export');
+
+            // P2M kie
+            Route::get('/kie', [KieController::class, 'index'])->name("kie.index");
+            Route::get('/kie/export', [KieController::class, 'export'])->name('kie.export');
+
+            // P2M lingkungan
+            Route::get('/lingkungan', [LingkunganController::class, 'index'])->name("lingkungan.index");
+            Route::get('/lingkungan/export', [LingkunganController::class, 'export'])->name('lingkungan.export');
         });
 
         Route::middleware(['role:operator'])->group(function() {
 
-            // sosialisasi
+            // P2M sosialisasi
             Route::get('/sosialisasi/create', [SosialisasiController::class, 'create'])->name("sosialisasi.create");
             Route::post('/sosialisasi', [SosialisasiController::class, 'store'])->name("sosialisasi.store");
             Route::get('/sosialisasi/{id}/edit', [SosialisasiController::class, 'edit'])->name('sosialisasi.edit');
             Route::put('/sosialisasi/{id}', [SosialisasiController::class, 'update'])->name('sosialisasi.update');
             Route::delete('/sosialisasi/{id}', [SosialisasiController::class, 'destroy'])->name("sosialisasi.destroy");
             
-            // cfd
+            // P2M cfd
             Route::get('/cfd/create', [CfdController::class, 'create'])->name("cfd.create");
             Route::post('/cfd', [CfdController::class, 'store'])->name("cfd.store");
             Route::delete('/cfd/{id}', [cfdController::class, 'destroy'])->name("cfd.destroy");
+
+            // P2M elektronik
+            Route::get('/elektronik/create', [ElektronikController::class, 'create'])->name("elektronik.create");
+            Route::post('/elektronik', [ElektronikController::class, 'store'])->name("elektronik.store");
+            Route::delete('/elektronik/{id}', [ElektronikController::class, 'destroy'])->name("elektronik.destroy");
+
+            // P2M online
+            Route::get('/online/create', [OnlineController::class, 'create'])->name("online.create");
+            Route::post('/online', [OnlineController::class, 'store'])->name("online.store");
+            Route::delete('/online/{id}', [OnlineController::class, 'destroy'])->name("online.destroy");
+
+            // P2M upacara
+            Route::get('/upacara/create', [UpacaraController::class, 'create'])->name("upacara.create");
+            Route::post('/upacara', [UpacaraController::class, 'store'])->name("upacara.store");
+            Route::delete('/upacara/{id}', [UpacaraController::class, 'destroy'])->name("upacara.destroy");
+
+            // P2M kie
+            Route::get('/kie/create', [KieController::class, 'create'])->name("kie.create");
+            Route::post('/kie', [KieController::class, 'store'])->name("kie.store");
+            Route::delete('/kie/{id}', [KieController::class, 'destroy'])->name("kie.destroy");
+
+            // P2M lingkungan
+            Route::get('/lingkungan/create', [LingkunganController::class, 'create'])->name("lingkungan.create");
+            Route::post('/lingkungan', [LingkunganController::class, 'store'])->name("lingkungan.store");
+            Route::delete('/lingkungan/{id}', [LingkunganController::class, 'destroy'])->name("lingkungan.destroy");
         });
-
-        Route::get('/upacara', [UpacaraController::class, 'index'])->name("upacara.index");
-        Route::get('/upacara/create', [UpacaraController::class, 'create'])->name("upacara.create");
-        Route::post('/upacara/store', [UpacaraController::class, 'store'])->name("upacara.store");
-        Route::delete('/upacara/destroy/{id}', [UpacaraController::class, 'destroy'])->name("upacara.destroy");
-
-        Route::get('/kie', [KieController::class, 'index'])->name("kie.index");
-        Route::get('/kie/create', [KieController::class, 'create'])->name("kie.create");
-        Route::post('/kie/store', [KieController::class, 'store'])->name("kie.store");
-        Route::delete('/kie/destroy/{id}', [KieController::class, 'destroy'])->name("kie.destroy");
-
-        Route::get('/lingkungan', [LingkunganController::class, 'index'])->name("lingkungan.index");
-        Route::get('/lingkungan/create', [LingkunganController::class, 'create'])->name("lingkungan.create");
-        Route::post('/lingkungan/store', [LingkunganController::class, 'store'])->name("lingkungan.store");
-        Route::delete('/lingkungan/destroy/{id}', [LingkunganController::class, 'destroy'])->name("lingkungan.destroy");
-
-
-
-        Route::get('/elektronik', [ElektronikController::class, 'index'])->name("elektronik.index");
-        Route::get('/elektronik/create', [ElektronikController::class, 'create'])->name("elektronik.create");
-        Route::post('/elektronik/store', [ElektronikController::class, 'store'])->name("elektronik.store");
-        Route::delete('/elektronik/destroy/{id}', [ElektronikController::class, 'destroy'])->name("elektronik.destroy");
-        Route::get('/elektronik/export', [ElektronikController::class, 'export'])->name('elektronik.export');
-
-
-        Route::get('/online', [OnlineController::class, 'index'])->name("online.index");
-        Route::get('/online/create', [OnlineController::class, 'create'])->name("online.create");
-        Route::post('/online/store', [OnlineController::class, 'store'])->name("online.store");
-        Route::delete('/online/destroy/{id}', [OnlineController::class, 'destroy'])->name("online.destroy");
-        Route::get('/online/export', [OnlineController::class, 'export'])->name('online.export');
-
     });
 
 });

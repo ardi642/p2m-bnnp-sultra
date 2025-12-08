@@ -14,6 +14,8 @@
                             <option {{ Route::is('p2m.cfd.*') ? 'selected' : '' }} data-url="{{ route('p2m.cfd.index') }}">Sosialisasi di lokasi Car Free Days (CFD)</option>
                             <option {{ Route::is('p2m.elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.elektronik.index') }}">Informasi dan Edukasi Melalui Media Elektronik</option>
                             <option {{ Route::is('p2m.online.*') ? 'selected' : '' }} data-url="{{ route('p2m.online.index') }}">Informasi dan Edukasi Melalui Media Online</option>
+                            <option {{ Route::is('p2m.tes_urine.*') ? 'selected' : '' }} data-url="{{ route('p2m.tes_urine.index') }}">Test Urine / Deteksi Dini</option>
+                            <option {{ Route::is('p2m.desa_bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desa_bersinar.index') }}">Desa Bersinar</option>
                         </select>
                     </div>
                     <div class="col">

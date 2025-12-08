@@ -12,4 +12,8 @@ class SatuanKerja extends Model
     public function p2mSosialisasis() {
         return $this->hasMany(P2mSosialisasi::class);
     }
+
+    public function p2mTesUrines() {
+        return $this->hasMany(P2mTesUrine::class);
+    }
 }

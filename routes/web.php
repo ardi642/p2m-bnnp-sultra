@@ -7,12 +7,14 @@ use App\Http\Controllers\P2m\KieController;
 use App\Http\Controllers\P2m\LingkunganController;
 use App\Models\P2mSosialisasi;
 use App\Http\Controllers\P2m\CfdController;
+use App\Http\Controllers\P2m\DesaBersinarController;
 use App\Models\p2mcfd;
 
 use App\Http\Controllers\P2m\ElektronikController;
 use App\Models\p2mElektronik;
 
 use App\Http\Controllers\P2m\OnlineController;
+use App\Http\Controllers\P2m\TesUrineController;
 use App\Models\p2mOnline;
 
 use Illuminate\Support\Facades\Route;
@@ -65,6 +67,14 @@ Route::middleware('auth')->group(function() {
             // P2M lingkungan
             Route::get('/lingkungan', [LingkunganController::class, 'index'])->name("lingkungan.index");
             Route::get('/lingkungan/export', [LingkunganController::class, 'export'])->name('lingkungan.export');
+
+            // P2M tes urine / deteksi dini
+            Route::get('/tes-urine', [TesUrineController::class, 'index'])->name("tes_urine.index");
+            Route::get('/tes-urine/export', [TesUrineController::class, 'export'])->name('tes_urine.export');
+
+            // P2M desa bersinar
+            Route::get('/desa-bersinar', [DesaBersinarController::class, 'index'])->name('desa_bersinar.index');
+            Route::get('/desa-bersinar/export', [DesaBersinarController::class, 'export'])->name('desa_bersinar.export');
         });
 
         Route::middleware(['role:operator'])->group(function() {
@@ -105,6 +115,20 @@ Route::middleware('auth')->group(function() {
             Route::get('/lingkungan/create', [LingkunganController::class, 'create'])->name("lingkungan.create");
             Route::post('/lingkungan', [LingkunganController::class, 'store'])->name("lingkungan.store");
             Route::delete('/lingkungan/{id}', [LingkunganController::class, 'destroy'])->name("lingkungan.destroy");
+
+            // P2M tes urine
+            Route::get('/tes-urine/create', [TesUrineController::class, 'create'])->name("tes_urine.create");
+            Route::post('/tes-urine', [TesUrineController::class, 'store'])->name("tes_urine.store");
+            Route::get('/tes-urine/{id}/edit', [TesUrineController::class, 'edit'])->name('tes_urine.edit');
+            Route::put('/tes-urine/{id}', [TesUrineController::class, 'update'])->name('tes_urine.update');
+            Route::delete('/tes-urine/{id}', [TesUrineController::class, 'destroy'])->name("tes_urine.destroy");
+
+            // P2M desa bersinar
+            Route::get('/desa-bersinar/create', [DesaBersinarController::class, 'create'])->name('desa_bersinar.create');
+            Route::post('/desa-bersinar', [DesaBersinarController::class, 'store'])->name('desa_bersinar.store');
+            Route::get('/desa-bersinar/{id}/edit', [DesaBersinarController::class, 'edit'])->name('desa_bersinar.edit');
+            Route::put('/desa-bersinar/{id}', [DesaBersinarController::class, 'update'])->name('desa_bersinar.update');
+            Route::delete('/desa-bersinar/{id}', [DesaBersinarController::class, 'destroy'])->name('desa_bersinar.destroy');
         });
     });
 

@@ -58,7 +58,7 @@ class Pegawai extends Model
         )->withTimestamps();
     }
 
-     public function p2mcfd(): BelongsToMany
+    public function p2mcfd(): BelongsToMany
     {
         return $this->belongsToMany(
             p2mcfd::class, 
@@ -67,6 +67,30 @@ class Pegawai extends Model
             'p2m_cfd_id',      // Foreign key untuk model lawan (Kegiatan)
             'nip',                     // Local Key (Primary Key model ini)
             'id'                       // Related Key (Primary Key model lawan)
+        )->withTimestamps();
+    }
+
+    public function p2mTesUrine(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            P2mTesUrine::class, 
+            'pegawai_p2m_tes_urine',
+            'pegawai_nip',
+            'p2m_tes_urine_id',
+            'nip',
+            'id'
+        )->withTimestamps();
+    }
+
+    public function p2mDesaBersinar(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            P2mDesaBersinar::class,
+            'pegawai_p2m_desa_bersinar',
+            'pegawai_nip',
+            'p2m_desa_bersinar_id',
+            'nip',
+            'id'
         )->withTimestamps();
     }
 }

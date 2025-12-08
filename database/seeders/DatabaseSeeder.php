@@ -4,63 +4,76 @@ namespace Database\Seeders;
 
 use App\Models\P2mSosialisasi;
 use App\Models\p2mcfd;
+use App\Models\P2mDesaBersinar;
 use App\Models\p2mElektronik;
 use App\Models\p2mOnline;
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
+use App\Models\P2mTesUrine; // <--- Import Model Baru
 use App\Models\Pegawai;
+use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     public function run(): void
     {
         // 1. Buat Data Master
         $this->call([
-            SatuanKerjaSeeder::class, 
+            SatuanKerjaSeeder::class,
+            KabupatenKotaSeeder::class
         ]);
         
-        // Saran: Tambah jumlah pegawai agar tiap satker kebagian orang
+        // Buat Pegawai
         Pegawai::factory(200)->create(); 
 
         p2mElektronik::factory(50)->create();
         p2mOnline::factory(50)->create();
 
-        // 2. Seeding P2M Sosialisasi (DIPERBAIKI)
-        P2mSosialisasi::factory(100)
-        ->create()
-        ->each(function ($kegiatan) {
-            
-            // --- LOGIKA PERBAIKAN ---
-            // Ambil pegawai yang SATUAN KERJA-nya SAMA dengan KEGIATAN ini
+        // 2. Seeding P2M Sosialisasi
+        P2mSosialisasi::factory(50)->create()->each(function ($kegiatan) {
             $pegawaiSesuaiSatker = Pegawai::where('satuan_kerja_id', $kegiatan->satuan_kerja_id)
-                ->inRandomOrder()
-                ->take(rand(3, 5))
-                ->pluck('nip');
+                ->inRandomOrder()->take(rand(2, 4))->pluck('nip');
             
-            // Hanya attach jika ada pegawainya
             if ($pegawaiSesuaiSatker->isNotEmpty()) {
                 $kegiatan->pegawai()->attach($pegawaiSesuaiSatker);
             }
         });
 
-        // 3. Seeding P2M CFD (DIPERBAIKI)
-        p2mcfd::factory(100)
-        ->create()
-        ->each(function ($kegiatan) {
-            
-            // --- LOGIKA PERBAIKAN (Sama) ---
+        // 3. Seeding P2M CFD
+        p2mcfd::factory(50)->create()->each(function ($kegiatan) {
             $pegawaiSesuaiSatker = Pegawai::where('satuan_kerja_id', $kegiatan->satuan_kerja_id)
-                ->inRandomOrder()
-                ->take(rand(3, 5))
-                ->pluck('nip');
+                ->inRandomOrder()->take(rand(2, 4))->pluck('nip');
             
             if ($pegawaiSesuaiSatker->isNotEmpty()) {
                 $kegiatan->pegawai()->attach($pegawaiSesuaiSatker);
             }
         });
+
+        // ---------------------------------------------------------
+        // 4. Seeding P2M Tes Urine (BARU)
+        // ---------------------------------------------------------
+        P2mTesUrine::factory(50) // Buat 50 data dummy
+        ->create()
+        ->each(function ($kegiatan) {
+            
+            // Ambil pegawai (Tim/Katim) yang SATKER-nya SAMA
+            $pegawaiSesuaiSatker = Pegawai::where('satuan_kerja_id', $kegiatan->satuan_kerja_id)
+                ->inRandomOrder()
+                ->take(rand(3, 6)) // Tim tes urine biasanya butuh lebih banyak orang (3-6)
+                ->pluck('nip');
+            
+            // Attach ke pivot
+            if ($pegawaiSesuaiSatker->isNotEmpty()) {
+                $kegiatan->pegawai()->attach($pegawaiSesuaiSatker);
+            }
+        });
+
+        P2mDesaBersinar::factory(50)
+        ->create()
+        ->each(fn ($d) => $d->pegawai()->attach(
+            Pegawai::where('satuan_kerja_id', $d->satuan_kerja_id)
+                ->inRandomOrder()
+                ->take(rand(1, 3))
+                ->pluck('nip')
+        ));
 
         $this->call([
             UserSeeder::class

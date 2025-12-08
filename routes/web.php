@@ -37,18 +37,29 @@ Route::middleware('auth')->group(function() {
         })->name("index");
         
         Route::middleware(['role:admin,operator'])->group(function() {
+
+            // P2M sosialisasi
             Route::get('/sosialisasi/export', [SosialisasiController::class, 'export'])->name('sosialisasi.export');
             Route::get('/sosialisasi', [SosialisasiController::class, 'index'])->name("sosialisasi.index");
+
+            // P2M cfd
+            Route::get('/cfd', [CfdController::class, 'index'])->name("cfd.index");
+            Route::get('/cfd/export', [CfdController::class, 'export'])->name('cfd.export');
         });
 
         Route::middleware(['role:operator'])->group(function() {
+
+            // sosialisasi
             Route::get('/sosialisasi/create', [SosialisasiController::class, 'create'])->name("sosialisasi.create");
             Route::post('/sosialisasi', [SosialisasiController::class, 'store'])->name("sosialisasi.store");
-
             Route::get('/sosialisasi/{id}/edit', [SosialisasiController::class, 'edit'])->name('sosialisasi.edit');
             Route::put('/sosialisasi/{id}', [SosialisasiController::class, 'update'])->name('sosialisasi.update');
-
             Route::delete('/sosialisasi/{id}', [SosialisasiController::class, 'destroy'])->name("sosialisasi.destroy");
+            
+            // cfd
+            Route::get('/cfd/create', [CfdController::class, 'create'])->name("cfd.create");
+            Route::post('/cfd', [CfdController::class, 'store'])->name("cfd.store");
+            Route::delete('/cfd/{id}', [cfdController::class, 'destroy'])->name("cfd.destroy");
         });
 
         Route::get('/upacara', [UpacaraController::class, 'index'])->name("upacara.index");
@@ -66,22 +77,20 @@ Route::middleware('auth')->group(function() {
         Route::post('/lingkungan/store', [LingkunganController::class, 'store'])->name("lingkungan.store");
         Route::delete('/lingkungan/destroy/{id}', [LingkunganController::class, 'destroy'])->name("lingkungan.destroy");
 
-        Route::get('/cfd', [CfdController::class, 'index'])->name("cfd.index");
-        Route::get('/cfd/create', [CfdController::class, 'create'])->name("cfd.create");
-        Route::post('/cfd/store', [CfdController::class, 'store'])->name("cfd.store");
-        Route::delete('/cfd/destroy/{id}', [cfdController::class, 'destroy'])->name("cfd.destroy");
 
 
         Route::get('/elektronik', [ElektronikController::class, 'index'])->name("elektronik.index");
         Route::get('/elektronik/create', [ElektronikController::class, 'create'])->name("elektronik.create");
         Route::post('/elektronik/store', [ElektronikController::class, 'store'])->name("elektronik.store");
         Route::delete('/elektronik/destroy/{id}', [ElektronikController::class, 'destroy'])->name("elektronik.destroy");
+        Route::get('/elektronik/export', [ElektronikController::class, 'export'])->name('elektronik.export');
 
 
         Route::get('/online', [OnlineController::class, 'index'])->name("online.index");
         Route::get('/online/create', [OnlineController::class, 'create'])->name("online.create");
         Route::post('/online/store', [OnlineController::class, 'store'])->name("online.store");
         Route::delete('/online/destroy/{id}', [OnlineController::class, 'destroy'])->name("online.destroy");
+        Route::get('/online/export', [OnlineController::class, 'export'])->name('online.export');
 
     });
 

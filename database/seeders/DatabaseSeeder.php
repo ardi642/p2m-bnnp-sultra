@@ -7,6 +7,7 @@ use App\Models\p2mcfd;
 use App\Models\P2mDesaBersinar;
 use App\Models\p2mElektronik;
 use App\Models\p2mOnline;
+use App\Models\P2mSafariReligi;
 use App\Models\P2mTesUrine; // <--- Import Model Baru
 use App\Models\Pegawai;
 use Illuminate\Database\Seeder;
@@ -74,6 +75,23 @@ class DatabaseSeeder extends Seeder
                 ->take(rand(1, 3))
                 ->pluck('nip')
         ));
+
+        P2mSafariReligi::factory(50) // Buat 50 data dummy
+        ->create()
+        ->each(function ($kegiatan) {
+            
+            // Ambil pegawai yang SATKER-nya SAMA dengan kegiatan
+            // Safari religi biasanya melibatkan tim kecil (2-5 orang)
+            $pegawaiSesuaiSatker = Pegawai::where('satuan_kerja_id', $kegiatan->satuan_kerja_id)
+                ->inRandomOrder()
+                ->take(rand(2, 5)) 
+                ->pluck('nip');
+            
+            // Attach ke pivot table
+            if ($pegawaiSesuaiSatker->isNotEmpty()) {
+                $kegiatan->pegawai()->attach($pegawaiSesuaiSatker);
+            }
+        });
 
         $this->call([
             UserSeeder::class

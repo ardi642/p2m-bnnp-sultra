@@ -16,6 +16,7 @@
                             <option {{ Route::is('p2m.online.*') ? 'selected' : '' }} data-url="{{ route('p2m.online.create') }}">Informasi dan Edukasi Melalui Media Online</option>
                             <option {{ Route::is('p2m.tes_urine.*') ? 'selected' : '' }} data-url="{{ route('p2m.tes_urine.create') }}">Test Urine / Deteksi Dini</option>
                             <option {{ Route::is('p2m.desa_bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desa_bersinar.create') }}">Desa Bersinar</option>
+                            <option {{ Route::is('p2m.safari_religi.*') ? 'selected' : '' }} data-url="{{ route('p2m.safari_religi.create') }}">Safari Religi</option>
                         </select>
                     </div>
                     <div class="col-12 col-lg">

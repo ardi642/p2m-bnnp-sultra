@@ -14,6 +14,7 @@ use App\Http\Controllers\P2m\ElektronikController;
 use App\Models\p2mElektronik;
 
 use App\Http\Controllers\P2m\OnlineController;
+use App\Http\Controllers\P2m\SafariReligiController;
 use App\Http\Controllers\P2m\TesUrineController;
 use App\Models\p2mOnline;
 
@@ -75,6 +76,10 @@ Route::middleware('auth')->group(function() {
             // P2M desa bersinar
             Route::get('/desa-bersinar', [DesaBersinarController::class, 'index'])->name('desa_bersinar.index');
             Route::get('/desa-bersinar/export', [DesaBersinarController::class, 'export'])->name('desa_bersinar.export');
+            
+            // P2M safari religi
+            Route::get('/safari-religi', [SafariReligiController::class, 'index'])->name("safari_religi.index");
+            Route::get('/safari-religi/export', [SafariReligiController::class, 'export'])->name('safari_religi.export');
         });
 
         Route::middleware(['role:operator'])->group(function() {
@@ -129,6 +134,13 @@ Route::middleware('auth')->group(function() {
             Route::get('/desa-bersinar/{id}/edit', [DesaBersinarController::class, 'edit'])->name('desa_bersinar.edit');
             Route::put('/desa-bersinar/{id}', [DesaBersinarController::class, 'update'])->name('desa_bersinar.update');
             Route::delete('/desa-bersinar/{id}', [DesaBersinarController::class, 'destroy'])->name('desa_bersinar.destroy');
+
+            // P2M safari religi
+            Route::get('/safari-religi/create', [SafariReligiController::class, 'create'])->name("safari_religi.create");
+            Route::post('/safari-religi', [SafariReligiController::class, 'store'])->name("safari_religi.store");
+            Route::get('/safari-religi/{id}/edit', [SafariReligiController::class, 'edit'])->name('safari_religi.edit');
+            Route::put('/safari-religi/{id}', [SafariReligiController::class, 'update'])->name('safari_religi.update');
+            Route::delete('/safari-religi/{id}', [SafariReligiController::class, 'destroy'])->name("safari_religi.destroy");
         });
     });
 

@@ -57,6 +57,10 @@
                             
                             {{-- FORM PEMBUNGKUS UTAMA --}}
                             <form action="{{ route('p2m.sosialisasi.index') }}" method="GET" class="mb-8">
+
+                                {{-- [SOLUSI] Tambahkan Tombol Hantu ini di sini --}}
+                                {{-- Saat Enter ditekan, tombol ini yang "diklik" oleh browser, menjalankan filter --}}
+                                <button type="submit" style="display: none;" aria-hidden="true"></button>
                                 
                                 {{-- TAMBAHAN: HIDDEN INPUT UNTUK MENJAGA SORTING SAAT EXPORT/FILTER --}}
                                 {{-- Ini mengambil nilai dari URL dan memasukkannya ke dalam form --}}
@@ -371,7 +375,7 @@
                                                 <td>{{ $data->tanggal_pelaksanaan->locale('id')->translatedFormat('l, d F Y') }}</td>
                                                 <td>{{ $data->tempat_kegiatan }}</td>
                                                 <td class="text-start">
-                                                    @foreach($data->pegawai as $pegawai)
+                                                    @foreach($data->pegawai->sortBy('nama') as $pegawai)
                                                         <span class="badge bg-primary mb-1">{{ $pegawai->nama }}</span>
                                                     @endforeach
                                                 </td>
@@ -441,7 +445,7 @@
                                         @empty
                                             <tr>
                                                 <td colspan="10" class="text-center p-4">
-                                                    <div class="text-muted">Tidak ada data kegiatan sosialisasi</div>
+                                                    <div class="text-muted">Tidak ada data</div>
                                                 </td>
                                             </tr>
                                         @endforelse

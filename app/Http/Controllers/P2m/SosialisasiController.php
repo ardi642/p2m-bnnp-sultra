@@ -9,6 +9,7 @@ use App\Models\Pegawai;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
 use App\Exports\SosialisasiExport; // Import Export Class
+use App\Helpers\SearchHelper;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel; // Import Facade Excel
@@ -77,16 +78,41 @@ class SosialisasiController extends Controller
         // Search
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $searchDate = SearchHelper::translateDateInput($search);
+            $query->where(function($q) use ($search, $searchDate) {
+                // 1. Pencarian Kolom Teks Utama
                 $q->where('nama_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhere('tempat_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhere('sasaran_kegiatan', 'LIKE', "%{$search}%")
+                    ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%") // Cari DIPA/NON DIPA
+                    ->orWhere('link_kelengkapan_dokumentasi', 'LIKE', "%{$search}%")
+
+                    // 2. Pencarian Angka (Jumlah Peserta)
+                    ->orWhere('jumlah_peserta', 'LIKE', "%{$search}%")
+
+                    // 3. Pencarian Relasi Satker
                     ->orWhereHas('satuanKerja', function($subQ) use ($search) {
                         $subQ->where('satuan_kerja', 'LIKE', "%{$search}%");
                     })
+
+                    // 4. Pencarian Relasi Pegawai (Cari nama pegawai yang terlibat)
                     ->orWhereHas('pegawai', function($subQ) use ($search) {
                         $subQ->where('nama', 'LIKE', "%{$search}%");
                     });
+
+                    // 3. Tanggal Pelaksanaan (Format: Kamis, 04 September 2025)
+                    // %W=Hari, %d=Tgl, %M=Bulan Panjang, %Y=Tahun
+                    $q->orWhereRaw("LOWER(DATE_FORMAT(tanggal_pelaksanaan, '%W, %d %M %Y')) LIKE ?", ["%{$searchDate}%"]);
+                    
+                    // Variasi tanpa hari (04 September 2025)
+                    // $q->orWhereRaw("LOWER(DATE_FORMAT(tanggal_pelaksanaan, '%d %M %Y')) LIKE ?", ["%{$searchDate}%"]);
+
+                    // 4. Dibuat Pada (Format: 09 Dec 2025 02:00)
+                    // %b=Bulan Pendek (Dec), %H:%i=Jam:Menit
+                    $q->orWhereRaw("LOWER(DATE_FORMAT(created_at, '%d %b %Y %H:%i')) LIKE ?", ["%{$searchDate}%"]);
+
+                    // Variasi tanpa jam (09 Dec 2025)
+                    // $q->orWhereRaw("LOWER(DATE_FORMAT(created_at, '%d %b %Y')) LIKE ?", ["%{$searchDate}%"]);
             });
         }
 

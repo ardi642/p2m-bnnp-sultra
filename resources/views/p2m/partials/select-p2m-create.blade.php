@@ -13,6 +13,7 @@
                             <option {{ Route::is('p2m.lingkungan.*') ? 'selected' : '' }} data-url="{{ route('p2m.lingkungan.create') }}">Lingkungan Bersinar</option>
                             <option {{ Route::is('p2m.cfd.*') ? 'selected' : '' }} data-url="{{ route('p2m.cfd.create') }}">Sosialisasi di lokasi Car Free Days (CFD)</option>
                             <option {{ Route::is('p2m.elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.elektronik.create') }}">Informasi dan Edukasi Melalui Media Elektronik</option>
+                            <option {{ Route::is('p2m.media_non_elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.media_non_elektronik.create') }}">Informasi dan Edukasi Melalui Media Non Elektronik</option>
                             <option {{ Route::is('p2m.online.*') ? 'selected' : '' }} data-url="{{ route('p2m.online.create') }}">Informasi dan Edukasi Melalui Media Online</option>
                             <option {{ Route::is('p2m.tes_urine.*') ? 'selected' : '' }} data-url="{{ route('p2m.tes_urine.create') }}">Test Urine / Deteksi Dini</option>
                             <option {{ Route::is('p2m.desa_bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desa_bersinar.create') }}">Desa Bersinar</option>

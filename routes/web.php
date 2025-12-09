@@ -11,6 +11,7 @@ use App\Http\Controllers\P2m\DesaBersinarController;
 use App\Models\p2mcfd;
 
 use App\Http\Controllers\P2m\ElektronikController;
+use App\Http\Controllers\P2m\MediaNonElektronikController;
 use App\Models\p2mElektronik;
 
 use App\Http\Controllers\P2m\OnlineController;
@@ -80,6 +81,10 @@ Route::middleware('auth')->group(function() {
             // P2M safari religi
             Route::get('/safari-religi', [SafariReligiController::class, 'index'])->name("safari_religi.index");
             Route::get('/safari-religi/export', [SafariReligiController::class, 'export'])->name('safari_religi.export');
+
+            // P2M media non elektronik
+            Route::get('/media_non_elektronik', [MediaNonElektronikController::class, 'index'])->name("media_non_elektronik.index");
+            Route::get('/media_non_elektronik/export', [MediaNonElektronikController::class, 'export'])->name('media_non_elektronik.export');
         });
 
         Route::middleware(['role:operator'])->group(function() {
@@ -141,6 +146,13 @@ Route::middleware('auth')->group(function() {
             Route::get('/safari-religi/{id}/edit', [SafariReligiController::class, 'edit'])->name('safari_religi.edit');
             Route::put('/safari-religi/{id}', [SafariReligiController::class, 'update'])->name('safari_religi.update');
             Route::delete('/safari-religi/{id}', [SafariReligiController::class, 'destroy'])->name("safari_religi.destroy");
+
+            // P2M media non elektronik
+            Route::get('/media_non_elektronik/create', [MediaNonElektronikController::class, 'create'])->name("media_non_elektronik.create");
+            Route::post('/media_non_elektronik', [MediaNonElektronikController::class, 'store'])->name("media_non_elektronik.store");
+            Route::get('/media_non_elektronik/{id}/edit', [MediaNonElektronikController::class, 'edit'])->name('media_non_elektronik.edit');
+            Route::put('/media_non_elektronik/{id}', [MediaNonElektronikController::class, 'update'])->name('media_non_elektronik.update');
+            Route::delete('/media_non_elektronik/{id}', [MediaNonElektronikController::class, 'destroy'])->name("media_non_elektronik.destroy");
         });
     });
 

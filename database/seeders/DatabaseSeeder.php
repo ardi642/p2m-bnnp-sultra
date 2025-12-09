@@ -6,6 +6,7 @@ use App\Models\P2mSosialisasi;
 use App\Models\p2mcfd;
 use App\Models\P2mDesaBersinar;
 use App\Models\p2mElektronik;
+use App\Models\P2mMediaNonElektronik;
 use App\Models\p2mOnline;
 use App\Models\P2mSafariReligi;
 use App\Models\P2mTesUrine; // <--- Import Model Baru
@@ -92,6 +93,8 @@ class DatabaseSeeder extends Seeder
                 $kegiatan->pegawai()->attach($pegawaiSesuaiSatker);
             }
         });
+
+        P2mMediaNonElektronik::factory(50)->create();
 
         $this->call([
             UserSeeder::class

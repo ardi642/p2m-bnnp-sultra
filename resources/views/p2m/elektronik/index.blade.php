@@ -13,9 +13,8 @@
             
             @include('p2m.partials.select-p2m-index')
 
-           {{-- LOGIKA HITUNG JUMLAH FILTER AKTIF (Define variable di sini) --}}
+            {{-- LOGIKA HITUNG JUMLAH FILTER AKTIF (Define variable di sini) --}}
             @php
-                // 1. Ambil semua input dari request (Kecuali pegawai_logic)
                 $allFilters = request()->only([
                     'satuan_kerja_id', 
                     'bulan', 
@@ -55,7 +54,7 @@
                         <div class="card-body">
                             
                             {{-- FORM PEMBUNGKUS UTAMA --}}
-                            <form action="{{ route('p2m.elektronik.index') }}" method="GET">
+                            <form action="{{ route('p2m.elektronik.index') }}" method="GET" class="mb-8">
                                 
                                 {{-- TAMBAHAN: HIDDEN INPUT UNTUK MENJAGA SORTING SAAT EXPORT/FILTER --}}
                                 {{-- Ini mengambil nilai dari URL dan memasukkannya ke dalam form --}}
@@ -84,13 +83,6 @@
                                                 @endif
                                             </button>
 
-                                            {{-- 2. TOMBOL HAPUS FILTER (Hanya muncul jika ada filter/search aktif) --}}
-                                            {{-- @if($activeFilters > 0)
-                                                <a href="{{ route('p2m.sosialisasi.index') }}" 
-                                                   class="btn btn-danger btn-sm text-white d-flex align-items-center gap-1">
-                                                    <i class="bi bi-x-circle"></i> Hapus Filter
-                                                </a>
-                                            @endif --}}
 
                                             {{-- 3. TOMBOL EXPORT EXCEL --}}
                                             {{-- Tombol ini akan mengirim semua input filter meskipun panel filter sedang tertutup --}}
@@ -129,16 +121,18 @@
                                         <div class="row g-3">
                                             
                                             {{-- 1. SATUAN KERJA --}}
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Satuan Kerja</label>
-                                                <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satuan Kerja..." autocomplete="off">
-                                                    @foreach($satuanKerjas as $satker)
-                                                        <option value="{{ $satker->id }}" {{ in_array($satker->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>
-                                                            {{ $satker->satuan_kerja }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
+                                            @if ($user->isAdmin())
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">Satuan Kerja</label>
+                                                    <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satuan Kerja..." autocomplete="off">
+                                                        @foreach($satuanKerjas as $satker)
+                                                            <option value="{{ $satker->id }}" {{ in_array($satker->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>
+                                                                {{ $satker->satuan_kerja }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            @endif
 
                                             {{-- 2. ANGGARAN --}}
                                             <div class="col-md-6">
@@ -181,7 +175,7 @@
                                                 </select>
                                             </div>
 
-                                            {{-- 5. SASARAN --}}
+                                          {{-- 5. SASARAN --}}
                                             <div class="col-md-6">
                                                 <label class="form-label fw-bold small text-muted text-uppercase mb-1">Jenis Media</label>
                                                 <select id="select-media" name="Media[]" multiple placeholder="Pilih Jenis Media..." autocomplete="off">
@@ -193,6 +187,7 @@
                                                     <option value="Media Lain" {{ in_array('Media Lain', request('Media', [])) ? 'selected' : '' }}>Media Lain</option>
                                                 </select>
                                             </div>
+
 
                                             {{-- BUTTONS ACTION --}}
                                             <div class="col-12 text-end mt-4 pt-2 border-top border-secondary-subtle">
@@ -214,6 +209,8 @@
                                 <table class="table table-hover mb-0" x-data="{ expanded: [] }">
                                     <thead class="table-light">
                                         <tr class="text-center align-middle">
+
+
                                             {{-- 1. NO (Tidak di-sort) --}}
                                             <th>No</th>
 
@@ -296,8 +293,7 @@
                                                     @endif
                                                 </a>
                                             </th>
-
-                                            
+                                         
                                             <th>
                                                 <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_at', 'sort_order' => (request('sort_by') == 'created_at' && request('sort_order') == 'asc') ? 'desc' : 'asc']) }}" 
                                                 class="text-decoration-none text-dark d-block text-nowrap">
@@ -332,18 +328,18 @@
                                                     <div class="d-flex gap-2 justify-content-center">
                                                         <button type="button" class="btn btn-info btn-sm text-white" 
                                                                 @click="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">
-                                                            <i class="bi" :class="expanded.includes({{ $data->id }}) ? 'bi-eye-slash' : 'bi-eye'"></i> Detail
+                                                            <i class="me-0 bi" :class="expanded.includes({{ $data->id }}) ? 'bi-eye-slash' : 'bi-eye'"></i> 
                                                         </button>
-                                                        <a href="#" class="btn btn-success btn-sm"><i class="bi bi-pencil-square"></i> Perbarui</a>
+                                                        <a href="{{ route('p2m.elektronik.edit', $data->id) }}" class="btn btn-success btn-sm"><i class="me-0 bi bi-pencil-square"></i></a>
                                                         <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.elektronik.destroy', $data->id) }}" method="POST" class="d-inline">
                                                             @csrf @method('DELETE')
-                                                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ $data->id }})"><i class="bi bi-trash"></i> Hapus</button>
+                                                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ $data->id }})"><i class="me-0 bi bi-trash"></i></button>
                                                         </form>
                                                     </div>
                                                 </td>
                                             </tr>
                                             <tr x-show="expanded.includes({{ $data->id }})" x-transition.duration.200ms class="bg-light">
-                                                <td colspan="10" class="text-start p-4">
+                                                <td colspan="11" class="text-start p-4">
                                                     <div class="card border-0">
                                                         <div class="card-body">
                                                             <h5 class="card-title fw-bold text-primary mb-3">Informasi Tambahan</h5>
@@ -426,7 +422,6 @@
                                 </div>
                                 
                             </div>
-                                                        
                         </div>
                     </div>
                 </div>
@@ -479,14 +474,14 @@
 
 @push('scripts')
 <script type="module">
-
     document.addEventListener("DOMContentLoaded", function() {
         const configTomSelect = { plugins: ['remove_button', 'clear_button'], persist: false, create: false, maxOptions: null };
         if(document.getElementById('select-satker')) new TomSelect('#select-satker', configTomSelect);
         if(document.getElementById('select-bulan')) new TomSelect('#select-bulan', configTomSelect);
         if(document.getElementById('select-anggaran')) new TomSelect('#select-anggaran', configTomSelect);
-        if(document.getElementById('select-media')) new TomSelect('#select-media', configTomSelect);
+        if(document.getElementById('select-sasaran')) new TomSelect('#select-sasaran', configTomSelect);
         if(document.getElementById('select-tahun')) new TomSelect('#select-tahun', configTomSelect);
+        if(document.getElementById('select-media')) new TomSelect('#select-media', configTomSelect);
         if(document.getElementById('select-pegawai')) new TomSelect('#select-pegawai', configTomSelect);
 
     });
@@ -507,7 +502,6 @@
             }
         });
     }
-
     @if(session('success'))
         const Toast = Swal.mixin({
             toast: true,
@@ -526,7 +520,5 @@
             title: "{{ session('message') }}"
         });
     @endif
-
-
 </script>
 @endpush

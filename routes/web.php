@@ -94,17 +94,23 @@ Route::middleware('auth')->group(function() {
             // P2M cfd
             Route::get('/cfd/create', [CfdController::class, 'create'])->name("cfd.create");
             Route::post('/cfd', [CfdController::class, 'store'])->name("cfd.store");
+            Route::get('/cfd/{id}/edit', [CfdController::class, 'edit'])->name('cfd.edit');
+            Route::put('/cfd/{id}', [CfdController::class, 'update'])->name('cfd.update');
             Route::delete('/cfd/{id}', [cfdController::class, 'destroy'])->name("cfd.destroy");
 
             // P2M elektronik
             Route::get('/elektronik/create', [ElektronikController::class, 'create'])->name("elektronik.create");
             Route::post('/elektronik', [ElektronikController::class, 'store'])->name("elektronik.store");
             Route::delete('/elektronik/{id}', [ElektronikController::class, 'destroy'])->name("elektronik.destroy");
+            Route::get('/elektronik/{id}/edit', [ElektronikController::class, 'edit'])->name('elektronik.edit');
+            Route::put('/elektronik/{id}', [ElektronikController::class, 'update'])->name('elektronik.update');
 
             // P2M online
             Route::get('/online/create', [OnlineController::class, 'create'])->name("online.create");
             Route::post('/online', [OnlineController::class, 'store'])->name("online.store");
             Route::delete('/online/{id}', [OnlineController::class, 'destroy'])->name("online.destroy");
+            Route::get('/online/{id}/edit', [OnlineController::class, 'edit'])->name('online.edit');
+            Route::put('/online/{id}', [OnlineController::class, 'update'])->name('online.update');
 
             // P2M upacara
             Route::get('/upacara/create', [UpacaraController::class, 'create'])->name("upacara.create");

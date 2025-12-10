@@ -1,4 +1,5 @@
 @extends('admin')
+
 @section('content')
     <main class="admin-main">
         <div class="container-fluid p-4 p-lg-5">
@@ -45,7 +46,7 @@
                         <div class="card-header bg-white border-0">
                             <div class="row align-items-center">
                                 <div class="col">
-                                    <h5 class="card-title mb-0 text-center">Data sosialisasi Car Free Day</h5>
+                                    <h5 class="card-title mb-0 text-center">Data sosialisasi Pada Lokasi Car Free Day</h5>
                                 </div>
                             </div>
                         </div>
@@ -53,7 +54,7 @@
                         <div class="card-body">
                             
                             {{-- FORM PEMBUNGKUS UTAMA --}}
-                            <form action="{{ route('p2m.cfd.index') }}" method="GET">
+                            <form action="{{ route('p2m.cfd.index') }}" method="GET" class="mb-8">
                                 
                                 {{-- TAMBAHAN: HIDDEN INPUT UNTUK MENJAGA SORTING SAAT EXPORT/FILTER --}}
                                 {{-- Ini mengambil nilai dari URL dan memasukkannya ke dalam form --}}
@@ -81,14 +82,6 @@
                                                     </span>
                                                 @endif
                                             </button>
-
-                                            {{-- 2. TOMBOL HAPUS FILTER (Hanya muncul jika ada filter/search aktif) --}}
-                                            {{-- @if($activeFilters > 0)
-                                                <a href="{{ route('p2m.sosialisasi.index') }}" 
-                                                   class="btn btn-danger btn-sm text-white d-flex align-items-center gap-1">
-                                                    <i class="bi bi-x-circle"></i> Hapus Filter
-                                                </a>
-                                            @endif --}}
 
                                             {{-- 3. TOMBOL EXPORT EXCEL --}}
                                             {{-- Tombol ini akan mengirim semua input filter meskipun panel filter sedang tertutup --}}
@@ -127,25 +120,19 @@
                                         <div class="row g-3">
                                             
                                             {{-- 1. SATUAN KERJA --}}
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Satuan Kerja</label>
-                                                <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satuan Kerja..." autocomplete="off">
-                                                    @foreach($satuanKerjas as $satker)
-                                                        <option value="{{ $satker->id }}" {{ in_array($satker->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>
-                                                            {{ $satker->satuan_kerja }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-
-                                            {{-- 2. ANGGARAN
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Anggaran</label>
-                                                <select id="select-anggaran" name="anggaran_pelaksanaan[]" multiple placeholder="Pilih Anggaran..." autocomplete="off">
-                                                    <option value="DIPA" {{ in_array('DIPA', request('anggaran_pelaksanaan', [])) ? 'selected' : '' }}>DIPA</option>
-                                                    <option value="NON DIPA" {{ in_array('NON DIPA', request('anggaran_pelaksanaan', [])) ? 'selected' : '' }}>NON DIPA</option>
-                                                </select>
-                                            </div> --}}
+                                            @if ($user->isAdmin())
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">Satuan Kerja</label>
+                                                    <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satuan Kerja..." autocomplete="off">
+                                                        @foreach($satuanKerjas as $satker)
+                                                            <option value="{{ $satker->id }}" {{ in_array($satker->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>
+                                                                {{ $satker->satuan_kerja }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            @endif
+                                            
                                             
                                             {{-- 3. BULAN --}}
                                             <div class="col-md-6">
@@ -179,16 +166,7 @@
                                                 </select>
                                             </div>
 
-                                            {{-- 5. SASARAN
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Sasaran Kegiatan</label>
-                                                <select id="select-sasaran" name="sasaran_kegiatan[]" multiple placeholder="Pilih Sasaran..." autocomplete="off">
-                                                    <option value="lingkungan pendidikan" {{ in_array('lingkungan pendidikan', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Pendidikan</option>
-                                                    <option value="lingkungan kerja" {{ in_array('lingkungan kerja', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Kerja</option>
-                                                    <option value="lingkungan masyarakat" {{ in_array('lingkungan masyarakat', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Masyarakat</option>
-                                                </select>
-                                            </div> --}}
-
+                        
                                             {{-- 6. PEGAWAI --}}
                                             <div class="col-md-6">
                                                 <label class="form-label fw-bold small text-muted text-uppercase mb-1">Pegawai</label>
@@ -214,7 +192,7 @@
                                                             @php $selectedNips = request('pegawai_nips', []); @endphp
                                                             @foreach($pegawais as $pgw)
                                                                 <option value="{{ $pgw->nip }}" {{ in_array($pgw->nip, $selectedNips) ? 'selected' : '' }}>
-                                                                    {{ $pgw->nama }}
+                                                                    {{ $pgw->nama }} - NIP: {{ $pgw->nip }}
                                                                 </option>
                                                             @endforeach
                                                         </select>
@@ -337,18 +315,18 @@
                                                     <div class="d-flex gap-2 justify-content-center">
                                                         <button type="button" class="btn btn-info btn-sm text-white" 
                                                                 @click="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">
-                                                            <i class="bi" :class="expanded.includes({{ $data->id }}) ? 'bi-eye-slash' : 'bi-eye'"></i> Detail
+                                                            <i class="me-0 bi" :class="expanded.includes({{ $data->id }}) ? 'bi-eye-slash' : 'bi-eye'"></i> 
                                                         </button>
-                                                        <a href="#" class="btn btn-success btn-sm"><i class="bi bi-pencil-square"></i> Perbarui</a>
+                                                        <a href="{{ route('p2m.cfd.edit', $data->id) }}" class="btn btn-success btn-sm"><i class="me-0 bi bi-pencil-square"></i></a>
                                                         <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.cfd.destroy', $data->id) }}" method="POST" class="d-inline">
                                                             @csrf @method('DELETE')
-                                                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ $data->id }})"><i class="bi bi-trash"></i> Hapus</button>
+                                                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ $data->id }})"><i class="me-0 bi bi-trash"></i></button>
                                                         </form>
                                                     </div>
                                                 </td>
                                             </tr>
                                             <tr x-show="expanded.includes({{ $data->id }})" x-transition.duration.200ms class="bg-light">
-                                                <td colspan="10" class="text-start p-4">
+                                                <td colspan="11" class="text-start p-4">
                                                     <div class="card border-0">
                                                         <div class="card-body">
                                                             <h5 class="card-title fw-bold text-primary mb-3">Informasi Tambahan</h5>
@@ -431,7 +409,6 @@
                                 </div>
                                 
                             </div>
-                                                        
                         </div>
                     </div>
                 </div>
@@ -479,9 +456,8 @@
         box-shadow: inset 0 -1px 0 #dee2e6;
     }
 
-    </style>
+</style>
 @endpush
-
 
 @push('scripts')
 <script type="module">
@@ -495,7 +471,6 @@
         if(document.getElementById('select-pegawai')) new TomSelect('#select-pegawai', configTomSelect);
 
     });
-
 
     window.confirmDelete = function(id) {
         Swal.fire({
@@ -513,27 +488,23 @@
             }
         });
     }
+    @if(session('success'))
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
 
-
-     @if(session('success'))
-            const Toast = Swal.mixin({
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-                didOpen: (toast) => {
-                    toast.addEventListener('mouseenter', Swal.stopTimer)
-                    toast.addEventListener('mouseleave', Swal.resumeTimer)
-                }
-            });
-
-            Toast.fire({
-                icon: 'success',
-                title: "{{ session('message') }}"
-            });
-        @endif
-
-
+        Toast.fire({
+            icon: 'success',
+            title: "{{ session('message') }}"
+        });
+    @endif
 </script>
 @endpush

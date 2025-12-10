@@ -18,7 +18,7 @@
                         <div class="card-header">
                             <div class="row align-items-center">
                                 <div class="col">
-                                    <h5 class="card-title mb-2" id="judul">Informasi Edukasi melalui Media Elektronik</h5>
+                                    <h5 class="card-title mb-2" id="judul">Informasi Edukasi Melalui Media Elektronik</h5>
                                 </div>
                             </div>
                         </div>
@@ -28,16 +28,9 @@
                                 <div class="row g-8 mb-5">
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-3">
-                                            <label for="exampleFormControlInput1" class="form-label">Satuan Kerja</label>
-                                            <select class="form-select @error('satuan_kerja_id') is-invalid @enderror" aria-label="Default select example" name="satuan_kerja_id">
-                                                <option value="" selected>Pilih Satuan Kerja</option>
-                                                @foreach ($satuanKerjas as $satuanKerja)
-                                                    <option value="{{ $satuanKerja->id }}" @selected(old('satuan_kerja_id') == $satuanKerja->id)>
-                                                    {{ $satuanKerja->satuan_kerja }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            @error('satuan_kerja_id')
+                                              <label for="exampleFormControlInput1" class="form-label">Tanggal Pelaksanaan</label>
+                                            <input type="date" class="form-control @error('tanggal_pelaksanaan') is-invalid @enderror" placeholder="Pilih Tanggal Pelaksanaan" name="tanggal_pelaksanaan" value="{{ old('tanggal_pelaksanaan') }}">
+                                            @error('tanggal_pelaksanaan')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
                                         </div>
@@ -60,16 +53,16 @@
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-3">
                                             <label for="exampleFormControlInput1" class="form-label">Media Yang Digunakan</label>
-                                            <select class="form-select @error('media') is-invalid @enderror" aria-label="Default select example" name="media">
+                                            <select class="form-select @error('Media') is-invalid @enderror" aria-label="Default select example" name="Media">
                                             <option value="" disabled selected>Pilih Media Yang Digunakan</option>
-                                            <option value="Televisi" @selected(old('media') == 'Televisi')>Televisi</option>
-                                            <option value="Radio" @selected(old('media') == 'Radio')>Radio</option>
-                                            <option value="Video Tron" @selected(old('media') == 'Video Tron')>Video Tron</option>
-                                            <option value="Bioskop" @selected(old('media') == 'Bioskop')>Bioskop</option>
-                                            <option value="Tv Plasma" @selected(old('media') == 'Tv Plasma')>Tv Plasma</option>
-                                            <option value="Media Lain" @selected(old('media') == 'Media Lain')>Media Lain</option>
+                                            <option value="Televisi" @selected(old('Media') == 'Televisi')>Televisi</option>
+                                            <option value="Radio" @selected(old('Media') == 'Radio')>Radio</option>
+                                            <option value="Video Tron" @selected(old('Media') == 'Video Tron')>Video Tron</option>
+                                            <option value="Bioskop" @selected(old('Media') == 'Bioskop')>Bioskop</option>
+                                            <option value="Tv Plasma" @selected(old('Media') == 'Tv Plasma')>Tv Plasma</option>
+                                            <option value="Media Lain" @selected(old('Media') == 'Media Lain')>Media Lain</option>
                                             </select>
-                                            @error('media')
+                                            @error('Media')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
                                         </div>
@@ -89,30 +82,20 @@
                                 </div>
                                
                                 <div class="row g-8 mb-5">
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-3">
-                                              <label for="exampleFormControlInput1" class="form-label">Tanggal Pelaksanaan</label>
-                                            <input type="date" class="form-control @error('tanggal_pelaksanaan') is-invalid @enderror" placeholder="Pilih Tanggal Pelaksanaan" name="tanggal_pelaksanaan" value="{{ old('tanggal_pelaksanaan') }}">
-                                            @error('tanggal_pelaksanaan')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
+
                                     <div class="col-12 col-lg-6">
                                     <div class="mb-3">
-                                    
-                                       <label for="exampleFormControlInput1" class="form-label">Masukan Durasi Pelaksanaan</label>
+                                       <label for="exampleFormControlInput1" class="form-label">Masukan Durasi Pelaksanaan (Hari) </label>
                                         <input type="number" class="form-control @error('durasi_pelaksanaan') is-invalid @enderror" placeholder="Masukkan Durasi Pelaksanaan (hari)" name="durasi_pelaksanaan" value="{{ old('durasi_pelaksanaan') }}">
                                         @error('durasi_pelaksanaan')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
                                     </div>
-                                </div>
 
-                                  <div class="row g-8 mb-5">
-                                    <div class="col-12">
-                                        <div class="mb-3">
+
+                                    <div class="col-12 col-lg-6">
+                                    <div class="mb-3">
                                             <label for="exampleFormControlInput1" class="form-label">Link Kelengkapan & Dokumentasi</label>
                                             <input type="text" class="form-control @error('link_kelengkapan_dokumentasi') is-invalid @enderror" placeholder="Masukkan Link Dokumentasi" name="link_kelengkapan_dokumentasi" value="{{ old('link_kelengkapan_dokumentasi') }}">
                                             @error('link_kelengkapan_dokumentasi')

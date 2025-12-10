@@ -18,7 +18,7 @@
                         <div class="card-header">
                             <div class="row align-items-center">
                                 <div class="col">
-                                    <h5 class="card-title mb-3" id="judul">Kegiatan Informasi dan Edukasi di lokasi CFD</h5>
+                                    <h5 class="card-title mb-3" id="judul">Kegiatan Informasi dan Edukasi Pada lokasi CFD</h5>
                                     <p>Input Data Kegiatan Informasi Dan Edukasi Dengan Membuka Stand Layanan Di Lokasi CFD (Car Free Day) Atau Lokasi Keramaian Lainnya (Pasar Tumpah, Expo, Pasar Malam Dll)</p>
                                 </div>
                             </div>
@@ -26,23 +26,20 @@
                         <div class="card-body">
                             <form action="{{ route('p2m.cfd.store') }}" method="POST">
                                 @csrf
+
                                 <div class="row g-8 mb-5">
+
+
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-3">
-                                            <label for="exampleFormControlInput1" class="form-label">Satuan Kerja</label>
-                                            <select class="form-select @error('satuan_kerja_id') is-invalid @enderror" aria-label="Default select example" name="satuan_kerja_id">
-                                                <option value="" selected>Pilih Satuan Kerja</option>
-                                                @foreach ($satuanKerjas as $satuanKerja)
-                                                    <option value="{{ $satuanKerja->id }}" @selected(old('satuan_kerja_id') == $satuanKerja->id)>
-                                                    {{ $satuanKerja->satuan_kerja }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            @error('satuan_kerja_id')
+                                            <label for="exampleFormControlInput1" class="form-label">Tempat Kegiatan</label>
+                                            <textarea class="form-control @error('tempat_kegiatan') is-invalid @enderror" rows="3" placeholder="Masukkan Tempat Kegiatan" name="tempat_kegiatan">{{ old('tempat_kegiatan') }}</textarea>
+                                            @error('tempat_kegiatan')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
                                         </div>
                                     </div>
+                                   
                                     <div class="col-12 col-lg-6">
                                          <div class="mb-3">
                                              <label for="exampleFormControlInput1" class="form-label">Tanggal Pelaksanaan</label>
@@ -53,6 +50,8 @@
                                         </div>
                                     </div>
                                 </div>
+
+
                                 <div class="row g-8 mb-5">
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-3">
@@ -83,24 +82,13 @@
                                             @error('jumlah_peserta')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
-
-
-
                                         </div>
                                     </div>
                                 </div>
                                
                                 <div class="row g-8 mb-5">
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-3">
-                                            <label for="exampleFormControlInput1" class="form-label">Tempat Kegiatan</label>
-                                            <textarea class="form-control @error('tempat_kegiatan') is-invalid @enderror" rows="3" placeholder="Masukkan Tempat Kegiatan" name="tempat_kegiatan">{{ old('tempat_kegiatan') }}</textarea>
-                                            @error('tempat_kegiatan')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-lg-6">
+                                    
+                                    <div class="col-12 col-lg-12">
                                         <div class="mb-3">
                                             <label for="exampleFormControlInput1" class="form-label">Link Kelengkapan & Dokumentasi</label>
                                             <input type="text" class="form-control @error('link_kelengkapan_dokumentasi') is-invalid @enderror" placeholder="Masukkan Link Dokumentasi" name="link_kelengkapan_dokumentasi" value="{{ old('link_kelengkapan_dokumentasi') }}">

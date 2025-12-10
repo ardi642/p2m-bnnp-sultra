@@ -1,10 +1,10 @@
 <?php
 
 namespace App\Http\Controllers\P2m;
-
+use App\Exports\SosialisasiExport; // Import Export Class
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\p2mElektronik;
-use App\Models\Pegawai;
 use App\Models\SatuanKerja;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
@@ -12,20 +12,32 @@ use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel; // Import Facade Excel
 use App\Exports\ElektronikExport;
 
+
 class ElektronikController extends Controller
 {
-   
-  // 1. FUNGSI KHUSUS UNTUK BUILD QUERY (Re-usable)
+    // 1. FUNGSI KHUSUS UNTUK BUILD QUERY (Re-usable)
     private function getFilteredQuery(Request $request)
     {
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
         $query = p2mElektronik::with('satuanKerja');
 
         // --- FILTER SAMA PERSIS SEPERTI SEBELUMNYA ---
-        if ($request->filled('satuan_kerja_id')) {
-            $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+
+        if ($user->isAdmin()) {
+            if ($request->filled('satuan_kerja_id')) {
+                $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+            }
         }
+        else if ($user->isOperator()){
+            $satkerId = $user->getSatkerId();
+            $query->where('satuan_kerja_id', $satkerId);
+        }
+
         if ($request->filled('bulan')) {
             $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
@@ -37,33 +49,30 @@ class ElektronikController extends Controller
             foreach ($activeYears as $y) {
                 $q->orWhereYear('tanggal_pelaksanaan', $y);
             }
-        }); 
+        });
         if ($request->filled('anggaran_pelaksanaan')) {
             $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
         }
-        if ($request->filled('Media')) {
+         if ($request->filled('Media')) {
             $query->whereIn('Media', $request->Media);
         }
-            
 
-
-        if ($request->filled('search')) {
+         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('nama_media', 'LIKE', "%{$search}%")
                     ->orWhere('Media', 'LIKE', "%{$search}%")
                     ->orWhere('tanggal_pelaksanaan', 'LIKE', "%{$search}%")
+                    ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%")
                     ->orWhere('durasi_pelaksanaan', 'LIKE', "%{$search}%")
                     ->orWhereHas('satuanKerja', function($subQ) use ($search) {
                         $subQ->where('satuan_kerja', 'LIKE', "%{$search}%");
                     });
             });
         }
-
-       
-
-         // Sorting
-        $sortBy = $request->input('sort_by', 'created_at');
+    
+    
+     $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
         $allowSort = ['anggaran_pelaksanaan', 'Media', 'nama_media', 'tanggal_pelaksanaan', 'durasi_pelaksanaan', 'created_at', 'satuan_kerja'];
 
@@ -82,14 +91,23 @@ class ElektronikController extends Controller
         return $query;
     }
 
-
-     public function index(Request $request): View {
+    public function index(Request $request): View {
         // Data Master
-        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if ($user->isAdmin()) {
+           
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        }
+        else if ($user->isOperator()) {
+            $satkerId = $user->getSatkerId();
+            $satuanKerjas = [];
+        }
+
         $years = p2mElektronik::selectRaw('YEAR(tanggal_pelaksanaan) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
-
         $query = $this->getFilteredQuery($request);
-
         $perPage = $request->input('per_page', 10);
         
         // Validasi keamanan (agar user tidak iseng input angka 1000000 bikin server down)
@@ -99,61 +117,149 @@ class ElektronikController extends Controller
         }
         $elektroniks = $query->paginate($perPage)->withQueryString();
                         
-        return view('p2m.elektronik.index', compact('elektroniks', 'satuanKerjas', 'years'));
+        return view('p2m.elektronik.index', compact('elektroniks', 'satuanKerjas', 'years','user'));
     }
 
-    public function create(): View {
-        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
-        // Ambil data pegawai untuk dropdown (urutkan nama a-z)
-             
-        return view('p2m.elektronik.create', compact('satuanKerjas'));
-    }
-
-
-      // 3. METHOD EXPORT (DOWNLOAD EXCEL)
+    // 3. METHOD EXPORT (DOWNLOAD EXCEL)
     public function export(Request $request) 
     {
         // Panggil fungsi query yang SAMA PERSIS dengan index
         // Bedanya: Kita tidak pakai paginate(), tapi langsung lempar ke Class Export
         $query = $this->getFilteredQuery($request);
 
-        return Excel::download(new ElektronikExport($query), 'Laporan_P2M_Media Elektronik.xlsx');
+        return Excel::download(new ElektronikExport($query), 'Laporan_P2M_Elektronik.xlsx');
+    }
+
+    public function create(): View {
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if ($user->isAdmin()) {
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        }
+        else if ($user->isOperator()){
+            $satuanKerjas = [];
+            $satkerId = $user->getSatkerId();
+            
+        }
+
+        return view('p2m.elektronik.create', compact('satuanKerjas'));
     }
 
     public function store(Request $request) {
-                    
+        
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        // 1. Validasi Input
         $validasi = $request->validate([
-            'satuan_kerja_id' => 'required',
             'anggaran_pelaksanaan' => 'required',
-            'media' => 'required',
+            'Media' => 'required',
             'durasi_pelaksanaan' => 'required',
             'tanggal_pelaksanaan' => 'required',
             'nama_media' => 'required',
-            'link_kelengkapan_dokumentasi' => 'required' ,  
+            'link_kelengkapan_dokumentasi' => 'required' ,
         ]);
 
-         // Gunakan Database Transaction agar data aman (jika gagal simpan pivot, data utama batal)
-        DB::transaction(function () use ($validasi) {
+        if ($user->isAdmin()) {
+            $rules['satuan_kerja_id'] = 'required';
+        }
+
+        // Gunakan Database Transaction agar data aman (jika gagal simpan pivot, data utama batal)
+        DB::transaction(function () use ($user, $validasi) {
             
-            // 2. Pisahkan data pegawai dari data utama
-            // Kita hapus 'pegawai_nips' dari array validasi karena kolom ini tidak ada di tabel p2m_sosialisasi
             $dataKegiatan = collect($validasi)->toArray();
-                      // 3. Simpan Data Kegiatan (Tabel Utama)
+           
+            if ($user->isOperator()) {
+                $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
+            }
+
+            // 3. Simpan Data Kegiatan (Tabel Utama)
             p2mElektronik::create($dataKegiatan);
+
         });
-
-
 
         return redirect()->route('p2m.elektronik.index')
             ->with('success', 'store')
             ->with('message', 'Berhasil menambahkan data');
-
-        // p2mElektronik::create($validasi);
-
-        return redirect()->route('p2m.elektronik.index')->with('status', 'success');
     }
 
- public function destroy($id) {
+    public function edit($id): View 
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Ambil Data Kegiatan beserta relasi Pegawai (untuk pre-fill input)
+        $kegiatan = p2mElektronik::findOrFail($id);
+        // Proteksi Hak Akses
+        // Jika Operator mencoba edit data milik Satker lain -> 403 Forbidden
+        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+            abort(403, 'Anda tidak berhak mengubah data Satuan Kerja lain.');
+        }
+
+        // Siapkan Data Master (Logic sama seperti Create)
+        if ($user->isAdmin()) {
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        } 
+        else {
+            $satuanKerjas = []; // Tidak dipakai di view operator
+            $satkerId = $user->getSatkerId();
+        }
+
+        return view('p2m.elektronik.edit', compact('kegiatan', 'satuanKerjas'));
+    }
+
+    public function update(Request $request, $id) 
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $kegiatan = p2mElektronik::findOrFail($id);
+
+        // Proteksi Update
+        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+            abort(403);
+        }
+
+        // Validasi
+        $rules = [
+            'anggaran_pelaksanaan' => 'required',
+            'Media' => 'required',
+            'durasi_pelaksanaan' => 'required',
+            'tanggal_pelaksanaan' => 'required',
+            'nama_media' => 'required',
+            'link_kelengkapan_dokumentasi' => 'required' ,
+        ];
+
+        // Jika Admin edit, validasi satker. Jika Operator, abaikan (pakai data lama)
+        if ($user->isAdmin()) {
+            $rules['satuan_kerja_id'] = 'required';
+        }
+
+        $validasi = $request->validate($rules);
+
+        DB::transaction(function () use ($validasi, $kegiatan, $user) {
+            
+            $dataUpdate = collect($validasi)->toArray();
+
+            // PENTING: Untuk Operator, JANGAN update satuan_kerja_id (biarkan yang lama)
+            // Untuk Admin, update sesuai input form
+            if ($user->isOperator()) {
+                unset($dataUpdate['satuan_kerja_id']); 
+            }
+
+            // Update Data Utama
+            $kegiatan->update($dataUpdate);
+
+        });
+
+        return redirect()->route('p2m.elektronik.index')
+            ->with('success', 'update') // Ubah wording session di JS index jika perlu
+            ->with('message', 'Data berhasil diperbarui');
+    }
+
+
+
+    public function destroy($id) {
         $data = p2mElektronik::findOrFail($id);
 
         $data->delete();
@@ -162,6 +268,4 @@ class ElektronikController extends Controller
         ->with('success', 'destroy')
         ->with('message', 'Data berhasil dihapus');
     }
-
-
 }

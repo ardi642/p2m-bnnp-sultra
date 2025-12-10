@@ -6,8 +6,8 @@
             {{-- Header --}}
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h1 class="h3 mb-0">Kegiatan P2M</h1>
-                    <p class="text-muted mb-0">Master Data P2M</p>
+                    <h1 class="h3 mb-0">P2M Sosialisasi Tatap Muka/Konvensional</h1>
+                    <p class="text-muted mb-0">Master Data Sosialisasi Tatap Muka/Konvensional</p>
                 </div>
             </div>
             
@@ -195,7 +195,7 @@
                                             </div>
 
                                             {{-- 6. PEGAWAI --}}
-                                            <div class="col-md-6">
+                                            <div class="col-md-12">
                                                 <label class="form-label fw-bold small text-muted text-uppercase mb-1">Pegawai</label>
                                                 
                                                 <div class="input-group" x-data="{ logic: '{{ request('pegawai_logic', 'OR') }}' }">

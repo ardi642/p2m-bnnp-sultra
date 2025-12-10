@@ -7,11 +7,11 @@
                 <div class="col-12 col-lg-10">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
-                            <h1 class="h3 mb-0">Edit Data Sosialisasi Tatap Muka/Konvensional</h1>
-                            <p class="text-muted mb-0">Perbarui Data Sosialisasi Tatap Muka/Konvensional</p>
+                            <h1 class="h3 mb-0">Edit Data KIE Keliling</h1>
+                            <p class="text-muted mb-0">Perbarui Data KIE Keliling</p>
                         </div>
                         {{-- PERBAIKAN: Tombol Kembali ke Index Murni --}}
-                        <a href="{{ route('p2m.sosialisasi.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <a href="{{ route('p2m.kie.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
                     </div>
@@ -26,7 +26,7 @@
                         </div>
                         <div class="card-body">
                             {{-- Form Edit --}}
-                            <form id="form-edit-p2m" action="{{ route('p2m.sosialisasi.update', $kegiatan->id) }}" method="POST">
+                            <form id="form-edit-p2m" action="{{ route('p2m.kie.update', $kegiatan->id) }}" method="POST">
                                 @csrf
                                 @method('PUT')
                                 
@@ -48,39 +48,12 @@
                                         </div>
                                     </div>
                                     @endif
-
+                                    
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-0">
-                                            <label class="form-label">Anggaran Pelaksanaan</label>
-                                            <select class="form-select @error('anggaran_pelaksanaan') is-invalid @enderror" name="anggaran_pelaksanaan">
-                                                <option value="DIPA" @selected(old('anggaran_pelaksanaan', $kegiatan->anggaran_pelaksanaan) == 'DIPA')>DIPA</option>
-                                                <option value="NON DIPA" @selected(old('anggaran_pelaksanaan', $kegiatan->anggaran_pelaksanaan) == 'NON DIPA')>NON DIPA</option>
-                                            </select>
-                                            @error('anggaran_pelaksanaan') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Nama Kegiatan</label>
-                                            <input type="text" class="form-control @error('nama_kegiatan') is-invalid @enderror" 
-                                                   name="nama_kegiatan" 
-                                                   value="{{ old('nama_kegiatan', $kegiatan->nama_kegiatan) }}">
-                                            @error('nama_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
-                                    </div>
-
-                                    {{-- LAYOUT: Sasaran (Kiri) & Tanggal (Kanan) --}}
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Sasaran Kegiatan</label>
-                                            <select class="form-select @error('sasaran_kegiatan') is-invalid @enderror" name="sasaran_kegiatan">
-                                                @php $val = old('sasaran_kegiatan', $kegiatan->sasaran_kegiatan); @endphp
-                                                <option value="lingkungan pendidikan" @selected($val == 'lingkungan pendidikan')>Lingkungan Pendidikan</option>
-                                                <option value="lingkungan kerja" @selected($val == 'lingkungan kerja')>Lingkungan Kerja</option>
-                                                <option value="lingkungan masyarakat" @selected($val == 'lingkungan masyarakat')>Lingkungan Masyarakat</option>
-                                            </select>
-                                            @error('sasaran_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            <label class="form-label">Tempat Kegiatan</label>
+                                            <textarea class="form-control @error('tempat_kegiatan') is-invalid @enderror" rows="3" name="tempat_kegiatan">{{ old('tempat_kegiatan', $kegiatan->tempat_kegiatan) }}</textarea>
+                                            @error('tempat_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
 
@@ -91,15 +64,6 @@
                                                    name="tanggal_pelaksanaan" 
                                                    value="{{ old('tanggal_pelaksanaan', $kegiatan->tanggal_pelaksanaan->format('Y-m-d')) }}">
                                             @error('tanggal_pelaksanaan') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
-                                    </div>
-
-                                    {{-- LAYOUT: Tempat (Kiri) & Katim (Kanan) --}}
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Tempat Kegiatan</label>
-                                            <textarea class="form-control @error('tempat_kegiatan') is-invalid @enderror" rows="3" name="tempat_kegiatan">{{ old('tempat_kegiatan', $kegiatan->tempat_kegiatan) }}</textarea>
-                                            @error('tempat_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
 
@@ -119,17 +83,6 @@
 
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-0">
-                                            <label class="form-label fw-bold">Jumlah Peserta</label>
-                                            <input type="number" class="form-control @error('jumlah_peserta') is-invalid @enderror" 
-                                                    name="jumlah_peserta" 
-                                                    value="{{ old('jumlah_peserta', $kegiatan->jumlah_peserta) }}">
-                                            @error('jumlah_peserta') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
-                                    </div>
-
-                                    {{-- === BAGIAN 3: LINK === --}}
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
                                             <label class="form-label">Link Dokumentasi</label>
                                             <input type="text" class="form-control @error('link_kelengkapan_dokumentasi') is-invalid @enderror" 
                                                    name="link_kelengkapan_dokumentasi" 
@@ -145,7 +98,7 @@
                                     </div>
                                     <div class="col-12 col-lg-auto">
                                         {{-- PERBAIKAN: Tombol Reset pakai LINK RELOAD --}}
-                                        <a href="{{ route('p2m.sosialisasi.edit', $kegiatan->id) }}" class="btn btn-secondary w-100 mb-4 mb-lg-0">
+                                        <a href="{{ route('p2m.kie.edit', $kegiatan->id) }}" class="btn btn-secondary w-100 mb-4 mb-lg-0">
                                             Reset Data
                                         </a>
                                     </div>

@@ -6,8 +6,8 @@
                 <div class="col-12 col-lg-10">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
-                            <h1 class="h3 mb-0">Kegiatan P2M</h1>
-                            <p class="text-muted mb-0">Input Data Kegiatan P2M</p>
+                            <h1 class="h3 mb-0">P2M Sosialisasi Tatap Muka/Konvensional</h1>
+                            <p class="text-muted mb-0">Input Data Sosialisasi Tatap Muka/Konvensional</p>
                         </div>
                     </div>
                 </div>
@@ -20,7 +20,7 @@
                         <div class="card-header">
                             <div class="row align-items-center">
                                 <div class="col">
-                                    <h5 class="card-title mb-2" id="judul">Input Data Kegiatan P2M Sosialisasi Tatap Muka/Konvensional</h5>
+                                    <h5 class="card-title mb-2" id="judul">Input Data Sosialisasi Tatap Muka/Konvensional</h5>
                                 </div>
                             </div>
                         </div>

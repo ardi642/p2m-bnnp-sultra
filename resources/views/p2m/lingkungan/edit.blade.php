@@ -7,11 +7,11 @@
                 <div class="col-12 col-lg-10">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
-                            <h1 class="h3 mb-0">Edit Data Sosialisasi Tatap Muka/Konvensional</h1>
-                            <p class="text-muted mb-0">Perbarui Data Sosialisasi Tatap Muka/Konvensional</p>
+                            <h1 class="h3 mb-0">Edit Data Lingkungan Bersinar</h1>
+                            <p class="text-muted mb-0">Perbarui Data Lingkungan Bersinar yang telah Terbentuk</p>
                         </div>
                         {{-- PERBAIKAN: Tombol Kembali ke Index Murni --}}
-                        <a href="{{ route('p2m.sosialisasi.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <a href="{{ route('p2m.lingkungan.index') }}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
                     </div>
@@ -26,7 +26,7 @@
                         </div>
                         <div class="card-body">
                             {{-- Form Edit --}}
-                            <form id="form-edit-p2m" action="{{ route('p2m.sosialisasi.update', $kegiatan->id) }}" method="POST">
+                            <form id="form-edit-p2m" action="{{ route('p2m.lingkungan.update', $kegiatan->id) }}" method="POST">
                                 @csrf
                                 @method('PUT')
                                 
@@ -41,52 +41,43 @@
                                             <select class="form-select @error('satuan_kerja_id') is-invalid @enderror" name="satuan_kerja_id">
                                                 <option value="">Pilih Satuan Kerja</option>
                                                 @foreach ($satuanKerjas as $satker)
-                                                    <option value="{{ $satker->id }}" @selected(old('satuan_kerja_id', $kegiatan->satuan_kerja_id) == $satker->id)>{{ $satker->satuan_kerja }}</option>
+                                                <option value="{{ $satker->id }}" @selected(old('satuan_kerja_id', $kegiatan->satuan_kerja_id) == $satker->id)>{{ $satker->satuan_kerja }}</option>
                                                 @endforeach
                                             </select>
                                             @error('satuan_kerja_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
                                     @endif
-
+                                    
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-0">
-                                            <label class="form-label">Anggaran Pelaksanaan</label>
-                                            <select class="form-select @error('anggaran_pelaksanaan') is-invalid @enderror" name="anggaran_pelaksanaan">
-                                                <option value="DIPA" @selected(old('anggaran_pelaksanaan', $kegiatan->anggaran_pelaksanaan) == 'DIPA')>DIPA</option>
-                                                <option value="NON DIPA" @selected(old('anggaran_pelaksanaan', $kegiatan->anggaran_pelaksanaan) == 'NON DIPA')>NON DIPA</option>
+                                            <label class="form-label">Sasaran</label>
+                                            <select class="form-select @error('sasaran') is-invalid @enderror" name="sasaran">
+                                                <option value="Sekolah/Kampus Bersinar" @selected(old('sasaran', $kegiatan->sasaran) == 'Sekolah/Kampus Bersinar')>Sekolah/Kampus Bersinar</option>
+                                                <option value="Pondok Pesantren Bersinar" @selected(old('sasaran', $kegiatan->sasaran) == 'Pondok Pesantren Bersinar')>Pondok Pesantren Bersinar</option>
+                                                <option value="Tempat Hiburan Bersinar" @selected(old('sasaran', $kegiatan->sasaran) == 'Tempat Hiburan Bersinar')>Tempat Hiburan Bersinar</option>
+                                                <option value="Tempat Wisata Bersinar" @selected(old('sasaran', $kegiatan->sasaran) == 'Tempat Wisata Bersinar')>Tempat Wisata Bersinar</option>
+                                                <option value="Industri Bersinar" @selected(old('sasaran', $kegiatan->sasaran) == 'Industri Bersinar')>Industri Bersinar</option>
                                             </select>
-                                            @error('anggaran_pelaksanaan') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
-                                    </div>
-
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Nama Kegiatan</label>
-                                            <input type="text" class="form-control @error('nama_kegiatan') is-invalid @enderror" 
-                                                   name="nama_kegiatan" 
-                                                   value="{{ old('nama_kegiatan', $kegiatan->nama_kegiatan) }}">
-                                            @error('nama_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
-                                    </div>
-
-                                    {{-- LAYOUT: Sasaran (Kiri) & Tanggal (Kanan) --}}
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Sasaran Kegiatan</label>
-                                            <select class="form-select @error('sasaran_kegiatan') is-invalid @enderror" name="sasaran_kegiatan">
-                                                @php $val = old('sasaran_kegiatan', $kegiatan->sasaran_kegiatan); @endphp
-                                                <option value="lingkungan pendidikan" @selected($val == 'lingkungan pendidikan')>Lingkungan Pendidikan</option>
-                                                <option value="lingkungan kerja" @selected($val == 'lingkungan kerja')>Lingkungan Kerja</option>
-                                                <option value="lingkungan masyarakat" @selected($val == 'lingkungan masyarakat')>Lingkungan Masyarakat</option>
+                                            
                                             </select>
-                                            @error('sasaran_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            @error('sasaran') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
 
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-0">
-                                            <label class="form-label">Tanggal Pelaksanaan</label>
+                                            <label class="form-label">Nama Tempat/Wilayah/Instansi</label>
+                                            <input type="text" class="form-control @error('nama_tempat') is-invalid @enderror" 
+                                                   name="nama_tempat" 
+                                                   value="{{ old('nama_tempat', $kegiatan->nama_tempat) }}">
+                                            @error('nama_tempat') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-lg-6">
+                                        <div class="mb-0">
+                                            <label class="form-label">Tanggal Pencanangan/Pengukuhan</label>
                                             <input type="date" class="form-control @error('tanggal_pelaksanaan') is-invalid @enderror" 
                                                    name="tanggal_pelaksanaan" 
                                                    value="{{ old('tanggal_pelaksanaan', $kegiatan->tanggal_pelaksanaan->format('Y-m-d')) }}">
@@ -94,18 +85,19 @@
                                         </div>
                                     </div>
 
-                                    {{-- LAYOUT: Tempat (Kiri) & Katim (Kanan) --}}
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-0">
-                                            <label class="form-label">Tempat Kegiatan</label>
-                                            <textarea class="form-control @error('tempat_kegiatan') is-invalid @enderror" rows="3" name="tempat_kegiatan">{{ old('tempat_kegiatan', $kegiatan->tempat_kegiatan) }}</textarea>
-                                            @error('tempat_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                            <label class="form-label">Jumlah Penggiat P4GN yang Terbentuk</label>
+                                            <input type="number" class="form-control @error('jumlah_penggiat') is-invalid @enderror" 
+                                                    name="jumlah_penggiat" 
+                                                    value="{{ old('jumlah_penggiat', $kegiatan->jumlah_penggiat) }}">
+                                            @error('jumlah_penggiat') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                         </div>
                                     </div>
-
+                                    
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-0">
-                                            <label class="form-label">Nama Pegawai yang ditugaskan</label>
+                                            <label class="form-label">Nama Penanggung Jawab Wilayah Bersinar</label>
                                             <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih Pegawai..." autocomplete="off" class="form-control @error('pegawai_nips') is-invalid @enderror">
                                                 @foreach ($pegawais as $pgw)
                                                     <option value="{{ $pgw->nip }}" @selected(in_array($pgw->nip, old('pegawai_nips', $selectedPegawaiNips)))>
@@ -119,16 +111,17 @@
 
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-0">
-                                            <label class="form-label fw-bold">Jumlah Peserta</label>
-                                            <input type="number" class="form-control @error('jumlah_peserta') is-invalid @enderror" 
-                                                    name="jumlah_peserta" 
-                                                    value="{{ old('jumlah_peserta', $kegiatan->jumlah_peserta) }}">
-                                            @error('jumlah_peserta') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
+                                            <label class="form-label">Nomor HP Penanggung
+                                                Jawab Wilayah Bersinar</label>
+                                            <input type="text" class="form-control @error('nomor_hp') is-invalid @enderror" 
+                                                    name="nomor_hp" 
+                                                    value="{{ old('nomor_hp', $kegiatan->nomor_hp) }}">
+                                            @error('nomor_hp') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div> 
                                     </div>
 
                                     {{-- === BAGIAN 3: LINK === --}}
-                                    <div class="col-12 col-lg-6">
+                                    <div class="col-12 col-lg-12">
                                         <div class="mb-0">
                                             <label class="form-label">Link Dokumentasi</label>
                                             <input type="text" class="form-control @error('link_kelengkapan_dokumentasi') is-invalid @enderror" 
@@ -145,7 +138,7 @@
                                     </div>
                                     <div class="col-12 col-lg-auto">
                                         {{-- PERBAIKAN: Tombol Reset pakai LINK RELOAD --}}
-                                        <a href="{{ route('p2m.sosialisasi.edit', $kegiatan->id) }}" class="btn btn-secondary w-100 mb-4 mb-lg-0">
+                                        <a href="{{ route('p2m.lingkungan.edit', $kegiatan->id) }}" class="btn btn-secondary w-100 mb-4 mb-lg-0">
                                             Reset Data
                                         </a>
                                     </div>

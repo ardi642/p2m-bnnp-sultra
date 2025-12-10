@@ -10,6 +10,8 @@ use App\Http\Controllers\P2m\CfdController;
 use App\Http\Controllers\P2m\DesaBersinarController;
 use App\Models\p2mcfd;
 
+use App\Http\Controllers\DashboardController;
+
 use App\Http\Controllers\P2m\ElektronikController;
 use App\Models\p2mElektronik;
 
@@ -20,12 +22,19 @@ use App\Models\p2mOnline;
 
 use Illuminate\Support\Facades\Route;
 
+
+// Route::get('/dashboard', [DashboardController::class, 'index']);
+
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'index'])->name('login');
     Route::post('/login', [LoginController::class, 'authenticate'])->name('login.authenticate');
 });
 
 Route::middleware('auth')->group(function() {
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
     Route::get('/', function () {
         return view('welcome');
     });
@@ -109,16 +118,22 @@ Route::middleware('auth')->group(function() {
             // P2M upacara
             Route::get('/upacara/create', [UpacaraController::class, 'create'])->name("upacara.create");
             Route::post('/upacara', [UpacaraController::class, 'store'])->name("upacara.store");
+            Route::get('/upacara/{id}/edit', [UpacaraController::class, 'edit'])->name('upacara.edit');
+            Route::put('/upacara/{id}', [UpacaraController::class, 'update'])->name('upacara.update');
             Route::delete('/upacara/{id}', [UpacaraController::class, 'destroy'])->name("upacara.destroy");
 
             // P2M kie
             Route::get('/kie/create', [KieController::class, 'create'])->name("kie.create");
             Route::post('/kie', [KieController::class, 'store'])->name("kie.store");
+            Route::get('/kie/{id}/edit', [KieController::class, 'edit'])->name('kie.edit');
+            Route::put('/kie/{id}', [KieController::class, 'update'])->name('kie.update');
             Route::delete('/kie/{id}', [KieController::class, 'destroy'])->name("kie.destroy");
 
             // P2M lingkungan
             Route::get('/lingkungan/create', [LingkunganController::class, 'create'])->name("lingkungan.create");
             Route::post('/lingkungan', [LingkunganController::class, 'store'])->name("lingkungan.store");
+            Route::get('/lingkungan/{id}/edit', [LingkunganController::class, 'edit'])->name('lingkungan.edit');
+            Route::put('/lingkungan/{id}', [LingkunganController::class, 'update'])->name('lingkungan.update');
             Route::delete('/lingkungan/{id}', [LingkunganController::class, 'destroy'])->name("lingkungan.destroy");
 
             // P2M tes urine

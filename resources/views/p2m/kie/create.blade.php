@@ -3,11 +3,14 @@
     <!-- Main Content -->
     <main class="admin-main">
         <div class="container-fluid p-4 p-lg-5">
-            <!-- Page Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 mb-0">Kegiatan P2M</h1>
-                    <p class="text-muted mb-0">Input Data Kegiatan P2M</p>
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-10">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h1 class="h3 mb-0">P2M KIE Keliling</h1>
+                            <p class="text-muted mb-0">Input Data KIE Keliling</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             @include('p2m.partials.select-p2m-create')
@@ -25,11 +28,13 @@
                         <div class="card-body">
                             <form action="{{ route('p2m.kie.store') }}" method="POST">
                                 @csrf
-                                <div class="row g-8 mb-5">
+                                <div class="row g-6 mb-5">
+                                    {{-- Input 1: Satuan Kerja (Hanya jika admin) --}}
+                                    @if ($pegawai == null)    
                                     <div class="col-12 col-lg-6">
-                                        <div class="mb-3">
-                                            <label for="exampleFormControlInput1" class="form-label">Satuan Kerja</label>
-                                            <select class="form-select @error('satuan_kerja_id') is-invalid @enderror" aria-label="Default select example" name="satuan_kerja_id">
+                                        <div class="mb-0">
+                                            <label for="satuan_kerja_id" class="form-label">Satuan Kerja</label>
+                                            <select class="form-select @error('satuan_kerja_id') is-invalid @enderror" name="satuan_kerja_id">
                                                 <option value="" selected>pilih satuan kerja</option>
                                                 @foreach ($satuanKerjas as $satuanKerja)
                                                     <option value="{{ $satuanKerja->id }}" @selected(old('satuan_kerja_id') == $satuanKerja->id)>
@@ -42,61 +47,58 @@
                                             @enderror
                                         </div>
                                     </div>
+                                    @endif
+
                                     <div class="col-12 col-lg-6">
-                                        <div class="mb-3">
-                                            <label for="exampleFormControlInput1" class="form-label">Tempat Kegiatan</label>
+                                        <div class="mb-0">
+                                            <label for="tempat_kegiatan" class="form-label">Tempat Kegiatan</label>
                                             <textarea class="form-control @error('tempat_kegiatan') is-invalid @enderror" rows="2" placeholder="masukkan tempat kegiatan" name="tempat_kegiatan" value="{{ old('tempat_kegiatan') }}"></textarea>
                                             @error('tempat_kegiatan')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
                                         </div>
                                     </div>
-                                </div>
-                                <div class="row g-8 mb-5">
+
                                     <div class="col-12 col-lg-6">
-                                        <div class="mb-3">
-                                            <label for="exampleFormControlInput1" class="form-label">Tanggal Pelaksanaan Kegiatan</label>
-                                            <input type="date" class="form-control @error('tanggal_pelaksanaan') is-invalid @enderror" placeholder="masukkan tanggal pelaksanaan" name="tanggal_pelaksanaan" value="{{ old('tanggal_pelaksanaan') }}">
+                                        <div class="mb-0">
+                                            <label for="tanggal_pelaksanaan" class="form-label">Tanggal Pelaksanaan</label>
+                                            <input type="date" class="form-control @error('tanggal_pelaksanaan') is-invalid @enderror" name="tanggal_pelaksanaan" value="{{ old('tanggal_pelaksanaan') }}">
                                             @error('tanggal_pelaksanaan')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
                                         </div>
                                     </div>
+
                                     <div class="col-12 col-lg-6">
-                                        <div class="mb-3">
+                                        <div class="mb-0">
                                             <label for="select-pegawai" class="form-label">Nama Pegawai yang ditugaskan</label>
-                                            
-                                            {{-- Perhatikan name="pegawai_nips[]" pakai kurung siku karena multiple --}}
                                             <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih Pegawai..." autocomplete="off" class="form-control @error('pegawai_nips') is-invalid @enderror">
                                                 <option value="">Pilih pegawai...</option>
-                                                @foreach ($pegawais as $pegawai)
-                                                    <option value="{{ $pegawai->nip }}" 
-                                                        @selected(collect(old('pegawai_nips'))->contains($pegawai->nip))>
-                                                        {{-- FORMAT TAMPILAN: Nama - Satuan Kerja - NIP --}}
-                                                        {{ $pegawai->nama }} - {{ $pegawai->satuanKerja->satuan_kerja ?? '-' }} - NIP: {{ $pegawai->nip }}
+                                                @foreach ($pegawais as $pegawai_item)
+                                                    <option value="{{ $pegawai_item->nip }}" 
+                                                        @selected(collect(old('pegawai_nips'))->contains($pegawai_item->nip))>
+                                                        {{ $pegawai_item->nama }} - NIP: {{ $pegawai_item->nip }}
                                                     </option>
                                                 @endforeach
                                             </select>
-                                            
-                                            {{-- Menampilkan pesan error validasi --}}
                                             @error('pegawai_nips') 
                                                 <div class="invalid-feedback d-block">{{ $message }}</div> 
                                             @enderror
                                         </div>
                                     </div>
-                                </div>
-                                <div class="row g-8 mb-5">
-                                     <div class="col-12 col-lg-12">
-                                       <div class="mb-3">
-                                            <label for="exampleFormControlInput1" class="form-label">Link Kelengkapan & Dokumentasi</label>
+
+                                    <div class="col-12 col-lg-6">
+                                        <div class="mb-0">
+                                            <label for="link_kelengkapan_dokumentasi" class="form-label">Link Kelengkapan & Dokumentasi</label>
                                             <input type="text" class="form-control @error('link_kelengkapan_dokumentasi') is-invalid @enderror" placeholder="masukkan link" name="link_kelengkapan_dokumentasi" value="{{ old('link_kelengkapan_dokumentasi') }}">
                                             @error('link_kelengkapan_dokumentasi')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
                                         </div>
                                     </div>
+                                    
                                 </div>
-                                <div class="row mb-5 justify-content-end">
+                                <div class="row justify-content-end">
                                     <div class="col-12 col-lg-auto">
                                         <button type="submit" class="btn btn-primary w-100 mb-4 mb-lg-0">Tambah Data</button>
                                     </div>

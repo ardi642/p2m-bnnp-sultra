@@ -9,6 +9,7 @@ use App\Models\Pegawai; // Import Model Pegawai
 use Illuminate\View\View;
 use Illuminate\Http\Request;
 use App\Exports\KieExport; // Import Export Class
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel; 
 
@@ -16,14 +17,24 @@ class KieController extends Controller
 {
     private function getFilteredQuery(Request $request)
     {
+         /** @var \App\Models\User $user */
+        $user = Auth::user();
+
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
         $query = P2mKie::with('pegawai', 'satuanKerja');
 
         // --- FILTER SAMA PERSIS SEPERTI SEBELUMNYA ---
-        if ($request->filled('satuan_kerja_id')) {
-            $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+        if ($user->isAdmin()) {
+            if ($request->filled('satuan_kerja_id')) {
+                $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+            }
         }
+        else if ($user->isOperator()){
+            $satkerId = $user->getSatkerId();
+            $query->where('satuan_kerja_id', $satkerId);
+        }
+
         if ($request->filled('bulan')) {
             $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
@@ -89,9 +100,23 @@ class KieController extends Controller
     }
 
     public function index(Request $request): View {
-        // Data Master
-        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
-        $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
+         // Data Master
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if ($user->isAdmin()) {
+            $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        }
+        else if ($user->isOperator()) {
+            $satkerId = $user->getSatkerId();
+            $pegawais = Pegawai::where('satuan_kerja_id', $satkerId)
+                                ->orderBy('nama', 'asc')
+                                ->get(['nip', 'nama']);
+            $satuanKerjas = [];
+        }
+
         $years = P2mKie::selectRaw('YEAR(tanggal_pelaksanaan) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
@@ -106,7 +131,7 @@ class KieController extends Controller
 
         $kies = $query->paginate($perPage)->withQueryString();
 
-        return view('p2m.kie.index', compact('kies', 'satuanKerjas', 'years', 'pegawais'));
+        return view('p2m.kie.index', compact('kies', 'satuanKerjas', 'years', 'pegawais', 'user'));
     }
 
     // 3. METHOD EXPORT (DOWNLOAD EXCEL)
@@ -120,20 +145,32 @@ class KieController extends Controller
     }
 
     public function create(): View {
-        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+         /** @var \App\Models\User $user */
+        $user = Auth::user();
 
-        // Ambil data pegawai untuk dropdown (urutkan nama a-z)     
-        $pegawais = Pegawai::with('satuanKerja')->orderBy('nama', 'asc')->get();
-        
+        if ($user->isAdmin()) {
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+            $pegawais = Pegawai::with('satuanKerja')->orderBy('nama', 'asc')->get();
+        }
+        else if ($user->isOperator()){
+            $satuanKerjas = [];
+            $satkerId = $user->getSatkerId();
+            $pegawais = Pegawai::with('satuanKerja')
+                ->where('satuan_kerja_id', $satkerId)
+                ->orderBy('nama', 'asc')
+                ->get();
+        }
+
         return view('p2m.kie.create', compact('satuanKerjas', 'pegawais'));
     }
 
     public function store(Request $request) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
                     
         $validasi = $request->validate([
-            'satuan_kerja_id' => 'required',
             'tempat_kegiatan' => 'required',
-            'tanggal_pelaksanaan' => 'required',
+            'tanggal_pelaksanaan' => 'required|date',
             'link_kelengkapan_dokumentasi' => 'required',
             
             // Validasi Array Pegawai (NIP)
@@ -141,13 +178,21 @@ class KieController extends Controller
             'pegawai_nips.*' => 'exists:pegawai,nip', // Pastikan NIP valid di DB
         ]);
 
+        if ($user->isAdmin()) {
+            $rules['satuan_kerja_id'] = 'required';
+        }
+
         // Gunakan Database Transaction agar data aman (jika gagal simpan pivot, data utama batal)
-        DB::transaction(function () use ($validasi) {
+        DB::transaction(function () use ($user, $validasi) {
             
             // 2. Pisahkan data pegawai dari data utama
             // Kita hapus 'pegawai_nips' dari array validasi karena kolom ini tidak ada di tabel p2m_kie
             $dataKegiatan = collect($validasi)->except('pegawai_nips')->toArray();
             $pegawaiNips = $validasi['pegawai_nips'];
+
+            if ($user->isOperator()) {
+                $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
+            }
 
             // 3. Simpan Data Kegiatan (Tabel Utama)
             $kegiatan = P2mKie::create($dataKegiatan);
@@ -160,6 +205,91 @@ class KieController extends Controller
         return redirect()->route('p2m.kie.index')
             ->with('success', 'store')
             ->with('message', 'Berhasil menambahkan data');
+    }
+    
+    public function edit($id): View 
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Ambil Data Kegiatan beserta relasi Pegawai (untuk pre-fill input)
+        $kegiatan = P2mKie::with('pegawai')->findOrFail($id);
+
+        // Proteksi Hak Akses
+        // Jika Operator mencoba edit data milik Satker lain -> 403 Forbidden
+        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+            abort(403, 'Anda tidak berhak mengubah data Satuan Kerja lain.');
+        }
+
+        // Siapkan Data Master (Logic sama seperti Create)
+        if ($user->isAdmin()) {
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+            $pegawais = Pegawai::orderBy('nama', 'asc')->get();
+        } 
+        else {
+            $satuanKerjas = []; // Tidak dipakai di view operator
+            $satkerId = $user->getSatkerId();
+            $pegawais = Pegawai::where('satuan_kerja_id', $satkerId)
+                ->orderBy('nama', 'asc')
+                ->get();
+        }
+
+        // Ambil Array NIP Pegawai yang sudah terpilih sebelumnya
+        // Ini penting untuk mengisi Tom Select nanti
+        $selectedPegawaiNips = $kegiatan->pegawai->pluck('nip')->toArray();
+
+        return view('p2m.kie.edit', compact('kegiatan', 'satuanKerjas', 'pegawais', 'selectedPegawaiNips'));
+    }
+
+        public function update(Request $request, $id) 
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $kegiatan = P2mKie::findOrFail($id);
+
+        // Proteksi Update
+        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+            abort(403);
+        }
+
+        // Validasi
+        $rules = [
+            'tempat_kegiatan' => 'required',
+            'tanggal_pelaksanaan' => 'required|date',
+            'link_kelengkapan_dokumentasi' => 'required',           
+            'pegawai_nips' => 'required|array',
+            'pegawai_nips.*' => 'exists:pegawai,nip',
+        ];
+
+        // Jika Admin edit, validasi satker. Jika Operator, abaikan (pakai data lama)
+        if ($user->isAdmin()) {
+            $rules['satuan_kerja_id'] = 'required';
+        }
+
+        $validasi = $request->validate($rules);
+
+        DB::transaction(function () use ($validasi, $kegiatan, $user) {
+            
+            $pegawaiNips = $validasi['pegawai_nips'];
+            $dataUpdate = collect($validasi)->except('pegawai_nips')->toArray();
+
+            // PENTING: Untuk Operator, JANGAN update satuan_kerja_id (biarkan yang lama)
+            // Untuk Admin, update sesuai input form
+            if ($user->isOperator()) {
+                unset($dataUpdate['satuan_kerja_id']); 
+            }
+
+            // Update Data Utama
+            $kegiatan->update($dataUpdate);
+
+            // Update Relasi Pegawai (SYNC)
+            // sync() akan menghapus yang tidak dipilih, dan menambah yang baru dipilih
+            $kegiatan->pegawai()->sync($pegawaiNips);
+        });
+
+        return redirect()->route('p2m.kie.index')
+            ->with('success', 'update') // Ubah wording session di JS index jika perlu
+            ->with('message', 'Data berhasil diperbarui');
     }
 
     public function destroy($id) {

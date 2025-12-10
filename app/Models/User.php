@@ -16,12 +16,24 @@ class User extends Authenticatable
     const ROLE_ADMIN = 'admin';
     const ROLE_OPERATOR = 'operator';
     
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'name',
         'email',
         'password',
         'role',
-        'pegawai_nip'
+        'pegawai_nip',
+        
+        // --- TAMBAHAN KOLOM BARU (WAJIB ADA) ---
+        'is_password_default',            // Agar status password default bisa diupdate
+        'pending_email',                  // Agar email sementara bisa disimpan/dihapus
+        'verification_token',             // Token verifikasi
+        'verification_token_expires_at',  // Waktu expired token
+        'email_verified_at',              // Waktu verifikasi
     ];
 
     protected $hidden = [
@@ -39,6 +51,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            // Casting untuk kolom baru (Opsional tapi bagus)
+            'verification_token_expires_at' => 'datetime',
+            'is_password_default' => 'boolean',
         ];
     }
 
@@ -57,9 +72,28 @@ class User extends Authenticatable
         return $this->role === self::ROLE_ADMIN;
     }
 
+    public function isAdminSatker(): bool
+    {
+        return $this->role === 'admin_satker';
+    }
+
     public function isOperator(): bool
     {
         return $this->role === self::ROLE_OPERATOR;
+    }
+
+    public function hasRole(string|array $roles): bool
+    {
+        if (is_array($roles)) {
+            return in_array($this->role, $roles);
+        }
+        return $this->role === $roles;
+    }
+
+    // Cek apakah user ini boleh mengelola user lain?
+    public function canManageUsers()
+    {
+        return in_array($this->role, ['admin', 'admin_satker']);
     }
 
     /**
@@ -71,5 +105,4 @@ class User extends Authenticatable
     {
         return $this->pegawai ? $this->pegawai->satuan_kerja_id : null;
     }
-
 }

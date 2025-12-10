@@ -12,7 +12,36 @@
                         <li class="nav-item">
                             <a class="nav-link {{ Route::is('p2m.*') ? 'active' : '' }}" href="./analytics.html">
                                 <i class="bi bi-file-earmark-text"></i>
-                                <span>P2M</span>
+                                <span>Kegiatan P2M</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link collapse show" href="#" data-bs-toggle="collapse" data-bs-target="#dataMaster" aria-expanded="true" style="">
+                                <i class="bi bi-puzzle"></i>
+                                <span>Data Master </span>
+                                <i class="bi bi-chevron-down ms-auto"></i>
+                            </a>
+                            <div class="collapse" id="dataMaster">
+                                <ul class="nav nav-submenu">
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="./elements.html">
+                                            <i class="bi bi-grid"></i>
+                                            <span>Data Pegawai</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="./elements-buttons.html">
+                                            <i class="bi bi-square"></i>
+                                            <span>Satuan Kerja</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link " href="./analytics.html">
+                                <i class="bi bi-file-earmark-text"></i>
+                                <span>Manajemen User</span>
                             </a>
                         </li>
                     </ul>

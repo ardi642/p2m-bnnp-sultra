@@ -2,6 +2,25 @@
         <main class="admin-main">
             <div class="container-fluid p-4 p-lg-5">
                 <!-- Page Header -->
+                
+                {{-- === TAMBAHKAN LOGIKA PERINGATAN DI SINI === --}}
+                @if(auth()->check() && auth()->user()->is_password_default)
+                    <div class="alert alert-warning alert-dismissible fade show m-4 mb-0 shadow-sm" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+                            <div>
+                                <strong>Peringatan Keamanan!</strong>
+                                <p class="mb-0">
+                                    Anda masih menggunakan password bawaan (default). 
+                                    Demi keamanan akun, silakan <a href="{{ route('profile.edit') }}" class="alert-link text-decoration-underline">Ganti Password Disini</a> secepatnya.
+                                </p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+                {{-- =========================================== --}}
+
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h1 class="h3 mb-0">Dashboard</h1>

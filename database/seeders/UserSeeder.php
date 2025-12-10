@@ -2,66 +2,105 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\Pegawai;
-use App\Models\SatuanKerja;
 use Illuminate\Database\Seeder;
+use App\Models\User;
+use App\Models\SatuanKerja;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $passwordDefault = Hash::make('12345678');
+        $defaultPassword = Hash::make('12345678'); // Password Default
 
-        // ==========================================
-        // 1. BUAT SUPER ADMIN (PUSAT)
-        // ==========================================
-        // Akun ini tidak terikat ke pegawai manapun (pegawai_nip = null)
-        User::firstOrCreate(
-            ['email' => 'admin@bnn.go.id'], // Cek email biar gak duplikat
-            [
-                'name'              => 'Administrator',
-                'password'          => $passwordDefault,
-                'pegawai_nip'       => null, 
-                'role'              => 'admin',
-                'email_verified_at' => now(),
-            ]
-        );
+        // ---------------------------------------------------
+        // 1. BUAT SUPER ADMIN (Hanya 1 Akun Global)
+        // ---------------------------------------------------
+        $adminEmail = 'admin@bnn.go.id';
         
-        $this->command->info('✅Admin Created.');
-
-        // ==========================================
-        // 2. BUAT USER DARI PEGAWAI PER SATKER
-        // ==========================================
-        
-        // Ambil semua satker yang ada
-        $satkers = SatuanKerja::all();
-
-        foreach ($satkers as $satker) {
-            // Ambil 1 pegawai saja dari satker ini sebagai perwakilan admin
-            $pegawai = Pegawai::where('satuan_kerja_id', $satker->id)->first();
-
-            // Cek: Apakah satker ini punya pegawai?
-            if ($pegawai) {
+        // Cek dulu apakah admin sudah ada
+        if (!User::where('email', $adminEmail)->exists()) {
+            User::create([
+                'name' => 'Super Administrator',
+                'email' => $adminEmail,
+                'password' => $defaultPassword,
+                'role' => 'admin',
+                'pegawai_nip' => null, // Tidak terikat satker/pegawai
+                'is_password_default' => true,
                 
-                // Cek: Apakah pegawai ini sudah punya user sebelumnya?
-                $userExist = User::where('pegawai_nip', $pegawai->nip)->exists();
+                // --- TAMBAHAN PENTING ---
+                'email_verified_at' => now(), // Langsung verified agar bisa login
+                'pending_email' => null,      // Pastikan bersih
+                'verification_token' => null, // Pastikan bersih
+            ]);
+            $this->command->info('Super Admin berhasil dibuat.');
+        }
 
-                if (!$userExist) {
+        // ---------------------------------------------------
+        // 2. BUAT USER ADMIN SATKER & OPERATOR (Per Satker)
+        // ---------------------------------------------------
+        // Ambil semua satker yang punya pegawai
+        $satuanKerjas = SatuanKerja::with('pegawai')->get();
+
+        foreach ($satuanKerjas as $satker) {
+            $pegawais = $satker->pegawai;
+
+            // Pastikan ada pegawai di satker ini
+            if ($pegawais->isEmpty()) {
+                continue; 
+            }
+
+            // --- A. BUAT ADMIN SATKER (Ambil Pegawai Pertama) ---
+            if ($pegawais->count() >= 1) {
+                $calonAdmin = $pegawais[0];
+                
+                // Cek apakah pegawai ini sudah punya user?
+                $cekUser = User::where('pegawai_nip', $calonAdmin->nip)->first();
+
+                if (!$cekUser) {
+                    // Buat format email unik: admin.namasatker@bnn.go.id
+                    $emailSatker = 'admin.' . strtolower(str_replace([' ', '.'], '', $satker->satuan_kerja)) . '@bnn.go.id';
+
                     User::create([
-                        'name'              => $pegawai->nama, // Pakai nama asli pegawai
-                        'email'             => $pegawai->email, // Pakai email asli pegawai
-                        'password'          => $passwordDefault,
-                        'pegawai_nip'       => $pegawai->nip, // Link ke data pegawai
-                        'role'              => 'operator',
-                        'email_verified_at' => now(),
-                    ]);
+                        'name' => $calonAdmin->nama,
+                        'email' => $emailSatker,
+                        'password' => $defaultPassword,
+                        'role' => 'admin_satker',
+                        'pegawai_nip' => $calonAdmin->nip,
+                        'is_password_default' => true,
 
-                    $this->command->info("👤 User dibuat untuk Satker: {$satker->nama} (Admin: {$pegawai->nama})");
+                        // --- TAMBAHAN PENTING ---
+                        'email_verified_at' => now(),
+                        'pending_email' => null,
+                        'verification_token' => null,
+                    ]);
                 }
-            } else {
-                $this->command->warn("⚠️ Satker {$satker->nama} tidak memiliki data pegawai, user dilewati.");
+            }
+
+            // --- B. BUAT OPERATOR (Ambil Pegawai Kedua) ---
+            if ($pegawais->count() >= 2) {
+                $calonOperator = $pegawais[1];
+                
+                // Cek apakah pegawai ini sudah punya user?
+                $cekUser = User::where('pegawai_nip', $calonOperator->nip)->first();
+
+                if (!$cekUser) {
+                    $emailOperator = 'operator.' . strtolower(str_replace([' ', '.'], '', $satker->satuan_kerja)) . '@bnn.go.id';
+
+                    User::create([
+                        'name' => $calonOperator->nama,
+                        'email' => $emailOperator,
+                        'password' => $defaultPassword,
+                        'role' => 'operator',
+                        'pegawai_nip' => $calonOperator->nip,
+                        'is_password_default' => true,
+
+                        // --- TAMBAHAN PENTING ---
+                        'email_verified_at' => now(),
+                        'pending_email' => null,
+                        'verification_token' => null,
+                    ]);
+                }
             }
         }
     }

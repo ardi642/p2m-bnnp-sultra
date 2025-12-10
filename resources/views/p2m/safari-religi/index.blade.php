@@ -173,7 +173,7 @@
                                                 </a>
                                             </th>
 
-                                            <th style="min-width: 150px;">Pegawai</th>
+                                            <th>Pegawai</th>
 
                                             {{-- 4. JUMLAH MASYARAKAT --}}
                                             <th>

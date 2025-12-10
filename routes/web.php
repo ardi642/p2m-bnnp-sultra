@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\P2m\SosialisasiController;
 use App\Http\Controllers\P2m\UpacaraController;
@@ -17,6 +19,7 @@ use App\Models\p2mElektronik;
 use App\Http\Controllers\P2m\OnlineController;
 use App\Http\Controllers\P2m\SafariReligiController;
 use App\Http\Controllers\P2m\TesUrineController;
+use App\Http\Controllers\ProfileController;
 use App\Models\p2mOnline;
 
 use Illuminate\Support\Facades\Route;
@@ -24,6 +27,22 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'index'])->name('login');
     Route::post('/login', [LoginController::class, 'authenticate'])->name('login.authenticate');
+
+    // Tampilkan Form Lupa Password
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])
+        ->name('password.request');
+
+    // Proses Kirim Link ke Email
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])
+        ->name('password.email');
+
+    // Tampilkan Form Reset Password (Link dari Email)
+    Route::get('/reset-password/{token}', [ForgotPasswordController::class, 'showResetForm'])
+        ->name('password.reset');
+
+    // Proses Update Password Baru
+    Route::post('/reset-password', [ForgotPasswordController::class, 'reset'])
+        ->name('password.update');
 });
 
 Route::middleware('auth')->group(function() {
@@ -31,7 +50,30 @@ Route::middleware('auth')->group(function() {
         return view('welcome');
     });
 
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    // Route untuk update Biodata (Email, dll)
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update'); 
+    // Route untuk ganti Password (yang sudah ada sebelumnya)
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+
+    // Route klik dari email (Public/Guest boleh akses, atau Auth juga boleh)
+    Route::get('/profile/verify-email/{token}', [ProfileController::class, 'verifyNewEmail'])->name('profile.email.verify');
+    
+    // Route tombol aksi di profil
+    Route::delete('/profile/cancel-email', [ProfileController::class, 'cancelEmailChange'])->name('profile.email.cancel');
+    Route::post('/profile/resend-email', [ProfileController::class, 'resendEmailVerification'])->name('profile.email.resend');
+
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    Route::middleware(['role:admin,admin_satker'])->group(function() {
+        Route::prefix('admin')->name('admin.')->group(function() {
+            Route::resource('users', UserController::class);
+            
+            // Route Khusus Reset Password
+            Route::put('users/{user}/reset-password', [UserController::class, 'resetPassword'])
+                ->name('users.reset_password');
+        });
+    });
 
     Route::prefix('p2m')
     ->name('p2m.')

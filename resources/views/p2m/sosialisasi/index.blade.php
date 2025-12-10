@@ -333,7 +333,7 @@
                                             </th>
 
                                             {{-- 8. PEGAWAI (Tidak di-sort sesuai permintaan) --}}
-                                            <th style="min-width: 200px;">Nama Pegawai</th>
+                                            <th>Nama Pegawai</th>
 
                                             {{-- 9. JUMLAH PESERTA --}}
                                             <th>
@@ -390,11 +390,13 @@
                                                                 @click="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">
                                                             <i class="me-0 bi" :class="expanded.includes({{ $data->id }}) ? 'bi-eye-slash' : 'bi-eye'"></i> 
                                                         </button>
+                                                        @if (auth()->user()->hasRole('operator'))
                                                         <a href="{{ route('p2m.sosialisasi.edit', $data->id) }}" class="btn btn-success btn-sm"><i class="me-0 bi bi-pencil-square"></i></a>
                                                         <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.sosialisasi.destroy', $data->id) }}" method="POST" class="d-inline">
                                                             @csrf @method('DELETE')
                                                             <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ $data->id }})"><i class="me-0 bi bi-trash"></i></button>
                                                         </form>
+                                                        @endif
                                                     </div>
                                                 </td>
                                             </tr>

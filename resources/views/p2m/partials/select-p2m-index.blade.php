@@ -22,7 +22,7 @@
                     </div>
                     <div class="col">
                         <div class="d-flex justify-content-end">
-                            @if (! Route::is('p2m.index'))
+                            @if (! Route::is('p2m.index') and auth()->user()->hasRole('operator'))
                                 @php
                                     $baseRoute = Str::beforeLast(Route::currentRouteName(), '.');
                                 @endphp

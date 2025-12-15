@@ -400,47 +400,120 @@
                                                     </div>
                                                 </td>
                                             </tr>
-                                            <tr x-show="expanded.includes({{ $data->id }})" x-transition.duration.200ms class="bg-light">
-                                                <td colspan="11" class="text-start p-4">
-                                                    <div class="card border-0">
-                                                        <div class="card-body">
-                                                            <h5 class="card-title fw-bold text-primary mb-3">Informasi Tambahan</h5>
-                                                            <div class="row">
-                                                                <div class="col-md-12 mb-3">
-                                                                    <div class="mb-0">
-                                                                        <label class="fw-bold text-muted">Link Kelengkapan / Dokumentasi</label>
-                                                                        <div class="d-flex align-items-center mt-2">
-                                                                            <i class="bi bi-link-45deg fs-4 me-2 text-primary"></i>
-                                                                            @if($data->link_kelengkapan_dokumentasi)
-                                                                                <a href="{{ $data->link_kelengkapan_dokumentasi }}" target="_blank" class="text-decoration-underline text-break text-primary fw-semibold">
-                                                                                    {{ $data->link_kelengkapan_dokumentasi }}
-                                                                                </a>
-                                                                            @else
-                                                                                <span class="text-muted fst-italic">Tidak ada link dokumentasi</span>
-                                                                            @endif
-                                                                        </div>
-                                                                    </div>
+                                            <tr x-show="expanded.includes({{ $data->id }})" x-transition.duration.300ms class="bg-light">
+                                                <td colspan="11" class="p-0">
+                                                    <div class="p-4 border-bottom border-start border-end shadow-inner bg-white">
+                                                        
+                                                        {{-- BAGIAN 1: INFORMASI KEGIATAN (DI ATAS) --}}
+                                                        <div class="mb-4">
+                                                            <h6 class="fw-bold text-uppercase text-secondary mb-3 small ls-1 border-bottom pb-2">
+                                                                <i class="bi bi-info-circle me-1"></i> Detail Informasi
+                                                            </h6>
+                                                            
+                                                            {{-- Grid Informasi (Dibuat menyamping agar rapi) --}}
+                                                            <div class="row g-3">
+                                                                <div class="col-md-3 col-6">
+                                                                    <div class="text-muted small text-uppercase fw-bold">Dibuat Pada</div>
+                                                                    <div class="fs-6 text-dark">{{ $data->created_at->format('d M Y H:i') }}</div>
                                                                 </div>
-                                                                <div class="col-md-6">
-                                                                    <div class="mb-0">
-                                                                        <label class="fw-bold text-muted small text-uppercase">Dibuat Pada</label>
-                                                                        <div class="d-flex align-items-center mt-1 text-dark">
-                                                                            <i class="bi bi-clock fs-5 me-2 text-secondary"></i>
-                                                                            {{ $data->created_at->locale('id')->translatedFormat('l, d F Y H:i') }}
-                                                                        </div>
-                                                                    </div>
+                                                                <div class="col-md-3 col-6">
+                                                                    <div class="text-muted small text-uppercase fw-bold">Update Terakhir</div>
+                                                                    <div class="fs-6 text-dark">{{ $data->updated_at->format('d M Y H:i') }}</div>
                                                                 </div>
-                                                                <div class="col-md-6">
-                                                                    <div class="mb-0">
-                                                                        <label class="fw-bold text-muted small text-uppercase">Terakhir Diperbarui</label>
-                                                                        <div class="d-flex align-items-center mt-1 text-dark">
-                                                                            <i class="bi bi-pencil-square fs-5 me-2 text-secondary"></i>
-                                                                            {{ $data->updated_at->locale('id')->translatedFormat('l, d F Y H:i') }}
-                                                                        </div>
-                                                                    </div>
+                                                                <div class="col-md-3 col-6">
+                                                                    <div class="text-muted small text-uppercase fw-bold">Sasaran</div>
+                                                                    <div><span class="badge bg-info text-dark">{{ $data->sasaran_kegiatan }}</span></div>
+                                                                </div>
+                                                                <div class="col-md-3 col-6">
+                                                                    <div class="text-muted small text-uppercase fw-bold">Tempat Kegiatan</div>
+                                                                    <div class="fs-6 text-dark">{{ $data->tempat_kegiatan }}</div>
                                                                 </div>
                                                             </div>
                                                         </div>
+
+                                                        {{-- BAGIAN 2: GALERI DOKUMENTASI (DI BAWAH) --}}
+                                                        <div>
+                                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                                <h6 class="fw-bold text-uppercase text-secondary mb-0 small ls-1">
+                                                                    <i class="bi bi-folder2-open me-1"></i> Dokumentasi & Laporan
+                                                                </h6>
+                                                                <span class="badge bg-secondary rounded-pill">{{ $data->dokumentasi->count() }} File</span>
+                                                            </div>
+
+                                                            @if($data->dokumentasi->count() > 0)
+                                                                {{-- Grid File lebih rapat (6 kolom di layar besar) karena area lebar --}}
+                                                                <div class="row g-3">
+                                                                    @foreach($data->dokumentasi as $doc)
+                                                                        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                                                                            
+                                                                            {{-- KARTU FILE --}}
+                                                                            <div class="card h-100 border shadow-sm file-card position-relative overflow-hidden group">
+                                                                                
+                                                                                {{-- PREVIEW (GAMBAR / ICON) --}}
+                                                                                <div class="ratio ratio-1x1 bg-light border-bottom d-flex align-items-center justify-content-center">
+                                                                                    
+                                                                                    @if(Str::contains($doc->tipe_file, 'image'))
+                                                                                        <img src="{{ Storage::url($doc->path_file) }}" 
+                                                                                            class="object-fit-cover w-100 h-100" 
+                                                                                            alt="{{ $doc->nama_file_asli }}"
+                                                                                            loading="lazy">
+                                                                                        
+                                                                                        {{-- Overlay Zoom --}}
+                                                                                        <a href="{{ Storage::url($doc->path_file) }}" target="_blank" 
+                                                                                        class="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center opacity-0 hover-opacity-100 transition-all text-decoration-none">
+                                                                                            <i class="bi bi-zoom-in text-white fs-3"></i>
+                                                                                        </a>
+
+                                                                                    @elseif(Str::contains($doc->tipe_file, 'pdf'))
+                                                                                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-danger">
+                                                                                            <i class="bi bi-file-earmark-pdf-fill display-4"></i>
+                                                                                            <span class="small fw-bold mt-1">PDF</span>
+                                                                                        </div>
+
+                                                                                    @elseif(Str::contains($doc->tipe_file, ['word', 'officedocument']))
+                                                                                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-primary">
+                                                                                            <i class="bi bi-file-earmark-word-fill display-4"></i>
+                                                                                            <span class="small fw-bold mt-1">DOCX</span>
+                                                                                        </div>
+
+                                                                                    @else
+                                                                                        <div class="d-flex flex-column align-items-center justify-content-center h-100 text-secondary">
+                                                                                            <i class="bi bi-file-earmark-text-fill display-4"></i>
+                                                                                            <span class="small fw-bold mt-1">FILE</span>
+                                                                                        </div>
+                                                                                    @endif
+                                                                                </div>
+
+                                                                                {{-- INFO & TOMBOL --}}
+                                                                                <div class="card-body p-2 text-center">
+                                                                                    <div class="fw-bold text-dark text-truncate small mb-1" title="{{ $doc->nama_file_asli }}">
+                                                                                        {{ $doc->nama_file_asli }}
+                                                                                    </div>
+                                                                                    <div class="text-muted x-small mb-2" style="font-size: 0.7rem;">
+                                                                                        {{ number_format($doc->ukuran_file / 1024, 0) }} KB
+                                                                                    </div>
+                                                                                    
+                                                                                    <a href="{{ Storage::url($doc->path_file) }}" target="_blank" class="btn btn-outline-primary btn-sm w-100 py-0" style="font-size: 0.75rem;">
+                                                                                        Unduh
+                                                                                    </a>
+                                                                                </div>
+
+                                                                            </div>
+                                                                        </div>
+                                                                    @endforeach
+                                                                </div>
+                                                            @else
+                                                                {{-- STATE KOSONG --}}
+                                                                <div class="alert alert-secondary d-flex align-items-center p-3" role="alert">
+                                                                    <i class="bi bi-folder-x fs-3 me-3 opacity-50"></i>
+                                                                    <div>
+                                                                        <div class="fw-bold">Belum ada dokumentasi</div>
+                                                                        <div class="small">Silakan edit data ini untuk mengupload foto atau laporan.</div>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+
                                                     </div>
                                                 </td>
                                             </tr>

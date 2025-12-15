@@ -10,9 +10,13 @@ use Illuminate\View\View;
 use Illuminate\Http\Request;
 use App\Exports\SosialisasiExport; // Import Export Class
 use App\Helpers\SearchHelper;
+use App\Models\DokumentasiKegiatan;
+use App\Models\TemporaryFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel; // Import Facade Excel
+use Illuminate\Support\Str;
 
 class SosialisasiController extends Controller
 {
@@ -25,7 +29,7 @@ class SosialisasiController extends Controller
         
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
-        $query = P2mSosialisasi::with('pegawai', 'satuanKerja');
+        $query = P2mSosialisasi::with('pegawai', 'satuanKerja', 'dokumentasi');
 
         // --- FILTER SAMA PERSIS SEPERTI SEBELUMNYA ---
 
@@ -205,48 +209,127 @@ class SosialisasiController extends Controller
         
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        // 1. Validasi Input
-        $validasi = $request->validate([
-            'anggaran_pelaksanaan' => 'required',
-            'nama_kegiatan' => 'required',
-            'sasaran_kegiatan' => 'required',
-            'tanggal_pelaksanaan' => 'required|date',
-            'tempat_kegiatan' => 'required',
-            'jumlah_peserta' => 'required|numeric',
-            'link_kelengkapan_dokumentasi' => 'required',
-            
-            // Validasi Array Pegawai (NIP)
-            'pegawai_nips' => 'required|array', // Harus berbentuk array
-            'pegawai_nips.*' => 'exists:pegawai,nip', // Pastikan NIP valid di DB
-        ]);
 
+        // SIAPKAN RULES VALIDASI
+        $rules = [
+            'anggaran_pelaksanaan' => 'required',
+            'nama_kegiatan'        => 'required',
+            'sasaran_kegiatan'     => 'required',
+            'tanggal_pelaksanaan'  => 'required|date',
+            'tempat_kegiatan'      => 'required',
+            'jumlah_peserta'       => 'required|numeric',
+            
+            // Validasi Array Pegawai
+            'pegawai_nips'   => 'required|array',
+            'pegawai_nips.*' => 'exists:pegawai,nip',
+
+            // Validasi Dokumentasi (Minimal 1 file wajib)
+            'dokumentasi'   => 'required|array',
+            'dokumentasi.*' => 'required',
+        ];
+
+        // Jika Admin, wajib pilih Satuan Kerja
         if ($user->isAdmin()) {
             $rules['satuan_kerja_id'] = 'required';
         }
 
-        // Gunakan Database Transaction agar data aman (jika gagal simpan pivot, data utama batal)
-        DB::transaction(function () use ($user, $validasi) {
-            
-            // 2. Pisahkan data pegawai dari data utama
-            // Kita hapus 'pegawai_nips' dari array validasi karena kolom ini tidak ada di tabel p2m_sosialisasi
-            $dataKegiatan = collect($validasi)->except('pegawai_nips')->toArray();
-            $pegawaiNips = $validasi['pegawai_nips'];
+        // EKSEKUSI VALIDASI
+        $validasi = $request->validate($rules);
 
+        $filesMoved = []; // Array untuk melacak file yang berhasil dipindah (untuk rollback)
+
+        DB::beginTransaction(); // MULAI TRANSAKSI
+
+        try {
+            // Pisahkan data input
+            $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
+            $pegawaiNips  = $validasi['pegawai_nips'];
+
+            // Jika Operator, set Satker ID otomatis sesuai user login
             if ($user->isOperator()) {
                 $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
             }
 
-            // 3. Simpan Data Kegiatan (Tabel Utama)
+            // SIMPAN DATA UTAMA
             $kegiatan = P2mSosialisasi::create($dataKegiatan);
 
-            // 4. Simpan Relasi Pegawai (Tabel Pivot)
-            // Menggunakan method attach() untuk many-to-many
+            // SIMPAN RELASI PEGAWAI
             $kegiatan->pegawai()->attach($pegawaiNips);
-        });
 
+            // PROSES PINDAH FILE (Dari Temp ke Storage Public)
+            if ($request->filled('dokumentasi')) {
+                $tempFolders = $request->input('dokumentasi');
+
+                foreach ($tempFolders as $folder) {
+                    $tempFile = TemporaryFile::where('folder', $folder)->first();
+
+                    if ($tempFile) {
+                        // A. Path SUMBER (Di folder tmp)
+                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
+
+                        // B. SOLUSI ERROR MIMETYPE: 
+                        // Ambil MimeType & Size dari file SUMBER (sebelum dipindah/copy)
+                        // Ini lebih stabil karena file pasti ada di default disk
+                        $mimeType = Storage::mimeType($sourcePath); 
+                        $size = Storage::size($sourcePath);
+
+                        // C. SOLUSI NAMA FILE (Anti Bentrok)
+                        // Format: WAKTU_IDUNIK_NAMASLUG.EKSTENSI
+                        // Contoh: 17028392_65a4b2c_laporan-kegiatan.pdf
+                        $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
+                        $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
+                        
+                        // uniqid() menambahkan string unik berbasis mikrodetik
+                        // Str::slug() membersihkan nama file dari spasi/karakter aneh
+                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
+
+                        // D. Path TUJUAN (Di Disk Public)
+                        $destinationPath = 'dokumentasi/' . date('Y') . '/' . $cleanFileName;
+
+                        if (Storage::exists($sourcePath)) {
+                            
+                            // Copy File antar Disk
+                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
+                            
+                            $filesMoved[] = $destinationPath;
+
+                            // Simpan ke DB
+                            $kegiatan->dokumentasi()->create([
+                                'nama_file_asli' => $tempFile->filename, // Nama asli tetap disimpan untuk display user
+                                'path_file'      => $destinationPath,    
+                                'tipe_file'      => $mimeType,           // Pakai variabel yang sudah diambil di atas
+                                'ukuran_file'    => $size,               // Pakai variabel size di atas
+                            ]);
+
+                            // Hapus Temp
+                            Storage::deleteDirectory('public/tmp/' . $folder);
+                            $tempFile->delete();
+                        }
+                    }
+                }
+            }
+
+            // KOMIT TRANSAKSI (Simpan Permanen)
+            DB::commit(); 
+
+        } catch (\Exception $e) {
+            // JIKA GAGAL: BATALKAN SEMUA
+            DB::rollBack();
+
+            // Hapus file fisik yang terlanjur tercopy ke folder tujuan
+            foreach ($filesMoved as $path) {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+
+            return back()->with('error', 'Gagal menyimpan: ' . $e->getMessage())->withInput();
+        }
+
+        // REDIRECT SUKSES
         return redirect()->route('p2m.sosialisasi.index')
-            ->with('success', 'store')
-            ->with('message', 'Berhasil menambahkan data');
+            ->with('success', 'store') // Trigger SweetAlert
+            ->with('message', 'Berhasil menambahkan data kegiatan');
     }
 
     public function edit($id): View 
@@ -294,33 +377,41 @@ class SosialisasiController extends Controller
             abort(403);
         }
 
-        // Validasi
+        // 1. Validasi
         $rules = [
             'anggaran_pelaksanaan' => 'required',
-            'nama_kegiatan' => 'required',
-            'sasaran_kegiatan' => 'required',
-            'tanggal_pelaksanaan' => 'required|date',
-            'tempat_kegiatan' => 'required',
-            'jumlah_peserta' => 'required|numeric',
-            'link_kelengkapan_dokumentasi' => 'required',
-            'pegawai_nips' => 'required|array',
-            'pegawai_nips.*' => 'exists:pegawai,nip',
+            'nama_kegiatan'        => 'required',
+            'sasaran_kegiatan'     => 'required',
+            'tanggal_pelaksanaan'  => 'required|date',
+            'tempat_kegiatan'      => 'required',
+            'jumlah_peserta'       => 'required|numeric',
+            'pegawai_nips'         => 'required|array',
+            'pegawai_nips.*'       => 'exists:pegawai,nip',
+
+            // Array ID file lama yang mau dihapus
+            'delete_files'   => 'nullable|array', 
+            'delete_files.*' => 'exists:dokumentasi_kegiatan,id',
+            
+            // Array FilePond untuk file baru (Nullable karena edit tidak wajib upload baru)
+            'dokumentasi'   => 'nullable|array',
         ];
 
-        // Jika Admin edit, validasi satker. Jika Operator, abaikan (pakai data lama)
         if ($user->isAdmin()) {
             $rules['satuan_kerja_id'] = 'required';
         }
 
         $validasi = $request->validate($rules);
 
-        DB::transaction(function () use ($validasi, $kegiatan, $user) {
-            
-            $pegawaiNips = $validasi['pegawai_nips'];
-            $dataUpdate = collect($validasi)->except('pegawai_nips')->toArray();
+        // Variabel pelacak
+        $newFilesMoved = []; // File baru yang sukses dipindah (untuk rollback)
+        $filesToDelete = []; // File lama yang mau dihapus fisiknya (setelah commit)
 
-            // PENTING: Untuk Operator, JANGAN update satuan_kerja_id (biarkan yang lama)
-            // Untuk Admin, update sesuai input form
+        DB::beginTransaction();
+
+        try {
+            $pegawaiNips = $validasi['pegawai_nips'];
+            $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
+
             if ($user->isOperator()) {
                 unset($dataUpdate['satuan_kerja_id']); 
             }
@@ -328,25 +419,142 @@ class SosialisasiController extends Controller
             // Update Data Utama
             $kegiatan->update($dataUpdate);
 
-            // Update Relasi Pegawai (SYNC)
-            // sync() akan menghapus yang tidak dipilih, dan menambah yang baru dipilih
+            // Update Relasi Pegawai
             $kegiatan->pegawai()->sync($pegawaiNips);
-        });
 
-        return redirect()->route('p2m.sosialisasi.index')
-            ->with('success', 'update') // Ubah wording session di JS index jika perlu
+            // A. PROSES HAPUS FILE LAMA (Hapus DB dulu, Fisik nanti)
+            if ($request->has('delete_files')) {
+                $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
+                
+                foreach ($filesToRemove as $file) {
+                    // Simpan path fisik untuk dihapus nanti
+                    $filesToDelete[] = $file->path_file; 
+                    // Hapus record database
+                    $file->delete();
+                }
+            }
+
+            // B. PROSES UPLOAD FILE BARU
+            if ($request->filled('dokumentasi')) {
+                $tempFolders = $request->input('dokumentasi');
+
+                foreach ($tempFolders as $folder) {
+                    $tempFile = TemporaryFile::where('folder', $folder)->first();
+
+                    if ($tempFile) {
+                        // Path Sumber (Temp)
+                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
+                        
+                        // Metadata File
+                        $mimeType = Storage::mimeType($sourcePath); 
+                        $size = Storage::size($sourcePath);
+                        
+                        // Generate Nama Unik
+                        $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
+                        $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
+                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
+
+                        // Path Tujuan (Disk Public)
+                        // Folder: dokumentasi/TAHUN/file.pdf
+                        $destinationPath = 'dokumentasi/' . date('Y') . '/' . $cleanFileName;
+
+                        if (Storage::exists($sourcePath)) {
+                            // Copy ke Disk Public
+                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
+                            $newFilesMoved[] = $destinationPath;
+
+                            // Simpan ke DB
+                            $kegiatan->dokumentasi()->create([
+                                'nama_file_asli' => $tempFile->filename,
+                                'path_file'      => $destinationPath, // Path bersih tanpa 'public/'
+                                'tipe_file'      => $mimeType,
+                                'ukuran_file'    => $size,
+                            ]);
+
+                            // Hapus Temp
+                            Storage::deleteDirectory('public/tmp/' . $folder);
+                            $tempFile->delete();
+                        }
+                    }
+                }
+            }
+
+            // COMMIT TRANSAKSI
+            DB::commit();
+
+            // C. CLEANUP SETELAH SUKSES (Hapus fisik file lama)
+            foreach ($filesToDelete as $path) {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+
+            return redirect()->route('p2m.sosialisasi.index')
+            ->with('success', 'update')
             ->with('message', 'Data berhasil diperbarui');
+
+        } catch (\Exception $e) {
+            // ROLLBACK JIKA GAGAL
+            DB::rollBack();
+
+            // Hapus file BARU yang terlanjur tercopy
+            foreach ($newFilesMoved as $path) {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+            
+            // Note: File lama TIDAK dihapus karena loop hapus fisik ada setelah commit.
+
+            return back()->with('error', 'Gagal update: ' . $e->getMessage())->withInput();
+        }
     }
-
-
 
     public function destroy($id) {
-        $data = P2mSosialisasi::findOrFail($id);
+        // Ambil Data & Path File
+        $kegiatan = P2mSosialisasi::with('dokumentasi')->findOrFail($id);
+        
+        // Simpan path file ke array memory sebelum datanya dihapus
+        $filesToDelete = [];
+        foreach ($kegiatan->dokumentasi as $doc) {
+            $filesToDelete[] = $doc->path_file;
+        }
 
-        $data->delete();
+        // Hapus Database (Pakai Transaksi biar aman sesama tabel)
+        DB::beginTransaction();
+        try {
+            $kegiatan->delete(); // Ini akan cascade delete ke tabel dokumentasi
+            DB::commit(); // <--- KUNCI: KOMIT DULU BARU HAPUS FISIK
+        } catch (\Exception $e) {
+            DB::rollBack();
+            // Jika DB gagal hapus, file JANGAN disentuh.
+            // Data aman, File aman.
+            return back()->with('error', 'Gagal menghapus data database: ' . $e->getMessage());
+        }
 
+        // Hapus File Fisik (Dilakukan SETELAH DB Commit sukses)
+        // Kita lakukan di luar try-catch DB, atau di try-catch terpisah
+        // Agar jika file gagal hapus, user tetap melihat datanya sudah terhapus.
+        
+        $gagalHapusCount = 0;
+        foreach ($filesToDelete as $path) {
+            try {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            } catch (\Exception $e) {
+                // Jika satu file gagal hapus (misal dikunci sistem), 
+                // biarkan saja (jangan bikin error 500).
+                // File ini jadi sampah, tapi aplikasi tetap bersih.
+                $gagalHapusCount++;
+                // Opsional: Log errornya -> Log::error("Gagal hapus file: $path");
+            }
+        }
+
+        // Return Sukses
         return redirect()->back()
-        ->with('success', 'destroy')
-        ->with('message', 'Data berhasil dihapus');
+            ->with('success', 'destroy')
+            ->with('message', 'Data berhasil dihapus.');
     }
+
 }

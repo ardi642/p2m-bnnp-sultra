@@ -25,7 +25,6 @@ return new class extends Migration
             $table->date('tanggal_pelaksanaan');
             $table->text('tempat_kegiatan');
             $table->integer('jumlah_peserta');
-            $table->text('link_kelengkapan_dokumentasi');
             $table->timestamps();
         });
     }

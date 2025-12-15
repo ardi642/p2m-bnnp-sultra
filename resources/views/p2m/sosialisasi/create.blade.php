@@ -25,7 +25,7 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <form action="{{ route('p2m.sosialisasi.store') }}" method="POST">
+                            <form action="{{ route('p2m.sosialisasi.store') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 
                                 {{-- PERBAIKAN: Gunakan SATU row container untuk semua input --}}
@@ -148,11 +148,35 @@
 
                                     {{-- Input 9: Link Kelengkapan (Full Width / col-12) --}}
                                     <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label for="link_kelengkapan_dokumentasi" class="form-label">Link Kelengkapan & Dokumentasi</label>
-                                            <input type="text" class="form-control @error('link_kelengkapan_dokumentasi') is-invalid @enderror" placeholder="masukkan link" name="link_kelengkapan_dokumentasi" value="{{ old('link_kelengkapan_dokumentasi') }}">
-                                            @error('link_kelengkapan_dokumentasi')
-                                                <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="mb-5">
+                                            <label class="form-label fw-bold h5 border-bottom pb-2 d-block">
+                                                <i class="bi bi-paperclip me-2"></i>Upload Dokumentasi
+                                            </label>
+                                            <p class="text-muted small">
+                                                Silakan upload <strong>Foto Kegiatan</strong> (.jpg, .png) dan <strong>Laporan/Dokumen</strong> (.pdf, .docx). 
+                                                <br>File akan diupload sementara, tekan tombol <b>Simpan</b> di bawah untuk memproses secara permanen.
+                                            </p>
+                                            
+                                            {{-- Input FilePond --}}
+                                            {{-- name="dokumentasi[]" penting agar bisa multiple --}}
+                                            <input type="file" 
+                                                class="filepond"
+                                                name="dokumentasi[]" 
+                                                multiple 
+                                                data-allow-reorder="true"
+                                                data-max-file-size="10MB"
+                                                data-max-files="10">
+
+                                            {{-- TAMBAHKAN INI AGAR ERROR MUNCUL --}}
+                                            @error('dokumentasi')
+                                                <div class="text-danger small mt-2">
+                                                    {{ $message }} (Pastikan file berwarna HIJAU sebelum simpan)
+                                                </div>
+                                            @enderror
+                                            @error('dokumentasi.*')
+                                                <div class="text-danger small mt-2">
+                                                    {{ $message }}
+                                                </div>
                                             @enderror
                                         </div>
                                     </div>
@@ -180,7 +204,7 @@
 
 @push('styles')
 {{-- CSS Tom Select (Theme Bootstrap 5) --}}
-    @vite('resources/css/tom-select.css')
+    @vite(['resources/css/tom-select.css', 'resources/css/filepond.css', 'resources/js/filepond.js'])
 @endpush
 
 @push('scripts')
@@ -203,6 +227,27 @@
         } else {
             console.error("Library Tom Select belum terinstall/terload");
         }
+
+        const inputElement = document.querySelector('input.filepond');
+        const pond = FilePond.create(inputElement, {
+            acceptedFileTypes: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            labelIdle: 'Drag & Drop file Anda atau <span class="filepond--label-action">Cari File</span>',
+            imagePreviewHeight: 120,
+            credits: false,
+
+            // KONFIGURASI SERVER (UPLOAD ASYNC KE FOLDER TMP)
+            server: {
+                process: {
+                    url: '{{ route('upload.temp') }}', // Route Controller Temporary
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                },
+                revert: {
+                    url: '{{ route('revert.temp') }}',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                }
+            }
+        });
+
     });
 </script>
 @endpush

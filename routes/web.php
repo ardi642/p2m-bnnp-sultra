@@ -21,6 +21,7 @@ use App\Http\Controllers\P2m\OnlineController;
 use App\Http\Controllers\P2m\SafariReligiController;
 use App\Http\Controllers\P2m\TesUrineController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TemporaryFileController;
 use App\Models\p2mOnline;
 
 use Illuminate\Support\Facades\Route;
@@ -50,6 +51,11 @@ Route::middleware('auth')->group(function() {
     Route::get('/', function () {
         return view('welcome');
     });
+
+    // --- ROUTE UTILITY FILEPOND (UPLOAD SEMENTARA) ---
+    // Ditaruh disini agar bisa diakses semua user yang login (Admin & Operator)
+    Route::post('/upload-temp', [TemporaryFileController::class, 'upload'])->name('upload.temp');
+    Route::delete('/revert-temp', [TemporaryFileController::class, 'revert'])->name('revert.temp');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     // Route untuk update Biodata (Email, dll)

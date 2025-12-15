@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\HasDokumentasi;
 
 class P2mSosialisasi extends Model
 {
     use HasFactory;
+    use HasDokumentasi;
     protected $table = 'p2m_sosialisasi';
 
     protected $casts = [

@@ -44,7 +44,6 @@ class P2mSosialisasiFactory extends Factory
             'tanggal_pelaksanaan' => $this->faker->dateTimeBetween('-1 year', 'now'), // Tanggal setahun terakhir
             'tempat_kegiatan' => $this->faker->address(),
             'jumlah_peserta' => $this->faker->numberBetween(10, 500),
-            'link_kelengkapan_dokumentasi' => $this->faker->url(),
         ];
     }
 }

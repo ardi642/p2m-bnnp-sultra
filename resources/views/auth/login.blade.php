@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     {{-- Javascript Utama --}}
-    <script type="module" crossorigin src="{{  asset("assets/main-f0Mg-34g.js") }}"></script>
+    <script type="module" crossorigin src="{{  asset("assets/main-Bfr21rhA.js") }}"></script>
     {{-- CSS Utama --}}
     <link rel="stylesheet" crossorigin href="{{ asset("assets/main-DLfE7m78.css") }}">
     
@@ -174,7 +174,7 @@
                     
                     <div class="mt-4 d-none d-lg-block">
                         <hr class="opacity-25 mx-auto" style="width: 50px; border-width: 3px;">
-                        <p class="small opacity-75 mt-3">Sistem Informasi Pelaporan P2M<br>Terintegrasi & Realtime</p>
+                        <p class="small opacity-75 mt-3">Sistem Informasi Pelaporan P2M<br>Sebenarnya belum ditahu nama sistemnya</p>
                     </div>
                 </div>
             </div>
@@ -262,7 +262,6 @@
 
                     <div class="mt-5 text-center">
                         <small class="text-muted d-block">&copy; {{ date('Y') }} BNNP Sulawesi Tenggara</small>
-                        <small class="text-muted opacity-75" style="font-size: 0.75rem;">Versi Aplikasi 1.0.0</small>
                     </div>
 
                 </div>

@@ -10,40 +10,25 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ Route::is('p2m.*') ? 'active' : '' }}" href="./analytics.html">
+                            <a class="nav-link {{ Route::is('p2m.*') ? 'active' : '' }}" href="{{ route('p2m.index') }}">
                                 <i class="bi bi-file-earmark-text"></i>
                                 <span>Kegiatan P2M</span>
                             </a>
                         </li>
+                        @if (auth()->user()->hasRole(['admin', 'admin_satker']))    
                         <li class="nav-item">
-                            <a class="nav-link collapse show" href="#" data-bs-toggle="collapse" data-bs-target="#dataMaster" aria-expanded="true" style="">
-                                <i class="bi bi-puzzle"></i>
-                                <span>Data Master </span>
-                                <i class="bi bi-chevron-down ms-auto"></i>
+                            <a class="nav-link {{ Route::is('admin.pegawai.*') ? 'active' : '' }}" href="{{ route('admin.pegawai.index') }}">
+                                <i class="bi bi-file-earmark-text"></i>
+                                <span>Manajemen Pegawai</span>
                             </a>
-                            <div class="collapse" id="dataMaster">
-                                <ul class="nav nav-submenu">
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="./elements.html">
-                                            <i class="bi bi-grid"></i>
-                                            <span>Data Pegawai</span>
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="./elements-buttons.html">
-                                            <i class="bi bi-square"></i>
-                                            <span>Satuan Kerja</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link " href="./analytics.html">
+                            <a class="nav-link {{ Route::is('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
                                 <i class="bi bi-file-earmark-text"></i>
                                 <span>Manajemen User</span>
                             </a>
                         </li>
+                        @endif
                     </ul>
                 </nav>
             </div>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\PegawaiController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
@@ -72,6 +73,8 @@ Route::middleware('auth')->group(function() {
             // Route Khusus Reset Password
             Route::put('users/{user}/reset-password', [UserController::class, 'resetPassword'])
                 ->name('users.reset_password');
+
+            Route::resource('pegawai', PegawaiController::class);
         });
     });
 
@@ -82,7 +85,7 @@ Route::middleware('auth')->group(function() {
             return view('p2m.index');
         })->name("index");
         
-        Route::middleware(['role:admin,operator'])->group(function() {
+        Route::middleware(['role:admin,admin_satker,operator'])->group(function() {
 
             // P2M sosialisasi
             Route::get('/sosialisasi/export', [SosialisasiController::class, 'export'])->name('sosialisasi.export');

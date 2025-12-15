@@ -142,11 +142,11 @@ class SosialisasiController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if ($user->isAdmin()) {
+        if ($user->hasRole('admin', 'admin_satker')) {
             $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
         }
-        else if ($user->isOperator()) {
+        else {
             $satkerId = $user->getSatkerId();
             $pegawais = Pegawai::where('satuan_kerja_id', $satkerId)
                                 ->orderBy('nama', 'asc')

@@ -32,7 +32,7 @@
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{  asset("assets/manifest-DTaoG9pG.json") }}">
-    <script type="module" crossorigin src="{{  asset("assets/main-f0Mg-34g.js") }}"></script>
+    <script type="module" crossorigin src="{{  asset("assets/main-Bfr21rhA.js") }}"></script>
     @vite(['resources/js/app.js'])
     <link rel="stylesheet" crossorigin href="{{  asset("assets/main-DLfE7m78.css") }}">
     @stack("styles")
@@ -57,6 +57,10 @@
                     <!-- Logo/Brand - Now first on the left -->
                     <a class="navbar-brand d-flex align-items-center" href="./index.html">
                         <img src="{{  asset("assets/logo-bnn.png") }}" alt="Logo" height="64" class="d-inline-block align-text-top me-2">
+                        @php
+                            $pegawai = auth()->user()->pegawai;
+                            $satuanKerja = $pegawai?->satuanKerja?->satuan_kerja ?? 'Super Admin BNNP Sultra';
+                        @endphp
                         <h1 class="h4 mb-0 fw-bold text-primary">{{ $satuanKerja }}</h1>
                     </a>
 

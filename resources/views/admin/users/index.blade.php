@@ -14,8 +14,8 @@
             </a>
         </div>
 
-        <div class="card shadow-lg p-4">
-            <div class="card-body">
+        <div class="card shadow-lg">
+            <div class="card-body p-8">
                 
                 {{-- SEARCH & FILTER FORM --}}
                 <form action="{{ route('admin.users.index') }}" method="GET" class="mb-4">

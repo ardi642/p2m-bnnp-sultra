@@ -33,7 +33,7 @@
                                 <div class="row g-6 mb-5">
                                     
                                     {{-- Input 1: Satuan Kerja (Hanya jika admin) --}}
-                                    @if ($pegawai == null)    
+                                    @if (auth()->user()->pegawai == null)    
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-0">
                                             <label for="satuan_kerja_id" class="form-label">Satuan Kerja</label>

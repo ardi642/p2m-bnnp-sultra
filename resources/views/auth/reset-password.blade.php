@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="{{ asset("assets/favicon-B_cwPWBd.png") }}">
-    <link rel="stylesheet" crossorigin href="{{ asset("assets/main-DLfE7m78.css") }}">
     <title>Buat Password Baru</title>
+    {{-- Javascript Utama --}}
+    <script type="module" crossorigin src="{{  asset("assets/main-Bfr21rhA.js") }}"></script>
+    {{-- CSS Utama --}}
+    <link rel="stylesheet" crossorigin href="{{ asset("assets/main-DLfE7m78.css") }}">
 <body>
 
     <div class="container">

@@ -14,6 +14,10 @@
         .btn-primary { padding: 0.75rem 1rem; font-weight: 600; }
         .info-box { background-color: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3; font-size: 0.85rem; border-radius: 6px; padding: 12px; margin-top: 1.5rem; }
     </style>
+    {{-- Javascript Utama --}}
+    <script type="module" crossorigin src="{{  asset("assets/main-Bfr21rhA.js") }}"></script>
+    {{-- CSS Utama --}}
+    <link rel="stylesheet" crossorigin href="{{ asset("assets/main-DLfE7m78.css") }}">
 <body>
 
     <div class="container">
@@ -83,8 +87,5 @@
             </div>
         </div>
     </div>
-
-    {{-- Script Bootstrap (Penting untuk Icon & Komponen) --}}
-    {{-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script> --}}
 </body>
 </html>

@@ -22,9 +22,11 @@ use App\Http\Controllers\P2m\SafariReligiController;
 use App\Http\Controllers\P2m\TesUrineController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TemporaryFileController;
+use App\Models\DokumentasiKegiatan;
 use App\Models\p2mOnline;
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'index'])->name('login');
@@ -51,6 +53,22 @@ Route::middleware('auth')->group(function() {
     Route::get('/', function () {
         return view('welcome');
     });
+
+    Route::get('/dokumentasi/{id}/download', function ($id) {
+        
+        $file = DokumentasiKegiatan::findOrFail($id);
+
+        if (!Storage::disk('public')->exists($file->path_file)) {
+            abort(404, 'File fisik tidak ditemukan.');
+        }
+
+        $pathLengkap = Storage::disk('public')->path($file->path_file);
+
+        // 2. Gunakan response()->download()
+        // Ini lebih dikenali editor daripada Storage::download()
+        return response()->download($pathLengkap, $file->nama_file_asli);
+
+    })->name('dokumentasi.download'); // <--- NAMA YANG DISARANKAN
 
     // --- ROUTE UTILITY FILEPOND (UPLOAD SEMENTARA) ---
     // Ditaruh disini agar bisa diakses semua user yang login (Admin & Operator)

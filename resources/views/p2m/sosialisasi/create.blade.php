@@ -25,14 +25,12 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            <form action="{{ route('p2m.sosialisasi.store') }}" method="POST" enctype="multipart/form-data">
+                            <form action="{{ route('p2m.sosialisasi.store') }}" method="POST" enctype="multipart/form-data" id="form-p2m">
                                 @csrf
                                 
-                                {{-- PERBAIKAN: Gunakan SATU row container untuk semua input --}}
-                                {{-- 'g-4' memberikan jarak antar kolom dan baris yang konsisten --}}
-                                <div class="row g-6 mb-5">
+                                <div class="row g-4 mb-5">
                                     
-                                    {{-- Input 1: Satuan Kerja (Hanya jika admin) --}}
+                                    {{-- Input 1: Satuan Kerja --}}
                                     @if (auth()->user()->pegawai == null)    
                                     <div class="col-12 col-lg-6">
                                         <div class="mb-0">
@@ -146,8 +144,8 @@
                                         </div>
                                     </div>
 
-                                    {{-- Input 9: Link Kelengkapan (Full Width / col-12) --}}
-                                    <div class="col-12 col-lg-6">
+                                    {{-- Input 9: Dokumentasi (FilePond) --}}
+                                    <div class="col-12">
                                         <div class="mb-5">
                                             <label class="form-label fw-bold h5 border-bottom pb-2 d-block">
                                                 <i class="bi bi-paperclip me-2"></i>Upload Dokumentasi
@@ -157,8 +155,6 @@
                                                 <br>File akan diupload sementara, tekan tombol <b>Simpan</b> di bawah untuk memproses secara permanen.
                                             </p>
                                             
-                                            {{-- Input FilePond --}}
-                                            {{-- name="dokumentasi[]" penting agar bisa multiple --}}
                                             <input type="file" 
                                                 class="filepond"
                                                 name="dokumentasi[]" 
@@ -167,7 +163,6 @@
                                                 data-max-file-size="10MB"
                                                 data-max-files="10">
 
-                                            {{-- TAMBAHKAN INI AGAR ERROR MUNCUL --}}
                                             @error('dokumentasi')
                                                 <div class="text-danger small mt-2">
                                                     {{ $message }} (Pastikan file berwarna HIJAU sebelum simpan)
@@ -182,14 +177,16 @@
                                     </div>
 
                                 </div> 
-                                {{-- END ROW CONTAINER --}}
 
                                 <div class="row justify-content-end">
                                     <div class="col-12 col-lg-auto">
-                                        <button type="submit" class="btn btn-primary w-100 mb-4 mb-lg-0">tambah data</button>
+                                        {{-- ID tombol submit penting untuk JS --}}
+                                        <button type="submit" id="btn-submit" class="btn btn-primary w-100 mb-4 mb-lg-0">
+                                            <i class="bi bi-save me-1"></i> Tambah Data
+                                        </button>
                                     </div>
                                     <div class="col-12 col-lg-auto">
-                                        <button type="reset" class="btn btn-secondary w-100 mb-4 mb-lg-0">reset</button>
+                                        <button type="reset" class="btn btn-secondary w-100 mb-4 mb-lg-0">Reset</button>
                                     </div>
                                 </div>
                             </form>
@@ -203,51 +200,91 @@
 @endsection
 
 @push('styles')
-{{-- CSS Tom Select (Theme Bootstrap 5) --}}
     @vite(['resources/css/tom-select.css', 'resources/css/filepond.css', 'resources/js/filepond.js'])
 @endpush
 
 @push('scripts')
-{{-- Script Tom Select --}}
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {
-        // Pastikan library Tom Select sudah di-load di layout utama (admin.blade.php)
+        // --- 1. Konfigurasi Tom Select ---
         if(typeof TomSelect !== 'undefined'){
-            console.log("test dulu berjalan")
             new TomSelect("#select-pegawai", {
-                create: false, // User tidak boleh buat nama baru (harus pilih dari list)
-                sortField: {
-                    field: "text",
-                    direction: "asc"
-                },
-                maxItems: null, // <--- MENAMBAHKAN INI AGAR SELECT BISA TANPA BATAS
+                create: false,
+                sortField: { field: "text", direction: "asc" },
+                maxItems: null,
                 placeholder: "Cari atau pilih pegawai...",
-                plugins: ['remove_button'], // Tombol 'x' untuk menghapus pilihan
+                plugins: ['remove_button'],
             });
-        } else {
-            console.error("Library Tom Select belum terinstall/terload");
         }
 
+        // --- 2. Konfigurasi FilePond ---
         const inputElement = document.querySelector('input.filepond');
+        const submitBtn = document.getElementById('btn-submit'); // Ambil tombol submit
+
         const pond = FilePond.create(inputElement, {
-            acceptedFileTypes: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            acceptedFileTypes: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
             labelIdle: 'Drag & Drop file Anda atau <span class="filepond--label-action">Cari File</span>',
             imagePreviewHeight: 120,
             credits: false,
 
-            // KONFIGURASI SERVER (UPLOAD ASYNC KE FOLDER TMP)
+            // A. LOGIC FILE LAMA (Gagal Validasi)
+            // Ini akan memuat ulang file yang sudah diupload ke temp jika validasi form gagal
+            files: [
+                @if(old('dokumentasi'))
+                    @foreach(old('dokumentasi') as $file)
+                    {
+                        source: '{{ $file }}',
+                        options: {
+                            type: 'local', // Menandakan file ini sudah ada di server (folder temp)
+                        }
+                    },
+                    @endforeach
+                @endif
+            ],
+
+            // B. KONFIGURASI SERVER
             server: {
                 process: {
-                    url: '{{ route('upload.temp') }}', // Route Controller Temporary
-                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                    url: '{{ route('upload.temp') }}',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    onload: (response) => {
+                        // Response dari server (biasanya nama file temp)
+                        return response; 
+                    },
+                    onerror: (response) => {
+                        // Jika error, kembalikan tombol submit
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="bi bi-save me-1"></i> Tambah Data';
+                        return response;
+                    }
                 },
                 revert: {
                     url: '{{ route('revert.temp') }}',
                     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-                }
+                },
+                // Load digunakan untuk menampilkan preview file 'local' (file lama saat validasi gagal)
+                load: {
+                    url: '{{ route('load.temp') }}/?file=', // Pastikan route ini ada: Route::get('load-temp', ...)->name('load.temp');
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                },
+            },
+
+            // C. EVENT LISTENER UNTUK TOMBOL SUBMIT
+            onprocessstart: (file) => {
+                // Saat upload dimulai, matikan tombol submit
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Mengupload...';
+            },
+            onprocessfiles: () => {
+                // Saat SEMUA file selesai diproses, aktifkan tombol submit
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-save me-1"></i> Tambah Data';
+            },
+            onwarning: (error, file, status) => {
+                // Jika user mencoba upload > max files
+                alert('Maksimal file terlampaui');
             }
         });
-
     });
 </script>
 @endpush

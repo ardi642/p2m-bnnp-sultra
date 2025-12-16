@@ -224,7 +224,7 @@ class SosialisasiController extends Controller
             'pegawai_nips.*' => 'exists:pegawai,nip',
 
             // Validasi Dokumentasi (Minimal 1 file wajib)
-            'dokumentasi'   => 'required|array',
+            'dokumentasi'   => 'nullable|array',
             'dokumentasi.*' => 'required',
         ];
 
@@ -510,51 +510,57 @@ class SosialisasiController extends Controller
         }
     }
 
-    public function destroy($id) {
-        // Ambil Data & Path File
-        $kegiatan = P2mSosialisasi::with('dokumentasi')->findOrFail($id);
+    public function destroy($id) 
+    {
+        // 1. CARI DATA
+        // Jangan pakai with('dokumentasi') disini agar hemat memori di awal
+        $kegiatan = P2mSosialisasi::findOrFail($id);
         
-        // Simpan path file ke array memory sebelum datanya dihapus
+        // 2. KUMPULKAN PATH FILE (EFISIENSI MEMORI TINGGI)
+        // Menggunakan cursor() agar data diambil satu per satu (streaming), 
+        // bukan dimuat sekaligus ke RAM. Sangat aman jika ada ribuan file.
         $filesToDelete = [];
-        foreach ($kegiatan->dokumentasi as $doc) {
+        
+        foreach ($kegiatan->dokumentasi()->cursor() as $doc) {
             $filesToDelete[] = $doc->path_file;
         }
 
-        // Hapus Database (Pakai Transaksi biar aman sesama tabel)
+        // 3. HAPUS DATABASE (TRANSAKSI ATOMIK)
         DB::beginTransaction();
         try {
-            $kegiatan->delete(); // Ini akan cascade delete ke tabel dokumentasi
-            DB::commit(); // <--- KUNCI: KOMIT DULU BARU HAPUS FISIK
+            // Hapus Kegiatan
+            // Berkat kode boot() di Model, ini otomatis menghapus data di DB:
+            // - p2m_sosialisasi (HILANG)
+            // - dokumentasi_kegiatan (HILANG)
+            $kegiatan->delete(); 
+
+            // KUNCI: Commit dulu! Pastikan DB bersih 100% baru sentuh file fisik.
+            DB::commit(); 
+
         } catch (\Exception $e) {
+            // JIKA DB GAGAL: Batalkan semua. File fisik jangan disentuh.
             DB::rollBack();
-            // Jika DB gagal hapus, file JANGAN disentuh.
-            // Data aman, File aman.
-            return back()->with('error', 'Gagal menghapus data database: ' . $e->getMessage());
+            return back()->with('error', 'Gagal menghapus data: ' . $e->getMessage());
         }
 
-        // Hapus File Fisik (Dilakukan SETELAH DB Commit sukses)
-        // Kita lakukan di luar try-catch DB, atau di try-catch terpisah
-        // Agar jika file gagal hapus, user tetap melihat datanya sudah terhapus.
+        // 4. HAPUS FILE FISIK (POST-COMMIT ACTION)
+        // Database sudah bersih. Sekarang kita bersihkan harddisk.
+        // Jika tahap ini gagal, tidak masalah (hanya jadi file sampah), 
+        // yang penting data di aplikasi sudah konsisten hilang.
         
-        $gagalHapusCount = 0;
         foreach ($filesToDelete as $path) {
             try {
                 if (Storage::disk('public')->exists($path)) {
                     Storage::disk('public')->delete($path);
                 }
             } catch (\Exception $e) {
-                // Jika satu file gagal hapus (misal dikunci sistem), 
-                // biarkan saja (jangan bikin error 500).
-                // File ini jadi sampah, tapi aplikasi tetap bersih.
-                $gagalHapusCount++;
-                // Opsional: Log errornya -> Log::error("Gagal hapus file: $path");
+                // Silent Fail: Biarkan saja jika file gagal dihapus (misal permission error).
             }
         }
 
-        // Return Sukses
         return redirect()->back()
             ->with('success', 'destroy')
-            ->with('message', 'Data berhasil dihapus.');
+            ->with('message', 'Data dan file berhasil dihapus.');
     }
 
 }

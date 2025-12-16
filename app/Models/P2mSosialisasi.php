@@ -21,6 +21,20 @@ class P2mSosialisasi extends Model
     protected $guarded = [];
 
     /**
+     * CLEANUP DATABASE OTOMATIS
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($kegiatan) {
+            // Hapus record database anak-anaknya.
+            // Tidak pakai cursor disini karena ->delete() langsung eksekusi query SQL (Cepat & Ringan)
+            $kegiatan->dokumentasi()->delete(); 
+        });
+    }
+
+    /**
      * Relasi ke Satuan Kerja (Many to One)
      */
     public function satuanKerja(): BelongsTo

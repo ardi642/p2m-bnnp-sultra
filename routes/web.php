@@ -74,6 +74,7 @@ Route::middleware('auth')->group(function() {
     // Ditaruh disini agar bisa diakses semua user yang login (Admin & Operator)
     Route::post('/upload-temp', [TemporaryFileController::class, 'upload'])->name('upload.temp');
     Route::delete('/revert-temp', [TemporaryFileController::class, 'revert'])->name('revert.temp');
+    Route::get('/load-temp', [TemporaryFileController::class, 'load'])->name('load.temp');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     // Route untuk update Biodata (Email, dll)

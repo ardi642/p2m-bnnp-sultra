@@ -29,16 +29,16 @@ class SosialisasiController extends Controller
         
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
-        $query = P2mSosialisasi::with('pegawai', 'satuanKerja', 'dokumentasi');
+        $query = P2mSosialisasi::with('pegawai.satuanKerja', 'satuanKerja');
 
         // --- FILTER SAMA PERSIS SEPERTI SEBELUMNYA ---
 
-        if ($user->isAdmin()) {
+        if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
             }
         }
-        else if ($user->isOperator()){
+        else {
             $satkerId = $user->getSatkerId();
             $query->where('satuan_kerja_id', $satkerId);
         }
@@ -145,7 +145,7 @@ class SosialisasiController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if ($user->hasRole('admin', 'admin_satker')) {
+        if ($user->hasRole('admin')) {
             $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
         }
@@ -161,6 +161,11 @@ class SosialisasiController extends Controller
 
         $query = $this->getFilteredQuery($request);
 
+        // Kita tambahkan 'dokumentasi' manual disini.
+        // Jadi saat Export Excel (yang tidak lewat fungsi index ini), dokumentasi TIDAK dimuat.
+        // Tapi saat buka halaman web (lewat fungsi index ini), dokumentasi DIMUAT.
+        $query->with('dokumentasi');
+
         $perPage = $request->input('per_page', 10);
         
         // Validasi keamanan (agar user tidak iseng input angka 1000000 bikin server down)
@@ -169,8 +174,13 @@ class SosialisasiController extends Controller
             $perPage = 10;
         }
         $sosialisasis = $query->paginate($perPage)->withQueryString();
+
+        // --- OPTIMASI LOOKUP (Agar View Cepat) ---
+        // Ambil semua nama satker menjadi array [id => nama]
+        // Contoh: [1 => 'BNN Jakarta', 2 => 'BNN Bali']
+        $satkerLookup = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
                         
-        return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years', 'pegawais', 'user'));
+        return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup'));
     }
 
     // 3. METHOD EXPORT (DOWNLOAD EXCEL)
@@ -252,6 +262,27 @@ class SosialisasiController extends Controller
             // SIMPAN DATA UTAMA
             $kegiatan = P2mSosialisasi::create($dataKegiatan);
 
+            // -----------------------------------------------------------
+            // SIMPAN RELASI PEGAWAI DENGAN ATTACH (MODIFIKASI DISINI)
+            // -----------------------------------------------------------
+            
+            // Ambil detail pegawai dari Database berdasarkan NIP yang dipilih
+            // Tujuannya: Untuk mengetahui 'satuan_kerja_id' mereka SAAT INI
+            $listPegawai = Pegawai::whereIn('nip', $pegawaiNips)->get();
+
+            // Siapkan Array untuk Attach
+            // Format yang dibutuhkan attach agar bisa simpan kolom tambahan:
+            // [ 
+            //    'NIP_A' => ['saved_satuan_kerja_id' => 1], 
+            //    'NIP_B' => ['saved_satuan_kerja_id' => 2] 
+            // ]
+            $attachData = [];
+            foreach ($listPegawai as $pgw) {
+                $attachData[$pgw->nip] = [
+                    'saved_satuan_kerja_id' => $pgw->satuan_kerja_id
+                ];
+            }
+
             // SIMPAN RELASI PEGAWAI
             $kegiatan->pegawai()->attach($pegawaiNips);
 
@@ -322,7 +353,10 @@ class SosialisasiController extends Controller
                 }
             }
 
-            return back()->with('error', 'Gagal menyimpan: ' . $e->getMessage())->withInput();
+            return back()
+                ->with('error', 'store') // Trigger error store
+                ->with('message', 'Gagal menyimpan data: ' . $e->getMessage())
+                ->withInput();
         }
 
         // REDIRECT SUKSES
@@ -351,11 +385,18 @@ class SosialisasiController extends Controller
             $pegawais = Pegawai::orderBy('nama', 'asc')->get();
         } 
         else {
-            $satuanKerjas = []; // Tidak dipakai di view operator
+            $satuanKerjas = []; 
             $satkerId = $user->getSatkerId();
-            $pegawais = Pegawai::where('satuan_kerja_id', $satkerId)
-                ->orderBy('nama', 'asc')
-                ->get();
+
+            // Ambil pegawai yang AKTIF di Satker saat ini
+            $pegawaiAktif = Pegawai::where('satuan_kerja_id', $satkerId)->get();
+
+            // Ambil pegawai yang SUDAH MENEMPEL di kegiatan ini (Termasuk yg sudah mutasi)
+            $pegawaiExisting = $kegiatan->pegawai;
+
+            // Gabungkan keduanya, lalu hilangkan duplikat NIP
+            // Ini memastikan Budi (yg sudah pindah satker) tetap muncul di list
+            $pegawais = $pegawaiAktif->merge($pegawaiExisting)->unique('nip')->sortBy('nama');
         }
 
         // Ambil Array NIP Pegawai yang sudah terpilih sebelumnya
@@ -418,8 +459,49 @@ class SosialisasiController extends Controller
             // Update Data Utama
             $kegiatan->update($dataUpdate);
 
-            // Update Relasi Pegawai
-            $kegiatan->pegawai()->sync($pegawaiNips);
+            // -----------------------------------------------------------
+            // LOGIKA UPDATE PIVOT (HISTORY PRESERVATION)
+            // -----------------------------------------------------------
+
+            // Ambil Data Pivot LAMA (Untuk melihat history satker sebelumnya)
+            // Kita ambil kolom 'pegawai_nip' dan 'saved_satuan_kerja_id'
+            $oldPivotData = DB::table('pegawai_p2m_sosialisasi')
+                                ->where('p2m_sosialisasi_id', $id)
+                                ->get()
+                                ->keyBy('pegawai_nip'); // Index array berdasarkan NIP
+
+            // Ambil Data Master Pegawai (Untuk pegawai BARU yg ditambahkan)
+            $masterPegawais = Pegawai::whereIn('nip', $pegawaiNips)->get()->keyBy('nip');
+
+            $syncData = [];
+
+            // Loop NIP yang disubmit dari Form
+            foreach ($pegawaiNips as $nip) {
+                
+                // CEK: Apakah pegawai ini adalah "Orang Lama" di kegiatan ini?
+                if (isset($oldPivotData[$nip]) && $oldPivotData[$nip]->saved_satuan_kerja_id) {
+                    // KASUS 1: PEGAWAI LAMA
+                    // Pertahankan ID Satker dari history lama.
+                    // Jangan ambil dari master pegawai (karena mungkin dia sudah mutasi).
+                    $satkerToSave = $oldPivotData[$nip]->saved_satuan_kerja_id; 
+                } else {
+                    // KASUS 2: PEGAWAI BARU (atau data lama yg belum punya history)
+                    // Ambil ID Satker dia saat ini dari master pegawai.
+                    $satkerToSave = $masterPegawais[$nip]->satuan_kerja_id ?? null;
+                }
+
+                // Masukkan ke array sync
+                $syncData[$nip] = [
+                    'saved_satuan_kerja_id' => $satkerToSave
+                ];
+            }
+
+            // Eksekusi Sync
+            // Otomatis menghapus pegawai yang tidak dicentang, 
+            // dan mengupdate/insert pegawai yang dicentang dengan Satker ID yang tepat.
+            $kegiatan->pegawai()->sync($syncData);
+
+            // -----------------------------------------------------------
 
             // A. PROSES HAPUS FILE LAMA (Hapus DB dulu, Fisik nanti)
             if ($request->has('delete_files')) {
@@ -505,7 +587,10 @@ class SosialisasiController extends Controller
             
             // Note: File lama TIDAK dihapus karena loop hapus fisik ada setelah commit.
 
-            return back()->with('error', 'Gagal update: ' . $e->getMessage())->withInput();
+            return back()
+                ->with('error', 'update') // Trigger error update
+                ->with('message', 'Gagal memperbarui data: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
@@ -539,7 +624,9 @@ class SosialisasiController extends Controller
         } catch (\Exception $e) {
             // JIKA DB GAGAL: Batalkan semua. File fisik jangan disentuh.
             DB::rollBack();
-            return back()->with('error', 'Gagal menghapus data: ' . $e->getMessage());
+            return back()
+                ->with('error', 'destroy') // Trigger error destroy
+                ->with('message', 'Gagal menghapus data dari database: ' . $e->getMessage());
         }
 
         // 4. HAPUS FILE FISIK (POST-COMMIT ACTION)

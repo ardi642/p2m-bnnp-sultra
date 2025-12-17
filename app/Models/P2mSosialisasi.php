@@ -50,12 +50,14 @@ class P2mSosialisasi extends Model
     public function pegawai(): BelongsToMany
     {
         return $this->belongsToMany(
-            Pegawai::class,                // 1. Model Tujuan
-            'pegawai_p2m_sosialisasi',     // 2. Nama Tabel Pivot
-            'p2m_sosialisasi_id',          // 3. Foreign Key tabel ini di Pivot
-            'pegawai_nip',                 // 4. Foreign Key tabel tujuan (Pegawai) di Pivot
-            'id',                          // 5. Primary Key tabel ini (Local Key)
-            'nip'                          // 6. Primary Key tabel tujuan (Pegawai Key - NIP)
-        )->withTimestamps();               // Opsional: jika tabel pivot punya created_at/updated_at
+            Pegawai::class,                // Model Tujuan
+            'pegawai_p2m_sosialisasi',     // Nama Tabel Pivot
+            'p2m_sosialisasi_id',          // Foreign Key tabel ini di Pivot
+            'pegawai_nip',                 // Foreign Key tabel tujuan (Pegawai) di Pivot
+            'id',                          // Primary Key tabel ini (Local Key)
+            'nip'                          // Primary Key tabel tujuan (Pegawai Key - NIP)
+        )
+        ->withPivot('saved_satuan_kerja_id')    // ambil kolom history
+        ->withTimestamps();               // Opsional: jika tabel pivot punya created_at/updated_at
     }
 }

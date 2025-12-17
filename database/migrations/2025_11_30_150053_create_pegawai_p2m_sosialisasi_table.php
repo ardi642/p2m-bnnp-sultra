@@ -28,6 +28,15 @@ public function up(): void
             ->on('pegawai')     // Di tabel 'pegawai'
             ->onDelete('cascade');
 
+
+        //  HISTORY SATKER (SNAPSHOT) - INI YANG BARU
+        // Disimpan nullable jaga-jaga, onDelete set null agar history aman meski satker master dihapus
+        $table->unsignedBigInteger('saved_satuan_kerja_id')->nullable();
+        $table->foreign('saved_satuan_kerja_id')
+            ->references('id')
+            ->on('satuan_kerja')
+            ->onDelete('set null');
+
         $table->timestamps();
         // Opsional: Mencegah duplikasi (satu pegawai tidak bisa input 2x di kegiatan yang sama)
         $table->unique(['p2m_sosialisasi_id', 'pegawai_nip'], 'unique_kegiatan_pegawai');

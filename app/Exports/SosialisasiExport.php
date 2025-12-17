@@ -2,19 +2,18 @@
 
 namespace App\Exports;
 
-use App\Models\P2mSosialisasi;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class SosialisasiExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
     protected $query;
 
-    // Kita terima Query Builder yang sudah difilter dari Controller
     public function __construct($query)
     {
         $this->query = $query;
@@ -29,42 +28,51 @@ class SosialisasiExport implements FromQuery, WithHeadings, WithMapping, ShouldA
     public function headings(): array
     {
         return [
-            'Satuan Kerja',
-            'Anggaran',
-            'Nama Kegiatan',
-            'Sasaran',
-            'Tanggal Pelaksanaan',
-            'Tempat',
-            'Pegawai',
-            'Jumlah Peserta',
-            'Link Dokumentasi',
-            'Dibuat Pada'
+            'Satuan Kerja',       // A
+            'Anggaran',           // B
+            'Nama Kegiatan',      // C
+            'Sasaran',            // D
+            'Tanggal Pelaksanaan',// E
+            'Tempat',             // F
+            'Pegawai',            // G
+            'Jumlah Peserta',     // H
+            'Dibuat Pada'         // I
         ];
     }
 
     // Mapping Data per Baris
     public function map($row): array
     {
-        // Ambil nama pegawai dan gabungkan dengan koma
-        $pegawaiNames = $row->pegawai->pluck('nama')->implode(', ');
+        // Gabungkan Nama dan NIP
+        $pegawaiData = $row->pegawai->map(function($p) {
+            return $p->nip ? "{$p->nama} ({$p->nip})" : $p->nama;
+        })->implode("\n");
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
             $row->anggaran_pelaksanaan,
             $row->nama_kegiatan,
             $row->sasaran_kegiatan,
-            $row->tanggal_pelaksanaan->translatedFormat('d F Y'), // Format tanggal Indo
+            
+            // PERBAIKAN DI SINI: Tambahkan ->locale('id')
+            $row->tanggal_pelaksanaan->locale('id')->translatedFormat('d F Y'),
+            
             $row->tempat_kegiatan,
-            $pegawaiNames, // List pegawai
+            $pegawaiData,
             $row->jumlah_peserta,
-            $row->link_kelengkapan_dokumentasi,
-            $row->created_at->translatedFormat('d F Y H:i'),
+            
+            // PERBAIKAN DI SINI: Tambahkan ->locale('id')
+            $row->created_at->locale('id')->translatedFormat('d F Y H:i'),
         ];
     }
 
-    // Styling Header (Bold)
+    // Styling
     public function styles(Worksheet $sheet)
     {
+        // Wrap text untuk kolom Pegawai (G)
+        $sheet->getStyle('G')->getAlignment()->setWrapText(true);
+        $sheet->getStyle('G')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+
         return [
             1 => ['font' => ['bold' => true]],
         ];

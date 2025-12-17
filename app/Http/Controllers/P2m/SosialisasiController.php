@@ -89,7 +89,6 @@ class SosialisasiController extends Controller
                     ->orWhere('tempat_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhere('sasaran_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%") // Cari DIPA/NON DIPA
-                    ->orWhere('link_kelengkapan_dokumentasi', 'LIKE', "%{$search}%")
 
                     // 2. Pencarian Angka (Jumlah Peserta)
                     ->orWhere('jumlah_peserta', 'LIKE', "%{$search}%")

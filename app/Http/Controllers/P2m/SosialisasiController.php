@@ -157,7 +157,13 @@ class SosialisasiController extends Controller
             $satuanKerjas = [];
         }
 
-        $years = P2mSosialisasi::selectRaw('YEAR(tanggal_pelaksanaan) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
+        $yearQuery = P2mSosialisasi::selectRaw('YEAR(tanggal_pelaksanaan) as year');
+
+        if ($user->isOperator()) {
+            $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
+        }
+
+        $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
 

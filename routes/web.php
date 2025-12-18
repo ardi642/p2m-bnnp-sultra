@@ -116,6 +116,9 @@ Route::middleware('auth')->group(function() {
             Route::get('/sosialisasi/export', [SosialisasiController::class, 'export'])->name('sosialisasi.export');
             Route::get('/sosialisasi', [SosialisasiController::class, 'index'])->name("sosialisasi.index");
 
+            Route::get('/upacara/export', [UpacaraController::class, 'export'])->name('upacara.export');
+            Route::get('/upacara', [UpacaraController::class, 'index'])->name("upacara.index");
+
             // P2M cfd
             Route::get('/cfd', [CfdController::class, 'index'])->name("cfd.index");
             Route::get('/cfd/export', [CfdController::class, 'export'])->name('cfd.export');
@@ -127,10 +130,6 @@ Route::middleware('auth')->group(function() {
             // P2M online
             Route::get('/online', [OnlineController::class, 'index'])->name("online.index");
             Route::get('/online/export', [OnlineController::class, 'export'])->name('online.export');
-
-            // P2M upacara
-            Route::get('/upacara', [UpacaraController::class, 'index'])->name("upacara.index");
-            Route::get('/upacara/export', [UpacaraController::class, 'export'])->name('upacara.export');
 
             // P2M kie
             Route::get('/kie', [KieController::class, 'index'])->name("kie.index");
@@ -165,6 +164,12 @@ Route::middleware('auth')->group(function() {
             Route::get('/sosialisasi/{id}/edit', [SosialisasiController::class, 'edit'])->name('sosialisasi.edit');
             Route::put('/sosialisasi/{id}', [SosialisasiController::class, 'update'])->name('sosialisasi.update');
             Route::delete('/sosialisasi/{id}', [SosialisasiController::class, 'destroy'])->name("sosialisasi.destroy");
+
+            Route::get('/upacara/create', [UpacaraController::class, 'create'])->name("upacara.create");
+            Route::post('/upacara', [UpacaraController::class, 'store'])->name("upacara.store");
+            Route::get('/upacara/{id}/edit', [UpacaraController::class, 'edit'])->name('upacara.edit');
+            Route::put('/upacara/{id}', [UpacaraController::class, 'update'])->name('upacara.update');
+            Route::delete('/upacara/{id}', [UpacaraController::class, 'destroy'])->name("upacara.destroy");
             
             // P2M cfd
             Route::get('/cfd/create', [CfdController::class, 'create'])->name("cfd.create");
@@ -180,11 +185,6 @@ Route::middleware('auth')->group(function() {
             Route::get('/online/create', [OnlineController::class, 'create'])->name("online.create");
             Route::post('/online', [OnlineController::class, 'store'])->name("online.store");
             Route::delete('/online/{id}', [OnlineController::class, 'destroy'])->name("online.destroy");
-
-            // P2M upacara
-            Route::get('/upacara/create', [UpacaraController::class, 'create'])->name("upacara.create");
-            Route::post('/upacara', [UpacaraController::class, 'store'])->name("upacara.store");
-            Route::delete('/upacara/{id}', [UpacaraController::class, 'destroy'])->name("upacara.destroy");
 
             // P2M kie
             Route::get('/kie/create', [KieController::class, 'create'])->name("kie.create");

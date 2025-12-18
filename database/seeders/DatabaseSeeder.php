@@ -32,31 +32,10 @@ class DatabaseSeeder extends Seeder
         p2mOnline::factory(50)->create();
         P2mMediaNonElektronik::factory(50)->create();
 
-        // =========================================================
-        // 4. SEEDING P2M SOSIALISASI (YANG DIPERBAIKI)
-        // =========================================================
-        // Hanya di sini kita isi 'saved_satuan_kerja_id' agar tampilan
-        // di tabel P2M Sosialisasi bersih (tidak merah/pindah).
-        // =========================================================
-        P2mSosialisasi::factory(50)->create()->each(function ($kegiatan) {
-            // Ambil pegawai dari satker yang sama
-            $listPegawai = Pegawai::where('satuan_kerja_id', $kegiatan->satuan_kerja_id)
-                ->inRandomOrder()
-                ->take(rand(2, 4))
-                ->get();
-
-            $attachData = [];
-            foreach ($listPegawai as $pgw) {
-                $attachData[$pgw->nip] = [
-                    // KITA ISI INI KHUSUS UNTUK SOSIALISASI
-                    'saved_satuan_kerja_id' => $pgw->satuan_kerja_id 
-                ];
-            }
-
-            if (!empty($attachData)) {
-                $kegiatan->pegawai()->attach($attachData);
-            }
-        });
+        $this->call([
+            P2mUpacaraSeeder::class,
+            P2mUpacaraSeeder::class
+        ]);
 
         // =========================================================
         // 5. SEEDING MODEL LAIN (STANDAR / DEFAULT)

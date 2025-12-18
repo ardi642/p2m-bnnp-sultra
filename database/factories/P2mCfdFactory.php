@@ -3,11 +3,11 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\p2mcfd;
+use App\Models\P2mCfd;
 use App\Models\SatuanKerja;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\P2mSosialisasi>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\P2mCfd>
  */
 class P2mCfdFactory extends Factory
 {
@@ -16,7 +16,7 @@ class P2mCfdFactory extends Factory
      *
      * @var string
      */
-    protected $model = p2mcfd::class;
+    protected $model = P2mCfd::class;
 
     /**
      * Define the model's default state.
@@ -26,12 +26,20 @@ class P2mCfdFactory extends Factory
     public function definition(): array
     {
         return [
-            // Ambil ID Satuan Kerja yang sudah ada secara acak
-            'satuan_kerja_id' => SatuanKerja::inRandomOrder()->first()->id ?? SatuanKerja::factory(),          
-            'tempat_kegiatan' => $this->faker->address(),
-            'tanggal_pelaksanaan' => $this->faker->dateTimeBetween('-1 year', 'now'), // Tanggal setahun terakhir
-            'jumlah_peserta' => $this->faker->numberBetween(10, 500),
-            'link_kelengkapan_dokumentasi' => $this->faker->url(),
+            // Ambil ID Satker acak yang ada, atau buat baru jika kosong
+            'satuan_kerja_id' => SatuanKerja::inRandomOrder()->first()->id ?? SatuanKerja::factory(),
+            
+            // Nama kegiatan khas CFD
+            'nama_kegiatan' => 'Sosialisasi P4GN pada Car Free Day ' . $this->faker->city(),
+            
+            // Tanggal dalam 1 tahun terakhir
+            'tanggal_pelaksanaan' => $this->faker->dateTimeBetween('-1 year', 'now'),
+            
+            // Lokasi (biasanya Alun-alun atau Jalan Protokol)
+            'tempat_kegiatan' => 'Alun-alun Kota ' . $this->faker->city() . ', ' . $this->faker->streetName(),
+            
+            // Jumlah peserta CFD biasanya ramai (50 - 5000)
+            'jumlah_peserta' => $this->faker->numberBetween(50, 5000),
         ];
     }
 }

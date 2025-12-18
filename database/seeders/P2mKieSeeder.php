@@ -3,21 +3,21 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\P2mCfd;
+use App\Models\P2mKie;
 use App\Models\Pegawai;
 
-class P2mCfdSeeder extends Seeder
+class P2mKieSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        // Membuat 50 data dummy CFD
-        P2mCfd::factory(50)->create()->each(function ($kegiatan) {
+        // Membuat 50 data dummy KIE Keliling
+        P2mKie::factory(50)->create()->each(function ($kegiatan) {
             
-            // Logika: Ambil pegawai yang berasal dari Satuan Kerja yang sama dengan kegiatan
-            // Ambil acak 2 s/d 5 orang petugas
+            // Ambil pegawai dari satker yang sama dengan kegiatan
+            // Ambil acak 2 s/d 5 orang
             $listPegawai = Pegawai::where('satuan_kerja_id', $kegiatan->satuan_kerja_id)
                 ->inRandomOrder()
                 ->take(rand(2, 5))
@@ -25,14 +25,14 @@ class P2mCfdSeeder extends Seeder
 
             $attachData = [];
             foreach ($listPegawai as $pgw) {
-                // PENTING: Mengisi data pivot 'saved_satuan_kerja_id' 
-                // agar fitur history perpindahan pegawai bekerja
+                // Mengisi data pivot (history satker)
+                // PENTING: Agar di tabel tidak muncul error / merah (pindah satker)
                 $attachData[$pgw->nip] = [
                     'saved_satuan_kerja_id' => $pgw->satuan_kerja_id 
                 ];
             }
 
-            // Simpan relasi ke tabel pivot 'pegawai_p2m_cfd'
+            // Simpan relasi ke tabel pivot
             if (!empty($attachData)) {
                 $kegiatan->pegawai()->attach($attachData);
             }

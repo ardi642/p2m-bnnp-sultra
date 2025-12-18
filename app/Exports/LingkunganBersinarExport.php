@@ -11,7 +11,7 @@ use Maatwebsite\Excel\Concerns\WithChunkReading;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
-class CfdExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithChunkReading
+class LingkunganBersinarExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithChunkReading
 {
     protected $query;
 
@@ -34,46 +34,47 @@ class CfdExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize,
     {
         return [
             'Satuan Kerja',
-            'Nama Kegiatan',
-            'Tanggal Pelaksanaan',
-            'Tempat',
-            'Pegawai Bertugas',
-            'Jumlah Peserta (Masyarakat)',
+            'Sasaran Kegiatan',
+            'Nama Tempat/Wilayah',
+            'Tanggal Pencanangan',
+            'Jumlah Penggiat P4GN',
+            'Penanggung Jawab Wilayah',
+            'No HP Penanggung Jawab',
             'Dibuat Pada'
         ];
     }
 
     public function map($row): array
     {
+        // Format list Penanggung Jawab
         $listPegawai = [];
         foreach ($row->pegawai as $pegawai) {
-            $info = $pegawai->nama;
-            if ($pegawai->nip) {
-                $info .= " ({$pegawai->nip})";
-            }
+            $info = $pegawai->nama . " (" . $pegawai->nip . ")";
+            // Cek status pindah satker
             if ($pegawai->satuan_kerja_id != $row->satuan_kerja_id) {
                 $satkerBaru = $pegawai->satuanKerja->satuan_kerja ?? 'Luar Satker';
                 $info .= " [Pindah ke: $satkerBaru]";
             }
             $listPegawai[] = $info;
         }
-        $pegawaiString = implode("\n", $listPegawai);
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
-            $row->nama_kegiatan,
-            $row->tanggal_pelaksanaan->locale('id')->translatedFormat('d F Y'),
-            $row->tempat_kegiatan,
-            $pegawaiString,
-            $row->jumlah_peserta,
+            $row->sasaran_kegiatan,
+            $row->nama_tempat_wilayah,
+            $row->tanggal_pencanangan->locale('id')->translatedFormat('d F Y'),
+            $row->jumlah_penggiat_p4gn . ' Orang',
+            implode("\n", $listPegawai),
+            $row->no_hp_penanggung_jawab ?? '-',
             $row->created_at->locale('id')->translatedFormat('d F Y H:i'),
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('E')->getAlignment()->setWrapText(true); // Kolom Pegawai
-        $sheet->getStyle('A:G')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+        $sheet->getStyle('F')->getAlignment()->setWrapText(true); // Kolom PJ Wrap Text
+        $sheet->getStyle('A:H')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+
         return [
             1 => ['font' => ['bold' => true]],
         ];

@@ -2,25 +2,27 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Traits\HasDokumentasi;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Traits\HasDokumentasi; 
 
-class P2mCfd extends Model
+class P2mLingkunganBersinar extends Model
 {
     use HasFactory, HasDokumentasi;
 
-    protected $table = 'p2m_cfd';
+    protected $table = 'p2m_lingkungan_bersinar';
+
+    protected $guarded = ['id'];
 
     protected $casts = [
-        'tanggal_pelaksanaan' => 'date'
+        'tanggal_pencanangan' => 'date'
     ];
 
-    protected $guarded = [];
-
-    // Cleanup Dokumentasi saat delete
+    /**
+     * Hapus dokumentasi fisik & DB saat data kegiatan dihapus
+     */
     protected static function boot()
     {
         parent::boot();
@@ -38,9 +40,9 @@ class P2mCfd extends Model
     {
         return $this->belongsToMany(
             Pegawai::class, 
-            'pegawai_p2m_cfd', 
-            'p2m_cfd_id', 
-            'pegawai_nip', 
+            'pegawai_p2m_lingkungan_bersinar', // Nama Tabel Pivot
+            'p2m_lingkungan_bersinar_id',      // FK Kegiatan
+            'pegawai_nip',                     // FK Pegawai
             'id', 
             'nip'
         )

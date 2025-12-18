@@ -6,32 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
+        // Hanya satu tabel, tidak ada pivot pegawai
         Schema::create('p2m_elektronik', function (Blueprint $table) {
             $table->id();
+            
             $table->unsignedBigInteger('satuan_kerja_id');
-            $table->foreign('satuan_kerja_id')
-                    ->references('id')
-                    ->on('satuan_kerja')
-                    ->onUpdate('cascade')
-                    ->onDelete('cascade');
+            $table->foreign('satuan_kerja_id')->references('id')->on('satuan_kerja')
+                ->onUpdate('cascade')->onDelete('cascade');
+
             $table->enum('anggaran_pelaksanaan', ['DIPA', 'NON DIPA']);
-            $table->enum('Media', ['Televisi', 'Radio', 'Video Tron', 'Bioskop', 'TV Plasma', 'Media Lain']);
-            $table->text('durasi_pelaksanaan');
+            
+            // Enum Jenis Media
+            $table->enum('jenis_media', ['televisi', 'radio', 'video tron', 'bioskop', 'tv plasma', 'media lain']);
+            
+            $table->string('nama_media'); // Nama Stasiun TV/Radio/Lokasi Videotron
             $table->date('tanggal_pelaksanaan');
-            $table->text('nama_media');
-            $table->text('link_kelengkapan_dokumentasi');
+            $table->integer('durasi_pelaksanaan'); // Satuan Hari
+            
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('p2m_elektronik');

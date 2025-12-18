@@ -34,25 +34,11 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             P2mUpacaraSeeder::class,
-            P2mUpacaraSeeder::class
+            P2mKieSeeder::class,
+            P2mLingkunganBersinarSeeder::class,
+            P2mCfdSeeder::class,
+            P2mElektronikSeeder::class
         ]);
-
-        // =========================================================
-        // 5. SEEDING MODEL LAIN (STANDAR / DEFAULT)
-        // =========================================================
-        // Bagian ini dikembalikan ke standar (attach NIP saja).
-        // Tidak mengisi kolom history agar tidak error "Column not found".
-        // =========================================================
-
-        // P2M CFD
-        p2mcfd::factory(50)->create()->each(function ($kegiatan) {
-            $pegawaiNips = Pegawai::where('satuan_kerja_id', $kegiatan->satuan_kerja_id)
-                ->inRandomOrder()->take(rand(2, 4))->pluck('nip');
-            
-            if ($pegawaiNips->isNotEmpty()) {
-                $kegiatan->pegawai()->attach($pegawaiNips);
-            }
-        });
 
         // P2M Tes Urine
         P2mTesUrine::factory(50)->create()->each(function ($kegiatan) {

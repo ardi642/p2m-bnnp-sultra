@@ -2,38 +2,49 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Traits\HasDokumentasi;
 
 class P2mKie extends Model
 {
-    use HasFactory;
+    use HasFactory, HasDokumentasi;
+
     protected $table = 'p2m_kie';
 
     protected $casts = [
         'tanggal_pelaksanaan' => 'date'
     ];
-    protected $guarded = [];
 
-    // Relasi ke Satuan Kerja (Many to One)
+    protected $guarded = ['id'];
+
+    // Cleanup otomatis dokumentasi
+    protected static function boot()
+    {
+        parent::boot();
+        static::deleting(function ($kegiatan) {
+            $kegiatan->dokumentasi()->delete(); 
+        });
+    }
+
     public function satuanKerja(): BelongsTo
     {
         return $this->belongsTo(SatuanKerja::class, 'satuan_kerja_id');
     }
 
-    // Relasi ke Pegawai (Many to Many)
-    // Menggunakan tabel pivot 'pegawai_p2m_kie'
     public function pegawai(): BelongsToMany
     {
         return $this->belongsToMany(
-            Pegawai::class,                // 1. Model Tujuan
-            'pegawai_p2m_kie',     // 2. Nama Tabel Pivot
-            'p2m_kie_id',          // 3. Foreign Key tabel ini di Pivot
-            'pegawai_nip',                 // 4. Foreign Key tabel tujuan (Pegawai) di Pivot
-            'id',                          // 5. Primary Key tabel ini (Local Key)
-            'nip'                          // 6. Primary Key tabel tujuan (Pegawai Key - NIP)
-        )->withTimestamps();               // Opsional: jika tabel pivot punya created_at/updated_at
+            Pegawai::class, 
+            'pegawai_p2m_kie', 
+            'p2m_kie_id', 
+            'pegawai_nip', 
+            'id', 
+            'nip'
+        )
+        ->withPivot('saved_satuan_kerja_id')
+        ->withTimestamps();
     }
 }

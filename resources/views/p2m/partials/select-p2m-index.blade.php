@@ -15,7 +15,7 @@
                         <option {{ Route::is('p2m.sosialisasi.*') ? 'selected' : '' }} data-url="{{ route('p2m.sosialisasi.index') }}">Sosialisasi Tatap Muka/Konvensional</option>
                         <option {{ Route::is('p2m.upacara.*') ? 'selected' : '' }} data-url="{{ route('p2m.upacara.index') }}">Sosialisasi Pembina Upacara</option>
                         <option {{ Route::is('p2m.kie.*') ? 'selected' : '' }} data-url="{{ route('p2m.kie.index') }}">KIE Keliling</option>
-                        <option {{ Route::is('p2m.lingkungan.*') ? 'selected' : '' }} data-url="{{ route('p2m.lingkungan.index') }}">Lingkungan Bersinar</option>
+                        <option {{ Route::is('p2m.lingkungan-bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.lingkungan-bersinar.index') }}">Lingkungan Bersinar</option>
                         <option {{ Route::is('p2m.cfd.*') ? 'selected' : '' }} data-url="{{ route('p2m.cfd.index') }}">Sosialisasi Car Free Days (CFD)</option>
                         <option {{ Route::is('p2m.elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.elektronik.index') }}">Media Elektronik</option>
                         <option {{ Route::is('p2m.media_non_elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.media_non_elektronik.index') }}">Media Non Elektronik</option>

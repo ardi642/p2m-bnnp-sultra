@@ -14,6 +14,7 @@ use App\Http\Controllers\P2m\DesaBersinarController;
 use App\Models\p2mcfd;
 
 use App\Http\Controllers\P2m\ElektronikController;
+use App\Http\Controllers\P2m\LingkunganBersinarController;
 use App\Http\Controllers\P2m\MediaNonElektronikController;
 use App\Models\p2mElektronik;
 
@@ -113,13 +114,22 @@ Route::middleware('auth')->group(function() {
         Route::middleware(['role:admin,admin_satker,operator'])->group(function() {
 
             // P2M sosialisasi
-            Route::get('/sosialisasi/export', [SosialisasiController::class, 'export'])->name('sosialisasi.export');
             Route::get('/sosialisasi', [SosialisasiController::class, 'index'])->name("sosialisasi.index");
+            Route::get('/sosialisasi/export', [SosialisasiController::class, 'export'])->name('sosialisasi.export');
 
-            Route::get('/upacara/export', [UpacaraController::class, 'export'])->name('upacara.export');
+            // P2M Upacara
             Route::get('/upacara', [UpacaraController::class, 'index'])->name("upacara.index");
+            Route::get('/upacara/export', [UpacaraController::class, 'export'])->name('upacara.export');
 
-            // P2M cfd
+            // P2M KIE Keliling
+            Route::get('/kie', [KieController::class, 'index'])->name("kie.index");
+            Route::get('/kie/export', [KieController::class, 'export'])->name('kie.export');
+
+            // P2M lingkungan bersinar
+            Route::get('/lingkungan-bersinar', [LingkunganBersinarController::class, 'index'])->name("lingkungan-bersinar.index");
+            Route::get('/lingkungan-bersinar/export', [LingkunganBersinarController::class, 'export'])->name('lingkungan-bersinar.export');
+
+            // P2M CFD (Car Free Day)
             Route::get('/cfd', [CfdController::class, 'index'])->name("cfd.index");
             Route::get('/cfd/export', [CfdController::class, 'export'])->name('cfd.export');
 
@@ -130,14 +140,6 @@ Route::middleware('auth')->group(function() {
             // P2M online
             Route::get('/online', [OnlineController::class, 'index'])->name("online.index");
             Route::get('/online/export', [OnlineController::class, 'export'])->name('online.export');
-
-            // P2M kie
-            Route::get('/kie', [KieController::class, 'index'])->name("kie.index");
-            Route::get('/kie/export', [KieController::class, 'export'])->name('kie.export');
-
-            // P2M lingkungan
-            Route::get('/lingkungan', [LingkunganController::class, 'index'])->name("lingkungan.index");
-            Route::get('/lingkungan/export', [LingkunganController::class, 'export'])->name('lingkungan.export');
 
             // P2M tes urine / deteksi dini
             Route::get('/tes-urine', [TesUrineController::class, 'index'])->name("tes_urine.index");
@@ -171,30 +173,38 @@ Route::middleware('auth')->group(function() {
             Route::put('/upacara/{id}', [UpacaraController::class, 'update'])->name('upacara.update');
             Route::delete('/upacara/{id}', [UpacaraController::class, 'destroy'])->name("upacara.destroy");
             
-            // P2M cfd
+            // P2M KIE Keliling
+            Route::get('/kie/create', [KieController::class, 'create'])->name("kie.create");
+            Route::post('/kie', [KieController::class, 'store'])->name("kie.store");
+            Route::get('/kie/{id}/edit', [KieController::class, 'edit'])->name('kie.edit');
+            Route::put('/kie/{id}', [KieController::class, 'update'])->name('kie.update');
+            Route::delete('/kie/{id}', [KieController::class, 'destroy'])->name("kie.destroy");
+
+            // P2M Lingkungan Bersinar
+            Route::get('/lingkungan-bersinar/create', [LingkunganBersinarController::class, 'create'])->name("lingkungan-bersinar.create");
+            Route::post('/lingkungan-bersinar', [LingkunganBersinarController::class, 'store'])->name("lingkungan-bersinar.store");
+            Route::get('/lingkungan-bersinar/{id}/edit', [LingkunganBersinarController::class, 'edit'])->name('lingkungan-bersinar.edit');
+            Route::put('/lingkungan-bersinar/{id}', [LingkunganBersinarController::class, 'update'])->name('lingkungan-bersinar.update');
+            Route::delete('/lingkungan-bersinar/{id}', [LingkunganBersinarController::class, 'destroy'])->name("lingkungan-bersinar.destroy");
+
+            // P2M CFD (Car Free Day)
             Route::get('/cfd/create', [CfdController::class, 'create'])->name("cfd.create");
             Route::post('/cfd', [CfdController::class, 'store'])->name("cfd.store");
-            Route::delete('/cfd/{id}', [cfdController::class, 'destroy'])->name("cfd.destroy");
+            Route::get('/cfd/{id}/edit', [CfdController::class, 'edit'])->name('cfd.edit');
+            Route::put('/cfd/{id}', [CfdController::class, 'update'])->name('cfd.update');
+            Route::delete('/cfd/{id}', [CfdController::class, 'destroy'])->name("cfd.destroy");
 
-            // P2M elektronik
+            // P2M Elektronik
             Route::get('/elektronik/create', [ElektronikController::class, 'create'])->name("elektronik.create");
             Route::post('/elektronik', [ElektronikController::class, 'store'])->name("elektronik.store");
+            Route::get('/elektronik/{id}/edit', [ElektronikController::class, 'edit'])->name('elektronik.edit');
+            Route::put('/elektronik/{id}', [ElektronikController::class, 'update'])->name('elektronik.update');
             Route::delete('/elektronik/{id}', [ElektronikController::class, 'destroy'])->name("elektronik.destroy");
 
             // P2M online
             Route::get('/online/create', [OnlineController::class, 'create'])->name("online.create");
             Route::post('/online', [OnlineController::class, 'store'])->name("online.store");
             Route::delete('/online/{id}', [OnlineController::class, 'destroy'])->name("online.destroy");
-
-            // P2M kie
-            Route::get('/kie/create', [KieController::class, 'create'])->name("kie.create");
-            Route::post('/kie', [KieController::class, 'store'])->name("kie.store");
-            Route::delete('/kie/{id}', [KieController::class, 'destroy'])->name("kie.destroy");
-
-            // P2M lingkungan
-            Route::get('/lingkungan/create', [LingkunganController::class, 'create'])->name("lingkungan.create");
-            Route::post('/lingkungan', [LingkunganController::class, 'store'])->name("lingkungan.store");
-            Route::delete('/lingkungan/{id}', [LingkunganController::class, 'destroy'])->name("lingkungan.destroy");
 
             // P2M tes urine
             Route::get('/tes-urine/create', [TesUrineController::class, 'create'])->name("tes_urine.create");

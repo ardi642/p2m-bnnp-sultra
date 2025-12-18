@@ -3,29 +3,39 @@
 namespace App\Http\Controllers\P2m;
 
 use App\Http\Controllers\Controller;
-use App\Models\p2mElektronik;
-use App\Models\Pegawai;
+use App\Models\P2mElektronik;
 use App\Models\SatuanKerja;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB; 
-use Maatwebsite\Excel\Facades\Excel; // Import Facade Excel
 use App\Exports\ElektronikExport;
+use App\Helpers\SearchHelper;
+use App\Models\DokumentasiKegiatan;
+use App\Models\TemporaryFile;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Str;
 
 class ElektronikController extends Controller
 {
-   
-  // 1. FUNGSI KHUSUS UNTUK BUILD QUERY (Re-usable)
     private function getFilteredQuery(Request $request)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
-        $query = p2mElektronik::with('satuanKerja');
+        // Tidak perlu with('pegawai')
+        $query = P2mElektronik::with('satuanKerja');
 
-        // --- FILTER SAMA PERSIS SEPERTI SEBELUMNYA ---
-        if ($request->filled('satuan_kerja_id')) {
-            $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+        if ($user->hasRole('admin')) {
+            if ($request->filled('satuan_kerja_id')) {
+                $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+            }
+        } else {
+            $query->where('satuan_kerja_id', $user->getSatkerId());
         }
+
         if ($request->filled('bulan')) {
             $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
@@ -33,45 +43,43 @@ class ElektronikController extends Controller
                 }
             });
         }
+
         $query->where(function($q) use ($activeYears) {
             foreach ($activeYears as $y) {
                 $q->orWhereYear('tanggal_pelaksanaan', $y);
             }
-        }); 
+        });
+
         if ($request->filled('anggaran_pelaksanaan')) {
             $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
         }
-        if ($request->filled('Media')) {
-            $query->whereIn('Media', $request->Media);
-        }
-            
 
+        if ($request->filled('jenis_media')) {
+            $query->whereIn('jenis_media', $request->jenis_media);
+        }
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $searchDate = SearchHelper::translateDateInput($search);
+            $query->where(function($q) use ($search, $searchDate) {
                 $q->where('nama_media', 'LIKE', "%{$search}%")
-                    ->orWhere('Media', 'LIKE', "%{$search}%")
-                    ->orWhere('tanggal_pelaksanaan', 'LIKE', "%{$search}%")
+                    ->orWhere('jenis_media', 'LIKE', "%{$search}%")
+                    ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%")
                     ->orWhere('durasi_pelaksanaan', 'LIKE', "%{$search}%")
-                    ->orWhereHas('satuanKerja', function($subQ) use ($search) {
-                        $subQ->where('satuan_kerja', 'LIKE', "%{$search}%");
-                    });
+                    ->orWhereHas('satuanKerja', function($subQ) use ($search) { $subQ->where('satuan_kerja', 'LIKE', "%{$search}%"); });
+                $q->orWhereRaw("LOWER(DATE_FORMAT(tanggal_pelaksanaan, '%W, %d %M %Y')) LIKE ?", ["%{$searchDate}%"]);
             });
         }
 
-       
-
-         // Sorting
+        // Sorting
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
-        $allowSort = ['anggaran_pelaksanaan', 'Media', 'nama_media', 'tanggal_pelaksanaan', 'durasi_pelaksanaan', 'created_at', 'satuan_kerja'];
+        $allowSort = ['nama_media', 'jenis_media', 'tanggal_pelaksanaan', 'durasi_pelaksanaan', 'created_at', 'satuan_kerja', 'anggaran_pelaksanaan'];
 
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {
                 $query->join('satuan_kerja', 'p2m_elektronik.satuan_kerja_id', '=', 'satuan_kerja.id')
-                        ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
-                        ->select('p2m_elektronik.*');
+                        ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)->select('p2m_elektronik.*');
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }
@@ -82,86 +90,203 @@ class ElektronikController extends Controller
         return $query;
     }
 
+    public function index(Request $request): View {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
-     public function index(Request $request): View {
-        // Data Master
-        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
-        $years = p2mElektronik::selectRaw('YEAR(tanggal_pelaksanaan) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
+        // Hanya Satker yang dibutuhkan untuk filter, Pegawai TIDAK PERLU
+        if ($user->hasRole('admin')) {
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        } else {
+            $satuanKerjas = [];
+        }
+
+        $yearQuery = P2mElektronik::selectRaw('YEAR(tanggal_pelaksanaan) as year');
+        if ($user->isOperator()) { $yearQuery->where('satuan_kerja_id', $user->getSatkerId()); }
+        $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
+        $query->with('dokumentasi');
 
         $perPage = $request->input('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100])) { $perPage = 10; }
         
-        // Validasi keamanan (agar user tidak iseng input angka 1000000 bikin server down)
-        // Hanya izinkan angka: 10, 25, 50, 100
-        if (!in_array($perPage, [10, 25, 50, 100])) {
-            $perPage = 10;
-        }
-        $elektroniks = $query->paginate($perPage)->withQueryString();
-                        
-        return view('p2m.elektronik.index', compact('elektroniks', 'satuanKerjas', 'years'));
+        $datas = $query->paginate($perPage)->withQueryString(); 
+        
+        return view('p2m.elektronik.index', compact('datas', 'satuanKerjas', 'years', 'user'));
+    }
+
+    public function export(Request $request) 
+    {
+        $query = $this->getFilteredQuery($request);
+        return Excel::download(new ElektronikExport($query), 'Laporan_P2M_Media_Elektronik.xlsx');
     }
 
     public function create(): View {
-        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
-        // Ambil data pegawai untuk dropdown (urutkan nama a-z)
-             
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($user->isAdmin()) {
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        } else {
+            $satuanKerjas = [];
+        }
         return view('p2m.elektronik.create', compact('satuanKerjas'));
     }
 
-
-      // 3. METHOD EXPORT (DOWNLOAD EXCEL)
-    public function export(Request $request) 
-    {
-        // Panggil fungsi query yang SAMA PERSIS dengan index
-        // Bedanya: Kita tidak pakai paginate(), tapi langsung lempar ke Class Export
-        $query = $this->getFilteredQuery($request);
-
-        return Excel::download(new ElektronikExport($query), 'Laporan_P2M_Media Elektronik.xlsx');
-    }
-
     public function store(Request $request) {
-                    
-        $validasi = $request->validate([
-            'satuan_kerja_id' => 'required',
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $rules = [
             'anggaran_pelaksanaan' => 'required',
-            'media' => 'required',
-            'durasi_pelaksanaan' => 'required',
-            'tanggal_pelaksanaan' => 'required',
-            'nama_media' => 'required',
-            'link_kelengkapan_dokumentasi' => 'required' ,  
-        ]);
+            'jenis_media'          => 'required',
+            'nama_media'           => 'required',
+            'tanggal_pelaksanaan'  => 'required|date',
+            'durasi_pelaksanaan'   => 'required|numeric|min:1',
+            'dokumentasi'          => 'nullable|array',
+        ];
 
-         // Gunakan Database Transaction agar data aman (jika gagal simpan pivot, data utama batal)
-        DB::transaction(function () use ($validasi) {
+        if ($user->isAdmin()) { $rules['satuan_kerja_id'] = 'required'; }
+
+        $validasi = $request->validate($rules);
+        $filesMoved = [];
+
+        DB::beginTransaction();
+        try {
+            $dataInsert = collect($validasi)->except('dokumentasi')->toArray();
+            if ($user->isOperator()) { $dataInsert['satuan_kerja_id'] = $user->getSatkerId(); }
+
+            // Simpan Data Utama (Tanpa Attach Pegawai)
+            $kegiatan = P2mElektronik::create($dataInsert);
+
+            if ($request->filled('dokumentasi')) {
+                foreach ($request->input('dokumentasi') as $folder) {
+                    $tempFile = TemporaryFile::where('folder', $folder)->first();
+                    if ($tempFile) {
+                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
+                        if (Storage::exists($sourcePath)) {
+                            $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
+                            $cleanName = time() . '_' . uniqid() . '_' . Str::slug(pathinfo($tempFile->filename, PATHINFO_FILENAME)) . '.' . $ext;
+                            $destPath = 'dokumentasi/' . date('Y') . '/' . $cleanName;
+                            
+                            Storage::disk('public')->put($destPath, Storage::readStream($sourcePath));
+                            $filesMoved[] = $destPath;
+
+                            $kegiatan->dokumentasi()->create([
+                                'nama_file_asli' => $tempFile->filename,
+                                'path_file' => $destPath,
+                                'tipe_file' => Storage::mimeType($sourcePath),
+                                'ukuran_file' => Storage::size($sourcePath),
+                            ]);
+                            Storage::deleteDirectory('public/tmp/' . $folder);
+                            $tempFile->delete();
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+            return redirect()->route('p2m.elektronik.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            foreach ($filesMoved as $path) { if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path); }
+            return back()->with('error', 'store')->with('message', $e->getMessage())->withInput();
+        }
+    }
+
+    public function edit($id): View {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $kegiatan = P2mElektronik::findOrFail($id);
+
+        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
+
+        if ($user->isAdmin()) {
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+        } else {
+            $satuanKerjas = [];
+        }
+
+        return view('p2m.elektronik.edit', compact('kegiatan', 'satuanKerjas'));
+    }
+
+    public function update(Request $request, $id) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $kegiatan = P2mElektronik::findOrFail($id);
+
+        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
+
+        $rules = [
+            'anggaran_pelaksanaan' => 'required',
+            'jenis_media'          => 'required',
+            'nama_media'           => 'required',
+            'tanggal_pelaksanaan'  => 'required|date',
+            'durasi_pelaksanaan'   => 'required|numeric|min:1',
+            'delete_files'         => 'nullable|array',
+            'dokumentasi'          => 'nullable|array',
+        ];
+        if ($user->isAdmin()) { $rules['satuan_kerja_id'] = 'required'; }
+
+        $validasi = $request->validate($rules);
+        
+        DB::beginTransaction();
+        try {
+            $dataUpdate = collect($validasi)->except(['dokumentasi', 'delete_files'])->toArray();
+            if ($user->isOperator()) { unset($dataUpdate['satuan_kerja_id']); }
             
-            // 2. Pisahkan data pegawai dari data utama
-            // Kita hapus 'pegawai_nips' dari array validasi karena kolom ini tidak ada di tabel p2m_sosialisasi
-            $dataKegiatan = collect($validasi)->toArray();
-                      // 3. Simpan Data Kegiatan (Tabel Utama)
-            p2mElektronik::create($dataKegiatan);
-        });
+            $kegiatan->update($dataUpdate);
 
+            // Handle Files
+            if ($request->has('delete_files')) {
+                $files = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
+                foreach($files as $f) { $f->delete(); if(Storage::disk('public')->exists($f->path_file)) Storage::disk('public')->delete($f->path_file); }
+            }
 
+            if ($request->filled('dokumentasi')) {
+                foreach ($request->input('dokumentasi') as $folder) {
+                    $tempFile = TemporaryFile::where('folder', $folder)->first();
+                    if ($tempFile) {
+                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
+                        if (Storage::exists($sourcePath)) {
+                            $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
+                            $cleanName = time() . '_' . uniqid() . '_' . Str::slug(pathinfo($tempFile->filename, PATHINFO_FILENAME)) . '.' . $ext;
+                            $destPath = 'dokumentasi/' . date('Y') . '/' . $cleanName;
+                            Storage::disk('public')->put($destPath, Storage::readStream($sourcePath));
+                            $kegiatan->dokumentasi()->create([
+                                'nama_file_asli' => $tempFile->filename, 'path_file' => $destPath,
+                                'tipe_file' => Storage::mimeType($sourcePath), 'ukuran_file' => Storage::size($sourcePath),
+                            ]);
+                            Storage::deleteDirectory('public/tmp/' . $folder);
+                            $tempFile->delete();
+                        }
+                    }
+                }
+            }
 
-        return redirect()->route('p2m.elektronik.index')
-            ->with('success', 'store')
-            ->with('message', 'Berhasil menambahkan data');
-
-        // p2mElektronik::create($validasi);
-
-        return redirect()->route('p2m.elektronik.index')->with('status', 'success');
+            DB::commit();
+            return redirect()->route('p2m.elektronik.index')->with('success', 'update')->with('message', 'Data berhasil diperbarui');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'update')->with('message', $e->getMessage());
+        }
     }
 
- public function destroy($id) {
-        $data = p2mElektronik::findOrFail($id);
+    public function destroy($id) {
+        $kegiatan = P2mElektronik::findOrFail($id);
+        $filesToDelete = [];
+        foreach ($kegiatan->dokumentasi()->cursor() as $doc) { $filesToDelete[] = $doc->path_file; }
+        
+        DB::beginTransaction();
+        try {
+            $kegiatan->delete();
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'destroy')->with('message', $e->getMessage());
+        }
 
-        $data->delete();
-
-        return redirect()->back()
-        ->with('success', 'destroy')
-        ->with('message', 'Data berhasil dihapus');
+        foreach ($filesToDelete as $path) { if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path); }
+        return back()->with('success', 'destroy')->with('message', 'Data dihapus');
     }
-
-
 }

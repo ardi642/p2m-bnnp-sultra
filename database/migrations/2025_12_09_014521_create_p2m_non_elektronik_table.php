@@ -8,29 +8,26 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('p2m_media_non_elektronik', function (Blueprint $table) {
+        Schema::create('p2m_non_elektronik', function (Blueprint $table) {
             $table->id();
             
             $table->unsignedBigInteger('satuan_kerja_id');
             $table->foreign('satuan_kerja_id')
-                ->references('id')
-                ->on('satuan_kerja')
-                ->onUpdate('cascade')
-                ->onDelete('cascade');
+                ->references('id')->on('satuan_kerja')
+                ->onUpdate('cascade')->onDelete('cascade');
 
             $table->enum('anggaran_pelaksanaan', ['DIPA', 'NON DIPA']);
             
-            // Enum sesuai kategori utama
+            // Enum Ringkas di Database
             $table->enum('jenis_media', [
                 'Media Cetak', 
                 'Media Luar Ruang', 
                 'Branding Sarana Publik'
             ]);
-
-            $table->integer('durasi_pelaksanaan'); // Dalam hari
-            $table->date('tanggal_pelaksanaan'); // Tanggal mulai
-            $table->text('tempat_kegiatan'); // Tempat pemasangan
-            $table->text('link_kelengkapan_dokumentasi');
+            
+            $table->text('tempat_pemasangan');
+            $table->date('tanggal_mulai_pelaksanaan');
+            $table->integer('durasi_pelaksanaan'); // Dalam Hari
             
             $table->timestamps();
         });
@@ -38,6 +35,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('p2m_media_non_elektronik');
+        Schema::dropIfExists('p2m_non_elektronik');
     }
 };

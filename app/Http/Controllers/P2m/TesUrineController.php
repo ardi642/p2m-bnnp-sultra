@@ -9,32 +9,39 @@ use App\Models\Pegawai;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
 use App\Exports\TesUrineExport; 
+use App\Helpers\SearchHelper;
+use App\Models\DokumentasiKegiatan;
+use App\Models\TemporaryFile;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // <--- JANGAN LUPA INI
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Str;
 
 class TesUrineController extends Controller
 {
-    // --- PRIVATE QUERY BUILDER (Untuk Index & Export) ---
+    // --- BUILD QUERY (Filter Logic) ---
     private function getFilteredQuery(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
+        
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
-        $query = P2mTesUrine::with('pegawai', 'satuanKerja');
+        // Default sorting: Created At (Terbaru ke Terlama) jika tidak ada request sort
+        $query = P2mTesUrine::with('pegawai.satuanKerja', 'satuanKerja');
 
-        // ... (Bagian Filter Satker, Bulan, Tahun, Anggaran, Sasaran, Pegawai TETAP SAMA seperti sebelumnya) ...
-        // Filter Satker
-        if ($user->isAdmin()) {
+        // Filter Satker (Role Based)
+        if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
             }
-        } else if ($user->isOperator()){
-            $query->where('satuan_kerja_id', $user->getSatkerId());
+        } else {
+            $satkerId = $user->getSatkerId();
+            $query->where('satuan_kerja_id', $satkerId);
         }
 
-        // Filter Bulan
+        // Filter Waktu & Kategori
         if ($request->filled('bulan')) {
             $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
@@ -42,81 +49,84 @@ class TesUrineController extends Controller
                 }
             });
         }
-        
-        // Filter Tahun
         $query->where(function($q) use ($activeYears) {
             foreach ($activeYears as $y) {
                 $q->orWhereYear('tanggal_pelaksanaan', $y);
             }
         });
-
-        if ($request->filled('anggaran_pelaksanaan')) $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
-        if ($request->filled('sasaran_kegiatan')) $query->whereIn('sasaran_kegiatan', $request->sasaran_kegiatan);
+        if ($request->filled('anggaran_pelaksanaan')) {
+            $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
+        }
+        if ($request->filled('sasaran_kegiatan')) {
+            $query->whereIn('sasaran_kegiatan', $request->sasaran_kegiatan);
+        }
         
+        // Filter Pegawai (Panitia)
         if ($request->filled('pegawai_nips')) {
             $nips = $request->pegawai_nips;
             $logic = $request->input('pegawai_logic', 'OR');
             if ($logic === 'AND') {
-                foreach ($nips as $nip) $query->whereHas('pegawai', fn($q) => $q->where('pegawai.nip', $nip));
+                foreach ($nips as $nip) {
+                    $query->whereHas('pegawai', function($q) use ($nip) {
+                        $q->where('pegawai.nip', $nip);
+                    });
+                }
             } else {
-                $query->whereHas('pegawai', fn($q) => $q->whereIn('pegawai.nip', $nips));
+                $query->whereHas('pegawai', function($q) use ($nips) {
+                    $q->whereIn('pegawai.nip', $nips);
+                });
             }
         }
 
-        // Search
+        // Search Global
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('nama_instansi_pelaksana', 'LIKE', "%{$search}%")
+            $searchDate = SearchHelper::translateDateInput($search);
+            $query->where(function($q) use ($search, $searchDate) {
+                $q->where('nama_instansi', 'LIKE', "%{$search}%") // Nama Instansi
                     ->orWhere('tempat_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhere('sasaran_kegiatan', 'LIKE', "%{$search}%")
-                    ->orWhere('keterangan_positif', 'LIKE', "%{$search}%")
-                    ->orWhereHas('satuanKerja', fn($subQ) => $subQ->where('satuan_kerja', 'LIKE', "%{$search}%"))
-                    ->orWhereHas('pegawai', fn($subQ) => $subQ->where('nama', 'LIKE', "%{$search}%"));
+                    ->orWhere('keterangan_positif', 'LIKE', "%{$search}%") // Parameter Positif
+                    ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%")
+                    ->orWhere('jumlah_peserta', 'LIKE', "%{$search}%")
+                    ->orWhereHas('satuanKerja', function($subQ) use ($search) {
+                        $subQ->where('satuan_kerja', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('pegawai', function($subQ) use ($search) {
+                        $subQ->where('nama', 'LIKE', "%{$search}%");
+                    });
+
+                    // Search Dates
+                    $q->orWhereRaw("LOWER(DATE_FORMAT(tanggal_pelaksanaan, '%W, %d %M %Y')) LIKE ?", ["%{$searchDate}%"]);
+                    $q->orWhereRaw("LOWER(DATE_FORMAT(created_at, '%d %b %Y %H:%i')) LIKE ?", ["%{$searchDate}%"]);
             });
         }
 
-        // --- PERBAIKAN SORTING DI SINI ---
-        $sortBy = $request->input('sort_by', 'created_at'); // Default 'created_at'
-        $sortOrder = $request->input('sort_order', 'desc'); // Default 'desc'
+        // Sorting Logic
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $allowSort = ['anggaran_pelaksanaan', 'nama_instansi', 'sasaran_kegiatan', 'tanggal_pelaksanaan', 'tempat_kegiatan', 'jumlah_peserta', 'jumlah_positif', 'created_at', 'satuan_kerja'];
 
-        $allowSort = [
-            'anggaran_pelaksanaan', 
-            'nama_instansi_pelaksana', 
-            'sasaran_kegiatan', 
-            'tanggal_pelaksanaan', 
-            'tempat_kegiatan', 
-            'jumlah_peserta', 
-            'jumlah_positif', 
-            'created_at', // Pastikan ini ada
-            'satuan_kerja'
-        ];
-
-        // Validasi agar tidak error query column not found
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {
-                // Join agar bisa sort berdasarkan nama satker, bukan ID
                 $query->join('satuan_kerja', 'p2m_tes_urine.satuan_kerja_id', '=', 'satuan_kerja.id')
                         ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
-                        // PENTING: Select tabel utama agar ID tidak tertimpa ID satker
-                        ->select('p2m_tes_urine.*'); 
+                        ->select('p2m_tes_urine.*');
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }
         } else {
-            // Fallback default sorting
-            $query->latest(); 
+            $query->latest(); // Default Created At Desc
         }
 
         return $query;
     }
 
-    // --- 1. INDEX ---
     public function index(Request $request): View {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if ($user->isAdmin()) {
+        if ($user->hasRole('admin')) {
             $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
         } else {
@@ -125,21 +135,31 @@ class TesUrineController extends Controller
             $satuanKerjas = [];
         }
 
-        $years = P2mTesUrine::selectRaw('YEAR(tanggal_pelaksanaan) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
+        // Filter Tahun Dropdown
+        $yearQuery = P2mTesUrine::selectRaw('YEAR(tanggal_pelaksanaan) as year');
+        if ($user->isOperator()) {
+            $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
+        }
+        $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
+
+        // Main Query
         $query = $this->getFilteredQuery($request);
+        $query->with('dokumentasi'); // Eager load docs for index view
+
         $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : 10;
-        
-        $tes_urines = $query->paginate($perPage)->withQueryString();
-        return view('p2m.tes-urine.index', compact('tes_urines', 'satuanKerjas', 'years', 'pegawais', 'user'));
+        $kegiatans = $query->paginate($perPage)->withQueryString();
+
+        $satkerLookup = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
+                        
+        return view('p2m.tes-urine.index', compact('kegiatans', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup'));
     }
 
-    // --- 2. EXPORT ---
-    public function export(Request $request) {
+    public function export(Request $request) 
+    {
         $query = $this->getFilteredQuery($request);
         return Excel::download(new TesUrineExport($query), 'Laporan_P2M_Tes_Urine.xlsx');
     }
 
-    // --- 3. CREATE ---
     public function create(): View {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -156,69 +176,121 @@ class TesUrineController extends Controller
         return view('p2m.tes-urine.create', compact('satuanKerjas', 'pegawais'));
     }
 
-    // --- 4. STORE ---
     public function store(Request $request) {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
         $rules = [
             'anggaran_pelaksanaan' => 'required',
-            'sasaran_kegiatan' => 'required',
-            'nama_instansi_pelaksana' => 'required|string|max:255',
-            'tanggal_pelaksanaan' => 'required|date',
-            'tempat_kegiatan' => 'required',
-            'jumlah_peserta' => 'required|numeric|min:0',
-            // Validasi: Jumlah Positif tidak boleh lebih dari peserta
-            'jumlah_positif' => 'required|numeric|min:0|lte:jumlah_peserta', 
-            'keterangan_positif' => 'nullable|string',
-            'link_kelengkapan_dokumentasi' => 'required',
-            'pegawai_nips' => 'required|array',
-            'pegawai_nips.*' => 'exists:pegawai,nip',
+            'nama_instansi'        => 'required',
+            'sasaran_kegiatan'     => 'required',
+            'tanggal_pelaksanaan'  => 'required|date',
+            'tempat_kegiatan'      => 'required',
+            'jumlah_peserta'       => 'required|numeric|min:1',
+            'jumlah_positif'       => 'required|numeric|min:0|lte:jumlah_peserta', // Tidak boleh lebih besar dari peserta
+            'keterangan_positif'   => 'nullable|string',
+            'pegawai_nips'         => 'required|array',
+            'pegawai_nips.*'       => 'exists:pegawai,nip',
+            'dokumentasi'          => 'nullable|array',
+            'dokumentasi.*'        => 'required',
         ];
 
-        if ($user->isAdmin()) $rules['satuan_kerja_id'] = 'required|exists:satuan_kerja,id';
+        if ($user->isAdmin()) {
+            $rules['satuan_kerja_id'] = 'required';
+        }
 
-        $validasi = $request->validate($rules);
+        $validasi = $request->validate($rules, [
+            'jumlah_positif.lte' => 'Jumlah positif tidak boleh melebihi jumlah peserta.'
+        ]);
 
-        DB::transaction(function () use ($user, $validasi) {
-            $pegawaiNips = $validasi['pegawai_nips'];
-            $dataKegiatan = collect($validasi)->except('pegawai_nips')->toArray();
+        $filesMoved = [];
+        DB::beginTransaction();
 
-            if ($user->isOperator()) $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
+        try {
+            $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
+            $pegawaiNips  = $validasi['pegawai_nips'];
 
+            if ($user->isOperator()) {
+                $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
+            }
+
+            // SIMPAN DATA
             $kegiatan = P2mTesUrine::create($dataKegiatan);
-            $kegiatan->pegawai()->attach($pegawaiNips);
-        });
 
-        return redirect()->route('p2m.tes_urine.index')
-            ->with('success', 'store')->with('message', 'Berhasil menambahkan data Tes Urine');
+            // SIMPAN PANITIA (PIVOT)
+            $listPegawai = Pegawai::whereIn('nip', $pegawaiNips)->get();
+            $attachData = [];
+            foreach ($listPegawai as $pgw) {
+                $attachData[$pgw->nip] = ['saved_satuan_kerja_id' => $pgw->satuan_kerja_id];
+            }
+            $kegiatan->pegawai()->attach($attachData);
+
+            // PROSES FILE
+            if ($request->filled('dokumentasi')) {
+                foreach ($request->input('dokumentasi') as $folder) {
+                    $tempFile = TemporaryFile::where('folder', $folder)->first();
+                    if ($tempFile) {
+                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
+                        $mimeType = Storage::mimeType($sourcePath); 
+                        $size = Storage::size($sourcePath);
+                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug(pathinfo($tempFile->filename, PATHINFO_FILENAME)) . '.' . pathinfo($tempFile->filename, PATHINFO_EXTENSION);
+                        $destinationPath = 'dokumentasi/' . date('Y') . '/' . $cleanFileName;
+
+                        if (Storage::exists($sourcePath)) {
+                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
+                            $filesMoved[] = $destinationPath;
+                            $kegiatan->dokumentasi()->create([
+                                'nama_file_asli' => $tempFile->filename,
+                                'path_file'      => $destinationPath,    
+                                'tipe_file'      => $mimeType,           
+                                'ukuran_file'    => $size,               
+                            ]);
+                            Storage::deleteDirectory('public/tmp/' . $folder);
+                            $tempFile->delete();
+                        }
+                    }
+                }
+            }
+
+            DB::commit(); 
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            foreach ($filesMoved as $path) {
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            }
+            return back()->with('error', 'store')->with('message', 'Gagal: ' . $e->getMessage())->withInput();
+        }
+
+        return redirect()->route('p2m.tes-urine.index')->with('success', 'store')->with('message', 'Berhasil menyimpan data Tes Urine');
     }
 
-    // --- 5. EDIT ---
-    public function edit($id): View {
+    public function edit($id): View 
+    {
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $kegiatan = P2mTesUrine::with('pegawai')->findOrFail($id);
 
         if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
-            abort(403, 'Anda tidak berhak mengubah data Satuan Kerja lain.');
+            abort(403, 'Akses Ditolak');
         }
 
         if ($user->isAdmin()) {
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
             $pegawais = Pegawai::orderBy('nama', 'asc')->get();
         } else {
-            $satuanKerjas = [];
+            $satuanKerjas = []; 
             $satkerId = $user->getSatkerId();
-            $pegawais = Pegawai::where('satuan_kerja_id', $satkerId)->orderBy('nama', 'asc')->get();
+            $pegawaiAktif = Pegawai::where('satuan_kerja_id', $satkerId)->get();
+            $pegawaiExisting = $kegiatan->pegawai;
+            $pegawais = $pegawaiAktif->merge($pegawaiExisting)->unique('nip')->sortBy('nama');
         }
 
-        $selectedPegawaiNips = $kegiatan->pegawai->pluck('nip')->toArray();
-        return view('p2m.tes-urine.edit', compact('kegiatan', 'satuanKerjas', 'pegawais', 'selectedPegawaiNips'));
+        return view('p2m.tes-urine.edit', compact('kegiatan', 'satuanKerjas', 'pegawais'));
     }
 
-    // --- 6. UPDATE ---
-    public function update(Request $request, $id) {
+    public function update(Request $request, $id) 
+    {
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $kegiatan = P2mTesUrine::findOrFail($id);
@@ -227,46 +299,135 @@ class TesUrineController extends Controller
 
         $rules = [
             'anggaran_pelaksanaan' => 'required',
-            'sasaran_kegiatan' => 'required',
-            'nama_instansi_pelaksana' => 'required|string|max:255',
-            'tanggal_pelaksanaan' => 'required|date',
-            'tempat_kegiatan' => 'required',
-            'jumlah_peserta' => 'required|numeric|min:0',
-            'jumlah_positif' => 'required|numeric|min:0|lte:jumlah_peserta',
-            'keterangan_positif' => 'nullable|string',
-            'link_kelengkapan_dokumentasi' => 'required',
-            'pegawai_nips' => 'required|array',
-            'pegawai_nips.*' => 'exists:pegawai,nip',
+            'nama_instansi'        => 'required',
+            'sasaran_kegiatan'     => 'required',
+            'tanggal_pelaksanaan'  => 'required|date',
+            'tempat_kegiatan'      => 'required',
+            'jumlah_peserta'       => 'required|numeric|min:1',
+            'jumlah_positif'       => 'required|numeric|min:0|lte:jumlah_peserta',
+            'keterangan_positif'   => 'nullable|string',
+            'pegawai_nips'         => 'required|array',
+            'pegawai_nips.*'       => 'exists:pegawai,nip',
+            'delete_files'         => 'nullable|array', 
+            'delete_files.*'       => 'exists:dokumentasi_kegiatan,id',
+            'dokumentasi'          => 'nullable|array',
         ];
 
-        if ($user->isAdmin()) $rules['satuan_kerja_id'] = 'required';
+        if ($user->isAdmin()) {
+            $rules['satuan_kerja_id'] = 'required';
+        }
 
-        $validasi = $request->validate($rules);
+        $validasi = $request->validate($rules, [
+            'jumlah_positif.lte' => 'Jumlah positif tidak boleh melebihi jumlah peserta.'
+        ]);
 
-        DB::transaction(function () use ($validasi, $kegiatan, $user) {
+        $newFilesMoved = [];
+        $filesToDelete = [];
+
+        DB::beginTransaction();
+
+        try {
             $pegawaiNips = $validasi['pegawai_nips'];
-            $dataUpdate = collect($validasi)->except('pegawai_nips')->toArray();
+            $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
 
-            if ($user->isOperator()) unset($dataUpdate['satuan_kerja_id']);
+            if ($user->isOperator()) unset($dataUpdate['satuan_kerja_id']); 
 
+            // UPDATE DATA UTAMA
             $kegiatan->update($dataUpdate);
-            $kegiatan->pegawai()->sync($pegawaiNips);
-        });
 
-        return redirect()->route('p2m.tes_urine.index')
-            ->with('success', 'update')->with('message', 'Data berhasil diperbarui');
+            // SYNC PEGAWAI (HISTORY PRESERVATION)
+            $oldPivotData = DB::table('pegawai_p2m_tes_urine')->where('p2m_tes_urine_id', $id)->get()->keyBy('pegawai_nip');
+            $masterPegawais = Pegawai::whereIn('nip', $pegawaiNips)->get()->keyBy('nip');
+            $syncData = [];
+
+            foreach ($pegawaiNips as $nip) {
+                if (isset($oldPivotData[$nip]) && $oldPivotData[$nip]->saved_satuan_kerja_id) {
+                    $satkerToSave = $oldPivotData[$nip]->saved_satuan_kerja_id; 
+                } else {
+                    $satkerToSave = $masterPegawais[$nip]->satuan_kerja_id ?? null;
+                }
+                $syncData[$nip] = ['saved_satuan_kerja_id' => $satkerToSave];
+            }
+            $kegiatan->pegawai()->sync($syncData);
+
+            // HAPUS FILE
+            if ($request->has('delete_files')) {
+                $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
+                foreach ($filesToRemove as $file) {
+                    $filesToDelete[] = $file->path_file; 
+                    $file->delete();
+                }
+            }
+
+            // UPLOAD FILE BARU
+            if ($request->filled('dokumentasi')) {
+                foreach ($request->input('dokumentasi') as $folder) {
+                    $tempFile = TemporaryFile::where('folder', $folder)->first();
+                    if ($tempFile) {
+                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
+                        $mimeType = Storage::mimeType($sourcePath); 
+                        $size = Storage::size($sourcePath);
+                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug(pathinfo($tempFile->filename, PATHINFO_FILENAME)) . '.' . pathinfo($tempFile->filename, PATHINFO_EXTENSION);
+                        $destinationPath = 'dokumentasi/' . date('Y') . '/' . $cleanFileName;
+
+                        if (Storage::exists($sourcePath)) {
+                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
+                            $newFilesMoved[] = $destinationPath;
+                            $kegiatan->dokumentasi()->create([
+                                'nama_file_asli' => $tempFile->filename,
+                                'path_file'      => $destinationPath, 
+                                'tipe_file'      => $mimeType,
+                                'ukuran_file'    => $size,
+                            ]);
+                            Storage::deleteDirectory('public/tmp/' . $folder);
+                            $tempFile->delete();
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+
+            // CLEANUP FISIK FILE LAMA
+            foreach ($filesToDelete as $path) {
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            }
+
+            return redirect()->route('p2m.tes-urine.index')->with('success', 'update')->with('message', 'Data Tes Urine diperbarui');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            foreach ($newFilesMoved as $path) {
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            }
+            return back()->with('error', 'update')->with('message', 'Gagal: ' . $e->getMessage())->withInput();
+        }
     }
 
-    // --- 7. DESTROY ---
-    public function destroy($id) {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        $data = P2mTesUrine::findOrFail($id);
+    public function destroy($id) 
+    {
+        $kegiatan = P2mTesUrine::findOrFail($id);
+        $filesToDelete = [];
+        
+        foreach ($kegiatan->dokumentasi()->cursor() as $doc) {
+            $filesToDelete[] = $doc->path_file;
+        }
 
-        if ($user->isOperator() && $data->satuan_kerja_id !== $user->getSatkerId()) abort(403);
+        DB::beginTransaction();
+        try {
+            $kegiatan->delete(); 
+            DB::commit(); 
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'destroy')->with('message', 'Gagal hapus: ' . $e->getMessage());
+        }
 
-        $data->delete();
-        return redirect()->back()
-            ->with('success', 'destroy')->with('message', 'Data berhasil dihapus');
+        foreach ($filesToDelete as $path) {
+            try {
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            } catch (\Exception $e) {}
+        }
+
+        return redirect()->back()->with('success', 'destroy')->with('message', 'Data Tes Urine dihapus.');
     }
 }

@@ -15,40 +15,52 @@ class P2mTesUrineFactory extends Factory
 
     public function definition(): array
     {
-        // Simulasi hasil tes
-        $jumlahPeserta = $this->faker->numberBetween(10, 200);
-        
-        // Peluang 80% tidak ada yang positif (0), 20% ada yang positif (1-5 orang)
-        $jumlahPositif = $this->faker->boolean(80) ? 0 : $this->faker->numberBetween(1, 5);
+        // 1. Tentukan Jumlah Peserta dulu
+        $jumlahPeserta = $this->faker->numberBetween(15, 150);
 
-        // Keterangan hanya ada jika jumlah positif > 0
-        $keteranganPositif = $jumlahPositif > 0 
-            ? 'Positif: ' . $this->faker->randomElement(['THC', 'Meth', 'Benzo']) . ' pada peserta inisial ' . $this->faker->lexify('??') 
-            : null;
+        // 2. Tentukan Jumlah Positif (80% kemungkinan 0, sisanya acak maks 10% dari peserta)
+        // Logika: Kebanyakan tes urine hasilnya negatif semua
+        $isClean = $this->faker->boolean(80); 
+        $jumlahPositif = $isClean ? 0 : $this->faker->numberBetween(1, ceil($jumlahPeserta * 0.1));
+
+        // 3. Generate Keterangan Parameter jika ada yang positif
+        $keterangan = null;
+        if ($jumlahPositif > 0) {
+            $params = ['THC', 'AMP', 'MET', 'BZO', 'COC', 'MOP'];
+            $selectedParam = $this->faker->randomElement($params);
+            $keterangan = "$selectedParam: $jumlahPositif Orang";
+            
+            // Variasi jika jumlah positif > 1, mungkin ada mix parameter
+            if($jumlahPositif > 2 && $this->faker->boolean(30)) {
+                $split = floor($jumlahPositif / 2);
+                $rem = $jumlahPositif - $split;
+                $param2 = $this->faker->randomElement(array_diff($params, [$selectedParam]));
+                $keterangan = "$selectedParam: $split Orang, $param2: $rem Orang";
+            }
+        }
 
         return [
-            // Ambil ID Satker acak yang sudah ada
+            // Ambil ID Satker acak
             'satuan_kerja_id' => SatuanKerja::inRandomOrder()->first()->id ?? SatuanKerja::factory(),
             
             'anggaran_pelaksanaan' => $this->faker->randomElement(['DIPA', 'NON DIPA']),
             
-            // Sasaran Kegiatan sesuai Enum Tes Urine
+            // Nama Instansi / Sekolah / Perusahaan
+            'nama_instansi' => $this->faker->company() . ' ' . $this->faker->city(),
+            
             'sasaran_kegiatan' => $this->faker->randomElement([
-                'Instansi Pemerintah', 
-                'Lingkungan Pendidikan', 
-                'Pekerja Swasta', 
-                'Lingkungan Masyarakat'
+                'instansi pemerintah', 
+                'lingkungan pendidikan', 
+                'pekerja swasta', 
+                'lingkungan masyarakat'
             ]),
-
-            'nama_instansi_pelaksana' => $this->faker->company(), // Nama instansi yang dites
+            
             'tanggal_pelaksanaan' => $this->faker->dateTimeBetween('-1 year', 'now'),
             'tempat_kegiatan' => $this->faker->address(),
             
             'jumlah_peserta' => $jumlahPeserta,
             'jumlah_positif' => $jumlahPositif,
-            'keterangan_positif' => $keteranganPositif,
-            
-            'link_kelengkapan_dokumentasi' => $this->faker->url(),
+            'keterangan_positif' => $keterangan,
         ];
     }
 }

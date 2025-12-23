@@ -3,274 +3,298 @@
 @section('content')
     <main class="admin-main">
         <div class="container-fluid p-4 p-lg-5">
+            
             {{-- Header --}}
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h1 class="h3 mb-0">P2M Desa Bersinar</h1>
-                    <p class="text-muted mb-0">Master Data Desa Bersinar</p>
+                    <h1 class="h3 mb-1 fw-bold text-dark">Kegiatan P2M Desa Bersinar</h1>
+                    <p class="text-muted mb-0">Master Data Pencanangan Desa Bersinar</p>
                 </div>
             </div>
+
+            {{-- Alerts --}}
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                    <div class="d-flex align-items-center"><i class="bi bi-check-circle-fill me-2"></i><div><strong>Berhasil!</strong> {{ session('message') }}</div></div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                    <div class="d-flex align-items-center"><i class="bi bi-exclamation-triangle-fill me-2"></i><div><strong>Gagal!</strong> {{ session('message') }}</div></div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            @endif
             
-            {{-- Tombol Navigasi / Create --}}
+            {{-- Select Navigasi --}}
             @include('p2m.partials.select-p2m-index')
 
             @php
-                $allFilters = request()->only([
-                    'satuan_kerja_id', 
-                    'bulan', 
-                    'tahun', 
-                    'anggaran_pembentukan', 
-                    'kabupaten_kota_id', 
-                    'pegawai_nips', 
-                    'search'
-                ]);
-                if (empty($allFilters['tahun'])) $allFilters['tahun'] = [date('Y')];
-                $activeFilters = collect($allFilters)->filter(fn($v) => !empty($v))->count(); 
+                $allFilters = request()->only(['satuan_kerja_id', 'bulan', 'tahun', 'anggaran_pembentukan', 'kabupaten_kota_id', 'search', 'pegawai_nips']);
+                if (empty($allFilters['tahun'])) { $allFilters['tahun'] = [date('Y')]; }
+                $activeFilters = collect($allFilters)->filter(function($value) { return !empty($value); })->count();
+                
+                // Helper Sort Link
+                $sortLink = function($col, $label) {
+                    $currentCol = request('sort_by', 'created_at'); 
+                    $currentOrder = request('sort_order', 'desc');
+                    $newOrder = ($currentCol === $col && $currentOrder === 'desc') ? 'asc' : 'desc';
+                    $icon = 'bi-arrow-down-up text-muted opacity-25';
+                    if ($currentCol === $col) { $icon = $currentOrder === 'desc' ? 'bi-sort-down text-primary' : 'bi-sort-up text-primary'; }
+                    return '<a href="'.request()->fullUrlWithQuery(['sort_by' => $col, 'sort_order' => $newOrder]).'" class="text-decoration-none text-secondary fw-bold d-flex align-items-center justify-content-between gap-2">'.$label.' <i class="bi '.$icon.'"></i></a>';
+                };
             @endphp
             
-            <div class="row justify-content-center mb-10" x-data="{ showFilter: true }">
-                <div class="col-12 col-lg-12">
-                    <div class="card shadow-lg p-5">
-                        <div class="card-header bg-white border-0">
-                            <h5 class="card-title mb-0 text-center">Data Desa Bersinar</h5>
+            <div class="row justify-content-center mb-5" x-data="{ showFilter: true }">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm"> 
+                        <div class="card-header bg-white py-3 border-bottom">
+                            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-center gap-2">
+                                <h5 class="card-title mb-0 fw-bold text-secondary"><i class="bi bi-table me-2"></i>Data Desa Bersinar</h5>
+                                <button type="button" @click="showFilter = !showFilter" class="btn btn-sm transition-all d-flex align-items-center gap-2" :class="showFilter ? 'btn-light text-secondary border' : 'btn-primary shadow-sm'">
+                                    <i class="bi" :class="showFilter ? 'bi-chevron-up' : 'bi-funnel'"></i> <span x-text="showFilter ? 'Sembunyikan Filter' : 'Filter Pencarian'"></span>
+                                    @if($activeFilters > 0) <span class="badge bg-danger rounded-pill">{{ $activeFilters }}</span> @endif
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="card-body">
-                            {{-- FORM FILTER --}}
-                            <form action="{{ route('p2m.desa_bersinar.index') }}" method="GET" class="mb-8">
+                        <div class="card-body p-0 p-lg-4">
+                            <form action="{{ route('p2m.desa-bersinar.index') }}" method="GET">
+                                <button type="submit" style="display: none;" aria-hidden="true"></button>
                                 <input type="hidden" name="sort_by" value="{{ request('sort_by') }}">
                                 <input type="hidden" name="sort_order" value="{{ request('sort_order') }}">
 
-                                <div class="row mb-5 align-items-center">
-                                    <div class="col-auto">
-                                        <div class="d-flex gap-2">
-                                            <button type="button" @click="showFilter = !showFilter" 
-                                                    class="btn btn-sm transition-all d-flex align-items-center gap-2"
-                                                    :class="showFilter ? 'btn-secondary' : 'btn-primary'">
-                                                <i class="bi" :class="showFilter ? 'bi-x-lg' : 'bi-sliders'"></i> 
-                                                <span x-text="showFilter ? 'Tutup Filter' : 'Filter Pencarian Lanjutan'"></span>
-                                                @if($activeFilters > 0)
-                                                    <span class="badge bg-warning text-dark border border-dark rounded-pill px-2 ms-1">{{ $activeFilters }} Aktif</span>
-                                                @endif
-                                            </button>
+                                {{-- PANEL FILTER --}}
+                                <div x-show="showFilter" x-transition class="mb-4 px-3 px-lg-0 pt-3 pt-lg-0">
+                                    <div class="bg-body-tertiary p-4 rounded-3 border">
+                                        <div class="row g-3 text-start">
+                                            <div class="col-12">
+                                                <label class="form-label fw-bold small text-secondary text-uppercase">Kata Kunci</label>
+                                                <div class="input-group shadow-sm">
+                                                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                                    <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Cari Desa, Penggiat, Penanggung Jawab..." value="{{ request('search') }}">
+                                                </div>
+                                            </div>
 
-                                            <button type="submit" formaction="{{ route('p2m.desa_bersinar.export') }}"
-                                                    class="btn btn-success btn-sm text-white d-flex align-items-center gap-2">
-                                                <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-md-inline">Export Excel</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-auto ms-auto">
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" name="search" class="form-control" placeholder="Cari desa, kelurahan, personil..." value="{{ request('search') }}">
-                                            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Cari</button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {{-- PANEL FILTER ITEMS --}}
-                                <div x-show="showFilter" x-transition.duration.300ms class="mb-4">
-                                    <div class="bg-light p-4 rounded-3 border">
-                                        <div class="row g-3">
-                                            {{-- Filter Satker --}}
                                             @if ($user->isAdmin())
-                                                <div class="col-md-6">
-                                                    <label class="form-label fw-bold small text-muted text-uppercase mb-1">Satuan Kerja</label>
-                                                    <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satker...">
-                                                        @foreach($satuanKerjas as $s)
-                                                            <option value="{{ $s->id }}" {{ in_array($s->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>
-                                                                {{ $s->satuan_kerja }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
+                                                <div class="col-lg-6">
+                                                    <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Satuan Kerja</label>
+                                                    <div class="shadow-sm bg-white rounded">
+                                                        <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satuan Kerja..." autocomplete="off">
+                                                            @foreach($satuanKerjas as $satker)
+                                                                <option value="{{ $satker->id }}" {{ in_array($satker->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>{{ $satker->satuan_kerja }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             @endif
 
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Anggaran Pembentukan</label>
-                                                <select id="select-anggaran" name="anggaran_pembentukan[]" multiple placeholder="Pilih Anggaran...">
-                                                    <option value="DIPA" {{ in_array('DIPA', request('anggaran_pembentukan', [])) ? 'selected' : '' }}>DIPA</option>
-                                                    <option value="NON DIPA" {{ in_array('NON DIPA', request('anggaran_pembentukan', [])) ? 'selected' : '' }}>NON DIPA</option>
-                                                </select>
+                                            <div class="col-lg-{{ $user->isAdmin() ? '6' : '12' }}">
+                                                <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Kabupaten / Kota</label>
+                                                <div class="shadow-sm bg-white rounded">
+                                                    <select id="select-kabkota" name="kabupaten_kota_id[]" multiple placeholder="Pilih Kabupaten/Kota..." autocomplete="off">
+                                                        @foreach($kabupatens as $kab)
+                                                            <option value="{{ $kab->id }}" {{ in_array($kab->id, request('kabupaten_kota_id', [])) ? 'selected' : '' }}>{{ $kab->nama }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
                                             </div>
 
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Kabupaten/Kota</label>
-                                                <select id="select-kabkota" name="kabupaten_kota_id[]" multiple placeholder="Pilih Kabupaten/Kota...">
-                                                    @foreach($kabupatenKotas as $k)
-                                                        <option value="{{ $k->id }}" {{ in_array($k->id, request('kabupaten_kota_id', [])) ? 'selected' : '' }}>
-                                                            {{ $k->nama }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
+                                            <div class="col-12 col-lg-3">
+                                                <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Anggaran</label>
+                                                <div class="shadow-sm bg-white rounded">
+                                                    <select id="select-anggaran" name="anggaran_pembentukan[]" multiple placeholder="Pilih Anggaran..." autocomplete="off">
+                                                        <option value="DIPA" {{ in_array('DIPA', request('anggaran_pembentukan', [])) ? 'selected' : '' }}>DIPA</option>
+                                                        <option value="NON DIPA" {{ in_array('NON DIPA', request('anggaran_pembentukan', [])) ? 'selected' : '' }}>NON DIPA</option>
+                                                    </select>
+                                                </div>
                                             </div>
 
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Bulan Pencanangan</label>
-                                                <select id="select-bulan" name="bulan[]" multiple placeholder="Pilih Bulan...">
-                                                    @foreach(range(1, 12) as $m)
-                                                        <option value="{{ $m }}" {{ in_array($m, request('bulan', [])) ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($m)->locale('id')->translatedFormat('F') }}</option>
-                                                    @endforeach
-                                                </select>
+                                            <div class="col-6 col-lg-3">
+                                                <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Bulan Pencanangan</label>
+                                                <div class="shadow-sm bg-white rounded">
+                                                    <select id="select-bulan" name="bulan[]" multiple placeholder="Bulan..." autocomplete="off">
+                                                        @foreach(range(1, 12) as $m)
+                                                            <option value="{{ $m }}" {{ in_array($m, request('bulan', [])) ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($m)->locale('id')->translatedFormat('F') }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
                                             </div>
 
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Tahun Pencanangan</label>
-                                                <select id="select-tahun" name="tahun[]" multiple placeholder="Pilih Tahun...">
-                                                    @foreach($years as $y)
-                                                        <option value="{{ $y }}" {{ in_array($y, request('tahun', []) ?: [date('Y')]) ? 'selected' : '' }}>{{ $y }}</option>
-                                                    @endforeach
-                                                </select>
+                                            <div class="col-6 col-lg-2">
+                                                <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Tahun</label>
+                                                <div class="shadow-sm bg-white rounded">
+                                                    <select id="select-tahun" name="tahun[]" multiple placeholder="Tahun..." autocomplete="off">
+                                                        @foreach($years as $year)
+                                                            <option value="{{ $year }}" {{ in_array($year, request('tahun', [date('Y')])) ? 'selected' : '' }}>{{ $year }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
                                             </div>
 
-                                            {{-- FILTER PENANGGUNG JAWAB (DISAMAKAN DENGAN SOSIALISASI) --}}
-                                            <div class="col-md-6">
-                                                <label class="form-label fw-bold small text-muted text-uppercase mb-1">Penanggung Jawab</label>
-                                                
-                                                <div class="input-group" x-data="{ logic: '{{ request('pegawai_logic', 'OR') }}' }">
-                                                    {{-- Tombol Logic --}}
-                                                    <button type="button" 
-                                                            class="btn fw-bold" 
-                                                            :class="logic === 'AND' ? 'btn-danger text-white' : 'btn-outline-secondary bg-white text-secondary'" 
-                                                            @click="logic = logic === 'OR' ? 'AND' : 'OR'"
-                                                            style="border-top-right-radius: 0; border-bottom-right-radius: 0;">
-                                                        <span x-text="logic === 'AND' ? 'AND' : 'OR'"></span>
+                                            <div class="col-12 col-lg-4">
+                                                <label class="form-label fw-bold small text-secondary text-uppercase mb-1 d-block">Penanggung Jawab</label>
+                                                <div class="d-flex align-items-stretch shadow-sm bg-white rounded border" x-data="{ logic: '{{ request('pegawai_logic', 'OR') }}' }">
+                                                    <button type="button" class="btn rounded-0 rounded-start border-end d-flex align-items-center justify-content-center fw-bold px-3" style="width: 70px; flex-shrink: 0;" :class="logic === 'AND' ? 'btn-danger text-white' : 'btn-light text-secondary'" @click="logic = logic === 'OR' ? 'AND' : 'OR'">
+                                                        <span x-text="logic"></span>
                                                     </button>
                                                     <input type="hidden" name="pegawai_logic" :value="logic">
-                                                    
-                                                    {{-- Dropdown TomSelect DI DALAM WRAPPER FLEX-GROW --}}
-                                                    {{-- Ini yang bikin dia FULL WIDTH seperti di Sosialisasi --}}
-                                                    <div style="flex-grow: 1;">
-                                                        <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih Pegawai...">
+                                                    <div class="flex-grow-1" style="min-width: 0;">
+                                                        <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Cari Pegawai..." autocomplete="off" class="border-0">
                                                             @foreach($pegawais as $pgw)
-                                                                <option value="{{ $pgw->nip }}" {{ in_array($pgw->nip, request('pegawai_nips', [])) ? 'selected' : '' }}>{{ $pgw->nama }}</option>
+                                                                <option value="{{ $pgw->nip }}" {{ in_array($pgw->nip, request('pegawai_nips', [])) ? 'selected' : '' }}>{{ $pgw->nama }} ({{ $pgw->nip }})</option>
                                                             @endforeach
                                                         </select>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div class="col-12 text-end mt-4 pt-2 border-top border-secondary-subtle">
-                                                <a href="{{ route('p2m.desa_bersinar.index') }}" class="btn btn-outline-secondary btn-sm me-2 px-3"><i class="bi bi-arrow-counterclockwise"></i> Reset</a>
-                                                <button type="submit" class="btn btn-primary btn-sm px-4"><i class="bi bi-funnel-fill"></i> Terapkan</button>
+                                            <div class="col-12 text-end pt-3 border-top mt-4 text-start">
+                                                <a href="{{ route('p2m.desa-bersinar.index') }}" class="btn btn-link text-decoration-none text-muted btn-sm me-2">Reset</a>
+                                                <button type="submit" class="btn btn-primary px-4 shadow-sm"><i class="bi bi-funnel-fill me-1"></i> Terapkan</button>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-3 px-3 px-lg-0">
+                                    <button type="submit" formaction="{{ route('p2m.desa-bersinar.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 shadow-sm">
+                                        <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-lg-inline">Export Excel</span>
+                                    </button>
+                                    <div class="text-muted small fst-italic">Total Data: <strong>{{ $desas->total() }}</strong></div>
                                 </div>
                             </form>
                             
                             {{-- TABEL DATA --}}
                             <div class="custom-table-scroll mb-3" id="data-table">
-                                <table class="table table-hover mb-0" x-data="{ expanded: [] }">
-                                    <thead class="table-light">
-                                        <tr class="text-center align-middle">
-                                            <th>No</th>
-                                            @foreach([
-                                                'satuan_kerja' => 'Satker',
-                                                'anggaran_pembentukan' => 'Anggaran',
-                                                'nama_desa' => 'Lokasi', // Gabungan Desa/Kel/Kab
-                                                'tanggal_pencanangan' => 'Tanggal',
-                                                'jumlah_penggiat' => 'Penggiat',
-                                                'keberadaan_ibm' => 'IBM'
-                                            ] as $field => $label)
-                                                <th>
-                                                    <a href="{{ request()->fullUrlWithQuery(['sort_by' => $field, 'sort_order' => request('sort_by') == $field && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
-                                                        {{ $label }}
-                                                        @if(request('sort_by') == $field) <i class="bi bi-sort-{{ request('sort_order') == 'asc' ? 'down' : 'up' }}"></i> @endif
-                                                    </a>
-                                                </th>
-                                            @endforeach
-                                            <th style="min-width: 150px;">Penanggung Jawab</th>
-                                            <th>
-                                                <a href="{{ request()->fullUrlWithQuery(['sort_by' => 'created_at', 'sort_order' => request('sort_by') == 'created_at' && request('sort_order') == 'asc' ? 'desc' : 'asc']) }}" class="text-decoration-none text-dark d-flex justify-content-center align-items-center gap-1">
-                                                    Dibuat
-                                                    @if(request('sort_by') == 'created_at' || !request('sort_by')) <i class="bi bi-sort-numeric-{{ request('sort_order', 'desc') == 'asc' ? 'down' : 'up-alt' }}"></i> @endif
-                                                </a>
-                                            </th>
-                                            <th>Aksi</th>
+                                <table class="table table-hover align-middle mb-0" x-data="{ expanded: [] }">
+                                    <thead class="bg-light sticky-top">
+                                        <tr class="text-center align-middle small text-uppercase text-secondary text-nowrap">
+                                            <th class="py-3 bg-light ps-3">No</th>
+                                            <th class="py-3 bg-light text-start">{!! $sortLink('satuan_kerja', 'Satuan Kerja') !!}</th>
+                                            <th class="py-3 bg-light">{!! $sortLink('anggaran_pembentukan', 'Anggaran') !!}</th>
+                                            
+                                            <th class="py-3 bg-light text-start">{!! $sortLink('nama_desa', 'Desa') !!}</th>
+                                            <th class="py-3 bg-light text-start">{!! $sortLink('nama_kelurahan', 'Kelurahan') !!}</th>
+                                            
+                                            <th class="py-3 bg-light text-start">Kabupaten/Kota</th>
+                                            <th class="py-3 bg-light">{!! $sortLink('tanggal_pencanangan', 'Tgl Pencanangan') !!}</th>
+                                            <th class="py-3 bg-light text-start">PJ (Pegawai)</th>
+                                            <th class="py-3 bg-light">{!! $sortLink('jumlah_penggiat', 'Penggiat') !!}</th>
+                                            
+                                            <th class="py-3 bg-light">{!! $sortLink('keberadaan_ibm', 'IBM') !!}</th>
+                                            
+                                            <th class="py-3 bg-light">{!! $sortLink('created_at', 'Dibuat Pada') !!}</th>
+                                            <th class="py-3 bg-light pe-3">Aksi</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        @forelse ($desaBersinars as $data)
-                                            <tr class="text-center align-middle">
-                                                <td>{{ $desaBersinars->firstItem() + $loop->index }}</td>
-                                                <td>{{ $data->satuanKerja->satuan_kerja ?? '-' }}</td>
-                                                <td>{{ $data->anggaran_pembentukan }}</td>
-                                                <td class="fw-semibold">
-                                                    {{ $data->nama_desa }} <br>
-                                                    <small class="text-muted">{{ $data->nama_kelurahan }} - {{ $data->kabupatenKota->nama ?? '-' }}</small>
-                                                </td>
-                                                <td>{{ $data->tanggal_pencanangan->translatedFormat('d M Y') }}</td>
-                                                <td>{{ $data->jumlah_penggiat }}</td>
-                                                <td>
-                                                    <span class="badge {{ $data->keberadaan_ibm === 'ada' ? 'bg-success' : 'bg-secondary' }}">
-                                                        {{ $data->keberadaan_ibm === 'ada' ? 'Ada' : 'Belum' }}
-                                                    </span>
-                                                </td>
+                                    <tbody class="border-top-0">
+                                        @forelse ($desas as $data)
+                                            <tr class="text-center align-middle" :class="expanded.includes({{ $data->id }}) ? 'bg-light' : ''">
+                                                <td class="fw-bold text-secondary ps-3">{{ $desas->firstItem() + $loop->index }}</td>
+                                                <td class="text-start"><span class="fw-semibold text-dark">{{ $data->satuanKerja->satuan_kerja ?? '-' }}</span></td>
+                                                <td><span class="badge rounded-pill {{ $data->anggaran_pembentukan == 'DIPA' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' }}">{{ $data->anggaran_pembentukan }}</span></td>
+                                                
+                                                <td class="text-start fw-bold text-dark"><a href="#" class="text-decoration-none fw-bold text-dark" @click.prevent="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">{{ $data->nama_desa }}</a></td>
+                                                
+                                                <td class="text-start">{{ $data->nama_kelurahan }}</td>
+                                                
+                                                <td class="text-start">{{ $data->kabupatenKota->nama ?? '-' }}</td>
+                                                <td class="small text-muted text-nowrap">{{ $data->tanggal_pencanangan->locale('id')->translatedFormat('d M Y') }}</td>
+                                                
+                                                {{-- FIX: TAMPILKAN SEMUA PEGAWAI --}}
                                                 <td class="text-start">
-                                                    @foreach($data->pegawai as $p)
-                                                        <span class="badge bg-info text-dark mb-1">{{ $p->nama }}</span>
-                                                    @endforeach
-                                                </td>
-                                                <td>
-                                                    <div class="small text-muted">
-                                                        {{ $data->created_at->translatedFormat('d M Y') }} <br>
-                                                        {{ $data->created_at->format('H:i') }}
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        @foreach($data->pegawai as $pegawai)
+                                                            <span class="badge bg-white border text-secondary fw-normal shadow-sm">{{ $pegawai->nama }}</span>
+                                                        @endforeach
                                                     </div>
                                                 </td>
-                                                <td>
-                                                    <div class="d-flex gap-2 justify-content-center">
-                                                        <button type="button" class="btn btn-info btn-sm text-white" @click="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">
-                                                            <i class="me-0 bi" :class="expanded.includes({{ $data->id }}) ? 'bi-eye-slash' : 'bi-eye'"></i>
-                                                        </button>
-                                                        <a href="{{ route('p2m.desa_bersinar.edit', $data->id) }}" class="btn btn-success btn-sm"><i class="me-0 bi bi-pencil-square"></i></a>
-                                                        <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.desa_bersinar.destroy', $data->id) }}" method="POST" class="d-inline">
-                                                            @csrf @method('DELETE')
-                                                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete({{ $data->id }})"><i class="me-0 bi bi-trash"></i></button>
-                                                        </form>
+
+                                                <td>{{ $data->jumlah_penggiat }}</td>
+                                                <td><span class="badge {{ $data->keberadaan_ibm == 'Ada' ? 'bg-primary' : 'bg-secondary' }}">{{ $data->keberadaan_ibm }}</span></td>
+                                                <td class="small text-muted text-nowrap">{{ $data->created_at->locale('id')->translatedFormat('d M Y H:i') }}</td>
+                                                <td class="pe-3">
+                                                    <div class="btn-group btn-group-sm shadow-sm">
+                                                        <button type="button" class="btn btn-light border text-secondary" @click="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})"><i class="bi" :class="expanded.includes({{ $data->id }}) ? 'bi-chevron-up text-primary' : 'bi-eye text-secondary'"></i></button>
+                                                        @if (auth()->user()->hasRole('operator'))
+                                                            <a href="{{ route('p2m.desa-bersinar.edit', $data->id) }}" class="btn btn-light border text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                                            <button type="button" class="btn btn-light border text-danger" onclick="confirmDelete({{ $data->id }})" title="Hapus"><i class="bi bi-trash"></i></button>
+                                                            <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.desa-bersinar.destroy', $data->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
+                                                        @endif
                                                     </div>
                                                 </td>
                                             </tr>
-                                            <tr x-show="expanded.includes({{ $data->id }})" x-transition.duration.200ms class="bg-light">
-                                                <td colspan="10" class="text-start p-4">
-                                                    <div class="card border-0">
-                                                        <div class="card-body">
-                                                            <h5 class="card-title fw-bold text-primary mb-3">Informasi Tambahan</h5>
-                                                            <div class="row">
-                                                                <div class="col-md-6 mb-3">
-                                                                    <label class="fw-bold text-muted small text-uppercase">No HP Penanggung Jawab</label>
-                                                                    <p class="mt-1 text-dark fw-bold">{{ $data->nomor_hp_penanggung_jawab ?: '-' }}</p>
-                                                                </div>
-                                                                <div class="col-md-6 mb-3">
-                                                                    <label class="fw-bold text-muted small text-uppercase">Link Dokumentasi</label>
-                                                                    <div class="mt-1">
-                                                                        @if($data->link_kelengkapan_dokumentasi)
-                                                                            <a href="{{ $data->link_kelengkapan_dokumentasi }}" target="_blank" class="text-primary text-break">
-                                                                                <i class="bi bi-link-45deg"></i> {{ $data->link_kelengkapan_dokumentasi }}
-                                                                            </a>
-                                                                        @else
-                                                                            <span class="text-muted fst-italic">Tidak ada link</span>
-                                                                        @endif
+
+                                            {{-- Detail --}}
+                                            <tr x-show="expanded.includes({{ $data->id }})" x-transition>
+                                                <td colspan="12" class="p-0 border-0">
+                                                    <div class="bg-body-tertiary p-4 border-bottom shadow-inner text-start">
+                                                        <div class="card border-0 shadow-sm">
+                                                            <div class="card-body">
+                                                                <h6 class="card-title fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-info-circle me-2"></i>Detail Lengkap</h6>
+                                                                <div class="row g-4 text-start">
+                                                                    <div class="col-lg-6">
+                                                                        <dl class="row mb-0 small">
+                                                                            <dt class="col-sm-4 text-secondary mb-2">Desa / Kelurahan</dt><dd class="col-sm-8 text-dark fw-bold">{{ $data->nama_desa }} / {{ $data->nama_kelurahan }}</dd>
+                                                                            <dt class="col-sm-4 text-secondary mb-2">Kabupaten/Kota</dt><dd class="col-sm-8 text-dark">{{ $data->kabupatenKota->nama ?? '-' }}</dd>
+                                                                            <dt class="col-sm-4 text-secondary mb-2">No. HP Penanggung Jawab</dt><dd class="col-sm-8 text-dark">{{ $data->no_hp_penanggung_jawab ?? '-' }}</dd>
+                                                                            <dt class="col-sm-4 text-secondary mb-2">Penanggung Jawab (BNN)</dt>
+                                                                            <dd class="col-sm-8">
+                                                                                <ul class="list-unstyled mb-0">
+                                                                                    @foreach($data->pegawai as $pegawai)
+                                                                                        @php $isPindah = $pegawai->satuan_kerja_id != $data->satuan_kerja_id; @endphp
+                                                                                        <li class="mb-2">
+                                                                                            <i class="bi bi-person-check-fill me-2 text-success"></i><span class="text-dark">{{ $pegawai->nama }}</span> <span class="text-muted">({{ $pegawai->nip }})</span>
+                                                                                            @if($isPindah) <br><small class="text-danger fw-bold fst-italic ms-4"><i class="bi bi-arrow-return-right me-1"></i>Pindah ke: {{ $pegawai->satuanKerja->satuan_kerja ?? 'Luar Satker' }}</small> @endif
+                                                                                        </li>
+                                                                                    @endforeach
+                                                                                </ul>
+                                                                            </dd>
+                                                                        </dl>
                                                                     </div>
-                                                                </div>
-                                                                
-                                                                <div class="col-md-12 mt-2">
-                                                                    <div class="row">
-                                                                        <div class="col-md-6">
-                                                                            <label class="fw-bold text-muted small text-uppercase">Dibuat Pada</label>
-                                                                            <div class="d-flex align-items-center mt-1 text-secondary">
-                                                                                <i class="bi bi-clock me-2"></i>
-                                                                                {{ $data->created_at->locale('id')->translatedFormat('l, d F Y H:i') }}
+                                                                    <div class="col-lg-6">
+                                                                        <div class="row small mb-3">
+                                                                            <div class="col-md-6 mb-2">
+                                                                                <span class="text-secondary d-block">Dibuat Pada</span>
+                                                                                <span class="text-dark fw-bold">{{ $data->created_at->locale('id')->translatedFormat('l, d F Y H:i') }}</span>
+                                                                            </div>
+                                                                            <div class="col-md-6 mb-2">
+                                                                                <span class="text-secondary d-block">Terakhir Diubah</span>
+                                                                                <span class="text-dark fw-bold">{{ $data->updated_at->locale('id')->translatedFormat('l, d F Y H:i') }}</span>
                                                                             </div>
                                                                         </div>
-                                                                        <div class="col-md-6">
-                                                                            <label class="fw-bold text-muted small text-uppercase">Terakhir Diperbarui</label>
-                                                                            <div class="d-flex align-items-center mt-1 text-secondary">
-                                                                                <i class="bi bi-pencil-square me-2"></i>
-                                                                                {{ $data->updated_at->locale('id')->translatedFormat('l, d F Y H:i') }}
-                                                                            </div>
+                                                                    </div>
+                                                                    {{-- Dokumentasi --}}
+                                                                    <div class="col-12 mt-3">
+                                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                            <span class="fw-bold text-secondary small">Dokumentasi</span>
+                                                                            <span class="badge bg-secondary rounded-pill">{{ $data->dokumentasi->count() }} File</span>
                                                                         </div>
+                                                                        @if($data->dokumentasi->count() > 0)
+                                                                            <div class="row g-2">
+                                                                                @foreach($data->dokumentasi as $doc)
+                                                                                    <div class="col-12 col-md-6 col-lg-4 text-start">
+                                                                                        <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center h-100 shadow-sm">
+                                                                                            <div class="small fw-bold text-dark text-wrap pe-2">
+                                                                                                @if(Str::contains($doc->tipe_file, 'image')) <i class="bi bi-file-image text-primary me-1"></i>
+                                                                                                @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf text-danger me-1"></i>
+                                                                                                @else <i class="bi bi-file-earmark-text text-secondary me-1"></i> @endif
+                                                                                                {{ $doc->nama_file_asli }}
+                                                                                            </div>
+                                                                                            <div class="d-flex gap-1 flex-shrink-0">
+                                                                                                @if(Str::contains($doc->tipe_file, ['image', 'pdf', 'video']))
+                                                                                                    <a href="{{ Storage::url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-info px-2 py-0" title="Preview"><i class="bi bi-eye"></i></a>
+                                                                                                @endif
+                                                                                                <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-xs btn-outline-primary px-2 py-0" title="Download"><i class="bi bi-download"></i></a>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                @endforeach
+                                                                            </div>
+                                                                        @else
+                                                                            <div class="text-muted small fst-italic border rounded p-3 text-center bg-light">Tidak ada dokumentasi.</div>
+                                                                        @endif
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -279,23 +303,24 @@
                                                 </td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="10" class="text-center p-4 text-muted">Tidak ada data Desa Bersinar</td></tr>
+                                            <tr><td colspan="12" class="text-center py-5 text-muted fst-italic border-bottom">Belum ada data desa bersinar.</td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center mt-4">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="text-muted small">Tampilkan</span>
-                                    <select class="form-select form-select-sm border-secondary-subtle" style="width: auto;" onchange="window.location.href = this.value">
-                                        @foreach([10, 25, 50, 100] as $num)
-                                            <option value="{{ request()->fullUrlWithQuery(['per_page' => $num, 'page' => 1]) }}" {{ request('per_page') == $num ? 'selected' : '' }}>{{ $num }}</option>
-                                        @endforeach
-                                    </select>
-                                    <span class="text-muted small">data</span>
+                            <div class="card-footer bg-white py-3 border-top-0">
+                                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-center gap-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <select class="form-select form-select-sm border-secondary-subtle" style="width: 70px;" onchange="window.location.href = this.value">
+                                            @foreach([10, 25, 50, 100] as $num)
+                                                <option value="{{ request()->fullUrlWithQuery(['per_page' => $num, 'page' => 1]) }}" {{ request('per_page') == $num ? 'selected' : '' }}>{{ $num }}</option>
+                                            @endforeach
+                                        </select>
+                                        <span class="text-muted small">Data / halaman</span>
+                                    </div>
+                                    <div>{{ $desas->withQueryString()->links() }}</div>
                                 </div>
-                                <div>{{ $desaBersinars->fragment('data-table')->links() }}</div>
                             </div>
                         </div>
                     </div>
@@ -305,91 +330,31 @@
     </main>
 @endsection
 
-{{-- CSS YANG DISAMAKAN PERSIS DENGAN SOSIALISASI --}}
 @push('styles')
-    @vite('resources/css/tom-select.css')
-    <style>
-        .ts-control { border-radius: 0.375rem !important; border-color: #dee2e6 !important; box-shadow: none !important; }
-        .ts-wrapper.focus .ts-control { box-shadow: none !important; border-color: #dee2e6 !important; }
-
-        .input-group .ts-wrapper {
-            height: 100%;
-        }
-        .input-group .ts-control {
-            border-top-left-radius: 0 !important;
-            border-bottom-left-radius: 0 !important;
-            height: 100%;
-            display: flex;
-            align-items: center;
-        }
-
-        /* CSS KHUSUS UNTUK TABEL SCROLL & STICKY */
-        .custom-table-scroll {
-            max-height: 70vh;       /* Batasi tinggi tabel */
-            overflow-y: auto;       /* Munculkan scrollbar vertikal */
-            position: relative;     /* Agar posisi sticky relative terhadap kotak ini */
-            border: 1px solid #dee2e6; /* Border tipis pembatas area scroll */
-        }
-
-        /* Memaksa Header Diam di Tempat */
-        .custom-table-scroll thead th {
-            position: sticky !important;
-            top: 0 !important;
-            z-index: 2;
-            
-            /* PENTING: Warna background header agar tidak tembus pandang */
-            background-color: #f8f9fa !important; 
-            
-            /* Garis bawah header agar tegas */
-            box-shadow: inset 0 -1px 0 #dee2e6;
-        }
-
-    </style>
+@vite('resources/css/tom-select.css')
+<style>
+    .ts-dropdown, .ts-dropdown.single { z-index: 2000 !important; }
+    .ts-control { border: none !important; box-shadow: none !important; padding-top: 0.5rem; padding-bottom: 0.5rem; background-color: transparent !important; min-height: 40px; }
+    .custom-table-scroll { max-height: 70vh; overflow-y: auto; position: relative; border: 1px solid #dee2e6; border-radius: 6px; }
+    .custom-table-scroll thead th { position: sticky !important; top: 0 !important; z-index: 10; background-color: #f8f9fa !important; box-shadow: inset 0 -1px 0 #dee2e6; }
+    .btn-xs { padding: 1px 5px; font-size: 0.75rem; }
+    .page-link { border: none; color: #6c757d; border-radius: 50% !important; margin: 0 2px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+    .page-item.active .page-link { background-color: #0d6efd; color: white; box-shadow: 0 2px 4px rgba(13,110,253,0.3); }
+</style>
 @endpush
 
 @push('scripts')
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {
-        const cfg = { plugins: ['remove_button', 'clear_button'], persist: false, create: false };
-        ['select-satker','select-anggaran','select-kabkota','select-bulan','select-tahun','select-pegawai'].forEach(id => {
-            if(document.getElementById(id)) new TomSelect('#'+id, cfg);
-        });
+        const configTomSelect = { plugins: ['remove_button', 'clear_button'], persist: false, create: false, maxOptions: null };
+        const ids = ['select-satker', 'select-bulan', 'select-anggaran', 'select-tahun', 'select-pegawai', 'select-kabkota'];
+        ids.forEach(id => { if(document.getElementById(id)) new TomSelect('#' + id, configTomSelect); });
     });
-
     window.confirmDelete = function(id) {
         Swal.fire({
-            title: 'Apakah Anda yakin?',
-            text: "Data yang dihapus tidak dapat dikembalikan!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Ya, hapus!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.getElementById('delete-form-' + id).submit();
-            }
-        });
+            title: 'Hapus Data?', text: "Data ini akan dihapus permanen.", icon: 'warning',
+            showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d', confirmButtonText: 'Ya, Hapus', cancelButtonText: 'Batal', reverseButtons: true
+        }).then((result) => { if (result.isConfirmed) { document.getElementById('delete-form-' + id).submit(); } });
     }
-
-    @if(session('success'))
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            didOpen: (toast) => {
-                toast.addEventListener('mouseenter', Swal.stopTimer)
-                toast.addEventListener('mouseleave', Swal.resumeTimer)
-            }
-        });
-
-        Toast.fire({
-            icon: 'success',
-            title: "{{ session('message') }}"
-        });
-    @endif
 </script>
 @endpush

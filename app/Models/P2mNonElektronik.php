@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\HasDokumentasi;
 
-class P2mOnline extends Model
+class P2mNonElektronik extends Model
 {
     use HasFactory, HasDokumentasi;
 
-    protected $table = 'p2m_online';
+    protected $table = 'p2m_non_elektronik';
 
     protected $casts = [
         'tanggal_mulai_pelaksanaan' => 'date'
@@ -19,13 +19,13 @@ class P2mOnline extends Model
 
     protected $guarded = [];
 
-    // Helper Label Lengkap
+    // Helper untuk Label Panjang di View & Excel
     public static function getJenisMediaOptions()
     {
         return [
-            'Media Online' => 'Media Online (Portal Berita Online)',
-            'Medsos Stakeholder' => 'Medsos Stakeholder',
-            'Media lain' => 'Media lain'
+            'Media Cetak' => 'Media Cetak (Banner, Brosur, Stiker, dll)',
+            'Media Luar Ruang' => 'Media Luar Ruang (Baliho, Spanduk, Umbul-umbul)',
+            'Branding Sarana Publik' => 'Branding Sarana Publik'
         ];
     }
 

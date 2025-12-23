@@ -3,168 +3,140 @@
 @section('content')
     <main class="admin-main">
         <div class="container-fluid p-4 p-lg-5">
-            <div class="row justify-content-center">
+            <div class="row justify-content-center mb-4">
                 <div class="col-12 col-lg-10">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div>
-                            <h1 class="h3 mb-0">Kegiatan Tes Urine</h1>
-                            <p class="text-muted mb-0">Input Data Deteksi Dini</p>
-                        </div>
-                        <a href="{{ route('p2m.tes_urine.index') }}" class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-arrow-left"></i> Kembali
-                        </a>
-                    </div>
+                    <h1 class="h3 mb-1 fw-bold text-dark">Input Kegiatan Tes Urine</h1>
+                    <p class="text-muted mb-0">Deteksi Dini & Tes Urine Lingkungan Masyarakat/Pemerintah/Swasta</p>
                 </div>
             </div>
+            
+            @include('p2m.partials.select-p2m-create')
 
             <div class="row justify-content-center">
                 <div class="col-12 col-lg-10">
-                    <div class="card shadow-lg p-5">
-                        <div class="card-header">
-                            <h5 class="card-title mb-2">Form Input Tes Urine</h5>
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-header bg-white py-3 border-bottom">
+                            <h5 class="card-title mb-0 fw-bold">Form Input Data</h5>
                         </div>
-                        <div class="card-body">
-                            {{-- TAMBAHKAN ID PADA FORM UNTUK JAVASCRIPT RESET --}}
-                            <form id="form-create-p2m" action="{{ route('p2m.tes_urine.store') }}" method="POST">
+
+                        <div class="card-body p-4 p-lg-5">
+                            <form action="{{ route('p2m.tes-urine.store') }}" method="POST" enctype="multipart/form-data" id="form-create">
                                 @csrf
                                 
-                                <div class="row g-6 mb-5">
-                                    {{-- 1. BAGIAN ATAS (DATA UMUM) --}}
-                                    
-                                    @if (Auth::user()->isAdmin())    
+                                {{-- SECTION 1: DATA PELAKSANAAN --}}
+                                <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">Data Pelaksanaan</h6>
+                                <div class="row g-4 mb-5">
+                                    @if (auth()->user()->isAdmin())    
                                     <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Satuan Kerja</label>
-                                            <select class="form-select @error('satuan_kerja_id') is-invalid @enderror" name="satuan_kerja_id">
-                                                <option value="" selected>Pilih Satuan Kerja</option>
-                                                @foreach ($satuanKerjas as $satker)
-                                                    <option value="{{ $satker->id }}" @selected(old('satuan_kerja_id') == $satker->id)>{{ $satker->satuan_kerja }}</option>
-                                                @endforeach
-                                            </select>
-                                            @error('satuan_kerja_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
+                                        <label class="form-label fw-semibold text-secondary small">Satuan Kerja <span class="text-danger">*</span></label>
+                                        <select class="form-select @error('satuan_kerja_id') is-invalid @enderror" name="satuan_kerja_id">
+                                            <option value="" selected disabled>-- Pilih Satuan Kerja --</option>
+                                            @foreach ($satuanKerjas as $satuanKerja)
+                                                <option value="{{ $satuanKerja->id }}" @selected(old('satuan_kerja_id') == $satuanKerja->id)>{{ $satuanKerja->satuan_kerja }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('satuan_kerja_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
                                     @endif
 
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Anggaran Pelaksanaan</label>
-                                            <select class="form-select @error('anggaran_pelaksanaan') is-invalid @enderror" name="anggaran_pelaksanaan">
-                                                <option value="" disabled selected>Pilih Anggaran</option>
-                                                <option value="DIPA" @selected(old('anggaran_pelaksanaan') == 'DIPA')>DIPA</option>
-                                                <option value="NON DIPA" @selected(old('anggaran_pelaksanaan') == 'NON DIPA')>NON DIPA</option>
-                                            </select>
-                                            @error('anggaran_pelaksanaan') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
+                                    <div class="col-12 col-lg-{{ auth()->user()->isAdmin() ? '6' : '12' }}">
+                                        <label class="form-label fw-semibold text-secondary small">Sumber Anggaran <span class="text-danger">*</span></label>
+                                        <select class="form-select @error('anggaran_pelaksanaan') is-invalid @enderror" name="anggaran_pelaksanaan">
+                                            <option value="" disabled selected>-- Pilih Sumber --</option>
+                                            <option value="DIPA" @selected(old('anggaran_pelaksanaan') == 'DIPA')>DIPA</option>
+                                            <option value="NON DIPA" @selected(old('anggaran_pelaksanaan') == 'NON DIPA')>NON DIPA</option>
+                                        </select>
+                                        @error('anggaran_pelaksanaan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
 
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Nama Instansi Pelaksana</label>
-                                            <input type="text" class="form-control @error('nama_instansi_pelaksana') is-invalid @enderror" 
-                                                   placeholder="Contoh: PT. Maju Jaya / Dinas Pendidikan" name="nama_instansi_pelaksana" value="{{ old('nama_instansi_pelaksana') }}">
-                                            @error('nama_instansi_pelaksana') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold text-secondary small">Nama Instansi Pelaksana <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-lg @error('nama_instansi') is-invalid @enderror" name="nama_instansi" value="{{ old('nama_instansi') }}" placeholder="Masukkan nama instansi pelaksana">
+                                        @error('nama_instansi') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    </div>
+                                </div>
+
+                                {{-- SECTION 2: DETAIL LOKASI & SASARAN --}}
+                                <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">Detail Lokasi & Sasaran</h6>
+                                <div class="row g-4 mb-5">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold text-secondary small">Tanggal Pelaksanaan <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control @error('tanggal_pelaksanaan') is-invalid @enderror" name="tanggal_pelaksanaan" value="{{ old('tanggal_pelaksanaan') }}">
+                                        @error('tanggal_pelaksanaan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
 
-                                    {{-- PERBAIKAN LAYOUT: KIRI (Sasaran) & KANAN (Tanggal) --}}
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Sasaran Kegiatan</label>
-                                            <select class="form-select @error('sasaran_kegiatan') is-invalid @enderror" name="sasaran_kegiatan">
-                                                <option value="" selected>Pilih Sasaran</option>
-                                                <option value="Instansi Pemerintah" @selected(old('sasaran_kegiatan') == 'Instansi Pemerintah')>Instansi Pemerintah</option>
-                                                <option value="Lingkungan Pendidikan" @selected(old('sasaran_kegiatan') == 'Lingkungan Pendidikan')>Lingkungan Pendidikan</option>
-                                                <option value="Pekerja Swasta" @selected(old('sasaran_kegiatan') == 'Pekerja Swasta')>Pekerja Swasta</option>
-                                                <option value="Lingkungan Masyarakat" @selected(old('sasaran_kegiatan') == 'Lingkungan Masyarakat')>Lingkungan Masyarakat</option>
-                                            </select>
-                                            @error('sasaran_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold text-secondary small">Target Sasaran <span class="text-danger">*</span></label>
+                                        <select class="form-select @error('sasaran_kegiatan') is-invalid @enderror" name="sasaran_kegiatan">
+                                            <option value="" selected disabled>-- Pilih Lingkungan --</option>
+                                            <option value="instansi pemerintah" @selected(old('sasaran_kegiatan') == 'instansi pemerintah')>Instansi Pemerintah</option>
+                                            <option value="lingkungan pendidikan" @selected(old('sasaran_kegiatan') == 'lingkungan pendidikan')>Lingkungan Pendidikan</option>
+                                            <option value="pekerja swasta" @selected(old('sasaran_kegiatan') == 'pekerja swasta')>Pekerja Swasta</option>
+                                            <option value="lingkungan masyarakat" @selected(old('sasaran_kegiatan') == 'lingkungan masyarakat')>Lingkungan Masyarakat</option>
+                                        </select>
+                                        @error('sasaran_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
 
-                                    {{-- Tanggal Pelaksanaan ubah jadi col-lg-6 agar sejajar --}}
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Tanggal Pelaksanaan</label>
-                                            <input type="date" class="form-control @error('tanggal_pelaksanaan') is-invalid @enderror" name="tanggal_pelaksanaan" value="{{ old('tanggal_pelaksanaan') }}">
-                                            @error('tanggal_pelaksanaan') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold text-secondary small">Alamat / Tempat Kegiatan <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control @error('tempat_kegiatan') is-invalid @enderror" name="tempat_kegiatan" value="{{ old('tempat_kegiatan') }}" placeholder="Masukkan lokasi atau alamat kegiatan">
+                                        @error('tempat_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    </div>
+                                </div>
+
+                                {{-- SECTION 3: PERSONIL & HASIL TES --}}
+                                <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">Personil & Hasil Tes</h6>
+                                <div class="row g-4 mb-4">
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold text-secondary small">Panitia Pelaksana / Pegawai Bertugas <span class="text-danger">*</span></label>
+                                        <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih pegawai..." autocomplete="off">
+                                            <option value="">Pilih pegawai...</option>
+                                            @foreach ($pegawais as $pgw)
+                                                <option value="{{ $pgw->nip }}" @selected(collect(old('pegawai_nips'))->contains($pgw->nip))>{{ $pgw->nama }} ({{ $pgw->nip }})</option>
+                                            @endforeach
+                                        </select>
+                                        @error('pegawai_nips') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
 
-                                    {{-- LAYOUT: KIRI (Tempat) & KANAN (Katim) --}}
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Tempat Kegiatan (Alamat)</label>
-                                            <textarea class="form-control @error('tempat_kegiatan') is-invalid @enderror" rows="3" name="tempat_kegiatan">{{ old('tempat_kegiatan') }}</textarea>
-                                            @error('tempat_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold text-secondary small">Jumlah Peserta <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control @error('jumlah_peserta') is-invalid @enderror" name="jumlah_peserta" value="{{ old('jumlah_peserta') }}" placeholder="Masukkan jumlah peserta">
+                                            <span class="input-group-text bg-light text-secondary">Orang</span>
                                         </div>
+                                        @error('jumlah_peserta') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
 
-                                    <div class="col-12 col-lg-6">
-                                        <div class="mb-0">
-                                            <label class="form-label">Katim / Anggota Tim</label>
-                                            <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih Pegawai..." autocomplete="off" class="form-control @error('pegawai_nips') is-invalid @enderror">
-                                                @foreach ($pegawais as $pegawai)
-                                                    <option value="{{ $pegawai->nip }}" @selected(collect(old('pegawai_nips'))->contains($pegawai->nip))>
-                                                        {{ $pegawai->nama }} - NIP {{ $pegawai->nip }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                            @error('pegawai_nips') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold text-secondary small">Jumlah Terindikasi Positif <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control @error('jumlah_positif') is-invalid @enderror" name="jumlah_positif" value="{{ old('jumlah_positif', 0) }}" placeholder="Masukkan jumlah positif">
+                                            <span class="input-group-text bg-light text-secondary">Orang</span>
                                         </div>
+                                        <div class="form-text">Isi 0 jika tidak ada yang positif.</div>
+                                        @error('jumlah_positif') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
 
-                                    {{-- 2. BAGIAN HASIL TES (Kiri Keterangan, Kanan Jumlah) --}}
-                                    <div class="col-12 col-lg-6">
-                                        <div class="h-100 p-3 border rounded bg-light">
-                                            <label class="form-label fw-bold">Keterangan parameter terindikasi positif</label>
-                                            <textarea class="form-control @error('keterangan_positif') is-invalid @enderror" 
-                                                      rows="5" 
-                                                      placeholder="Contoh: Inisial AA (THC), Inisial BB (BZO)..."
-                                                      name="keterangan_positif">{{ old('keterangan_positif') }}</textarea>
-                                            <div class="form-text text-muted">Kosongkan jika hasil tes negatif semua.</div>
-                                            @error('keterangan_positif') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold text-secondary small">Keterangan Parameter Terindikasi Positif</label>
+                                        <textarea class="form-control @error('keterangan_positif') is-invalid @enderror" name="keterangan_positif" rows="3" placeholder="Masukkan keterangan parameter terindikasi positif">{{ old('keterangan_positif') }}</textarea>
+                                        @error('keterangan_positif') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
 
-                                    <div class="col-12 col-lg-6">
-                                        <div class="d-flex flex-column gap-3 h-100">
-                                            <div>
-                                                <label class="form-label fw-bold">Jumlah Peserta</label>
-                                                <input type="number" class="form-control @error('jumlah_peserta') is-invalid @enderror" name="jumlah_peserta" value="{{ old('jumlah_peserta') }}">
-                                                @error('jumlah_peserta') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                            </div>
-
-                                            <div>
-                                                <label class="form-label fw-bold text-danger">Jumlah Peserta terindikasi positif *</label>
-                                                <input type="number" class="form-control @error('jumlah_positif') is-invalid @enderror" name="jumlah_positif" value="{{ old('jumlah_positif', 0) }}">
-                                                <div class="form-text text-muted fst-italic">
-                                                    Jikalau tidak ada yang terindikasi, di isi dengan angka 0
-                                                </div>
-                                                @error('jumlah_positif') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                            </div>
+                                    <div class="col-12 mt-3">
+                                        <div class="bg-light p-4 rounded-3 border border-dashed">
+                                            <label class="form-label fw-bold h6 mb-1 text-dark"><i class="bi bi-cloud-arrow-up me-2"></i>Upload Dokumentasi</label>
+                                            <p class="text-muted small mb-3">Format: .jpg, .png, .pdf, .docx. Maks 10MB/file.</p>
+                                            <input type="file" class="filepond" name="dokumentasi[]" multiple data-allow-reorder="true" data-max-file-size="10MB" data-max-files="10">
+                                            @error('dokumentasi') <div class="alert alert-danger py-2 mt-2 small"><i class="bi bi-exclamation-circle me-1"></i> {{ $message }}</div> @enderror
                                         </div>
                                     </div>
-
-                                    {{-- 3. BAGIAN LINK --}}
-                                    <div class="col-12 col-lg-12">
-                                        <div class="mb-0">
-                                            <label class="form-label">Link Kelengkapan & Dokumentasi</label>
-                                            <input type="text" class="form-control @error('link_kelengkapan_dokumentasi') is-invalid @enderror" name="link_kelengkapan_dokumentasi" value="{{ old('link_kelengkapan_dokumentasi') }}">
-                                            @error('link_kelengkapan_dokumentasi') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                                        </div>
-                                    </div>
-
                                 </div> 
 
-                                <div class="row justify-content-end">
-                                    <div class="col-12 col-lg-auto">
-                                        <button type="submit" class="btn btn-primary w-100 mb-4 mb-lg-0">Simpan Data</button>
-                                    </div>
-                                    <div class="col-12 col-lg-auto">
-                                        {{-- BUTTON RESET TYPE=RESET --}}
-                                        <button type="reset" class="btn btn-secondary w-100">Reset</button>
-                                    </div>
+                                {{-- BUTTONS --}}
+                                <div class="d-flex flex-column-reverse flex-lg-row justify-content-end gap-2 pt-3 border-top">
+                                    <button type="button" onclick="window.location.reload()" class="btn btn-light border text-secondary px-4"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
+                                    <button type="submit" id="btn-submit" class="btn btn-primary px-5 shadow-sm"><i class="bi bi-save me-1"></i> Simpan Data</button>
                                 </div>
                             </form>
                         </div>
@@ -176,33 +148,118 @@
 @endsection
 
 @push('styles')
-    @vite('resources/css/tom-select.css')
+    @vite(['resources/css/tom-select.css', 'resources/css/filepond.css', 'resources/js/filepond.js'])
+    <style>
+        .ts-control { border: 1px solid #dee2e6; padding: 0.5rem 0.75rem; border-radius: 0.375rem; box-shadow: none; }
+        .ts-control.focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+        .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; }
+        .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+    </style>
 @endpush
 
 @push('scripts')
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {
+        
+        // 1. Tom Select
         if(typeof TomSelect !== 'undefined'){
-            // 1. Simpan instance TomSelect ke dalam variabel
-            const tomSelectInstance = new TomSelect("#select-pegawai", {
+            new TomSelect("#select-pegawai", {
                 create: false,
                 sortField: { field: "text", direction: "asc" },
                 maxItems: null,
-                placeholder: "Cari pegawai...",
-                plugins: ['remove_button'],
+                placeholder: "Pilih pegawai...",
+                plugins: ['remove_button', 'clear_button'], 
+                render: {
+                    option: function(data, escape) { return '<div class="d-flex align-items-center"><i class="bi bi-person me-2 text-muted"></i>' + escape(data.text) + '</div>'; },
+                    item: function(data, escape) { return '<div>' + escape(data.text) + '</div>'; }
+                }
             });
-
-            // 2. Ambil elemen Form berdasarkan ID
-            const form = document.getElementById('form-create-p2m');
-
-            // 3. Tambahkan Event Listener untuk tombol Reset
-            if (form) {
-                form.addEventListener('reset', function() {
-                    // Gunakan method clear() dari TomSelect untuk menghapus pilihan
-                    tomSelectInstance.clear();
-                });
-            }
         }
+
+        // 2. Definisi Elemen
+        const inputElement = document.querySelector('input.filepond');
+        const form = document.getElementById('form-create');
+        const submitBtn = document.getElementById('btn-submit');
+        const originalBtnText = submitBtn.innerHTML;
+
+        // 3. Helper Button State
+        const setButtonState = (isLoading, text = null) => {
+            if (isLoading) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + (text || 'Memproses...');
+                submitBtn.classList.add('btn-secondary');
+                submitBtn.classList.remove('btn-primary');
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.classList.add('btn-primary');
+                submitBtn.classList.remove('btn-secondary');
+            }
+        };
+
+        // 4. FilePond Config
+        const pond = FilePond.create(inputElement, {
+            acceptedFileTypes: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+            labelIdle: 'Drag & Drop file atau <span class="filepond--label-action">Cari File</span>',
+            imagePreviewHeight: 120,
+            credits: false,
+            allowMultiple: true,
+            files: [
+                @if(old('dokumentasi'))
+                    @foreach(old('dokumentasi') as $file)
+                    { source: '{{ $file }}', options: { type: 'local' } },
+                    @endforeach
+                @endif
+            ],
+            server: {
+                process: {
+                    url: '{{ route('upload.temp') }}',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    onload: (response) => { return response; },
+                    onerror: (response) => { setButtonState(false); return response; }
+                },
+                revert: { url: '{{ route('revert.temp') }}', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } },
+                load: { url: '{{ route('load.temp') }}/?file=', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } },
+            },
+            onprocessstart: () => { setButtonState(true, 'Mengupload...'); },
+            onprocessfiles: () => { setButtonState(false); },
+            onwarning: () => { setButtonState(false); },
+            onerror: () => { setButtonState(false); },
+            onremovefile: () => {
+                const files = pond.getFiles();
+                const isStillBusy = files.some(file => file.status === 3 || file.status === 9);
+                if (!isStillBusy) { setButtonState(false); }
+            }
+        });
+
+        // 5. Event Listener Submit (Konsisten dengan Sosialisasi)
+        form.addEventListener('submit', function(e) {
+            const files = pond.getFiles();
+            // Status 2 = PROCESS_COMPLETE, Status 5 = LOAD_COMPLETE (untuk file lama/edit)
+            const isBusy = files.some(file => file.status !== 2 && file.status !== 5);
+
+            if (isBusy) {
+                e.preventDefault(); 
+                e.stopPropagation();
+                
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Upload Belum Selesai',
+                        text: 'Silakan tunggu proses upload selesai atau hapus file yang macet.',
+                        showConfirmButton: true,
+                        confirmButtonText: 'Mengerti',
+                        timer: 5000,
+                        timerProgressBar: true,
+                        allowOutsideClick: true
+                    });
+                } else {
+                    alert('Mohon tunggu, file sedang diupload.');
+                }
+            } else {
+                setButtonState(true, 'Menyimpan...');
+            }
+        });
     });
 </script>
 @endpush

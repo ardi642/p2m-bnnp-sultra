@@ -6,59 +6,44 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        // 1. Tabel Utama: p2m_safari_religi
+        // 1. Tabel Utama Safari Religi
         Schema::create('p2m_safari_religi', function (Blueprint $table) {
             $table->id();
-
-            // Relasi Satuan Kerja
             $table->unsignedBigInteger('satuan_kerja_id');
             $table->foreign('satuan_kerja_id')
-                ->references('id')->on('satuan_kerja')
-                ->onUpdate('cascade')->onDelete('cascade');
-
-            // Data Kegiatan
-            $table->text('tempat_kegiatan');
+                  ->references('id')->on('satuan_kerja')
+                  ->onUpdate('cascade')->onDelete('cascade');
+            
             $table->date('tanggal_pelaksanaan');
-            
-            // Jumlah Masyarakat yang tersosialisasi
-            $table->integer('jumlah_masyarakat')->default(0); 
-            
-            // Dokumentasi
-            $table->text('link_kelengkapan_dokumentasi')->nullable();
-
+            $table->text('tempat_kegiatan');
+            $table->integer('jumlah_masyarakat'); // Sesuai request: Jumlah Masyarakat Tersosialisasi
             $table->timestamps();
         });
 
-        // 2. Tabel Pivot: pegawai_p2m_safari_religi
+        // 2. Tabel Pivot Pegawai <-> Safari Religi
         Schema::create('pegawai_p2m_safari_religi', function (Blueprint $table) {
             $table->id();
-
-            // Relasi ke Safari Religi
             $table->foreignId('p2m_safari_religi_id')
-                ->constrained('p2m_safari_religi')
-                ->onDelete('cascade');
+                  ->constrained('p2m_safari_religi')
+                  ->onDelete('cascade');
 
-            // Relasi ke Pegawai (NIP String)
             $table->string('pegawai_nip');
             $table->foreign('pegawai_nip')
-                ->references('nip')->on('pegawai')
-                ->onDelete('cascade');
+                  ->references('nip')->on('pegawai')
+                  ->onDelete('cascade');
+
+            // History Satker (Snapshot saat input)
+            $table->unsignedBigInteger('saved_satuan_kerja_id')->nullable();
+            $table->foreign('saved_satuan_kerja_id')
+                  ->references('id')->on('satuan_kerja')
+                  ->onDelete('set null');
 
             $table->timestamps();
-            
-            // Mencegah duplikasi pegawai di kegiatan yang sama
-            $table->unique(['p2m_safari_religi_id', 'pegawai_nip'], 'unique_safari_religi_pegawai');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('pegawai_p2m_safari_religi');

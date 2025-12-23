@@ -7,9 +7,11 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
-class TesUrineExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
+class TesUrineExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithChunkReading
 {
     protected $query;
 
@@ -23,46 +25,65 @@ class TesUrineExport implements FromQuery, WithHeadings, WithMapping, ShouldAuto
         return $this->query;
     }
 
+    public function chunkSize(): int
+    {
+        return 1000;
+    }
+
     public function headings(): array
     {
         return [
             'Satuan Kerja',
             'Anggaran',
             'Nama Instansi Pelaksana',
-            'Sasaran Kegiatan',
+            'Sasaran',
             'Tanggal Pelaksanaan',
             'Tempat',
-            'Tim / Katim',
+            'Panitia Pelaksana',
             'Jumlah Peserta',
-            'Jumlah Positif',
-            'Keterangan Positif',
-            'Link Dokumentasi',
+            'Terindikasi Positif',
+            'Keterangan Parameter',
             'Dibuat Pada'
         ];
     }
 
     public function map($row): array
     {
-        $pegawaiNames = $row->pegawai->pluck('nama')->implode(', ');
+        $listPegawai = [];
+        foreach ($row->pegawai as $pegawai) {
+            $info = $pegawai->nama;
+            if ($pegawai->nip) {
+                $info .= " ({$pegawai->nip})";
+            }
+            if ($pegawai->satuan_kerja_id != $row->satuan_kerja_id) {
+                $satkerBaru = $pegawai->satuanKerja->satuan_kerja ?? 'Luar Satker';
+                $info .= " [Pindah ke: $satkerBaru]";
+            }
+            $listPegawai[] = $info;
+        }
+        $pegawaiString = implode("\n", $listPegawai);
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
             $row->anggaran_pelaksanaan,
-            $row->nama_instansi_pelaksana,
+            $row->nama_instansi,
             $row->sasaran_kegiatan,
-            $row->tanggal_pelaksanaan->translatedFormat('d F Y'),
+            $row->tanggal_pelaksanaan->locale('id')->translatedFormat('d F Y'),
             $row->tempat_kegiatan,
-            $pegawaiNames,
+            $pegawaiString,
             $row->jumlah_peserta,
             $row->jumlah_positif,
-            $row->keterangan_positif ?? '-', // Tanda strip jika null
-            $row->link_kelengkapan_dokumentasi,
-            $row->created_at->translatedFormat('d F Y H:i'),
+            $row->keterangan_positif ?? '-',
+            $row->created_at->locale('id')->translatedFormat('d F Y H:i'),
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
+        $sheet->getStyle('G')->getAlignment()->setWrapText(true); // Kolom Panitia
+        $sheet->getStyle('J')->getAlignment()->setWrapText(true); // Kolom Keterangan
+        $sheet->getStyle('A:K')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+
         return [
             1 => ['font' => ['bold' => true]],
         ];

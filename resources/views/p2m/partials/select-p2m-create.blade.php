@@ -17,11 +17,11 @@
                             <option {{ Route::is('p2m.lingkungan-bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.lingkungan-bersinar.create') }}">Lingkungan Bersinar</option>
                             <option {{ Route::is('p2m.cfd.*') ? 'selected' : '' }} data-url="{{ route('p2m.cfd.create') }}">Car Free Days (CFD)</option>
                             <option {{ Route::is('p2m.elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.elektronik.create') }}">Media Elektronik</option>
-                            <option {{ Route::is('p2m.media_non_elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.media_non_elektronik.create') }}">Media Non Elektronik</option>
+                            <option {{ Route::is('p2m.non-elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.non-elektronik.create') }}">Media Non Elektronik</option>
                             <option {{ Route::is('p2m.online.*') ? 'selected' : '' }} data-url="{{ route('p2m.online.create') }}">Media Online</option>
-                            <option {{ Route::is('p2m.tes_urine.*') ? 'selected' : '' }} data-url="{{ route('p2m.tes_urine.create') }}">Tes Urine / Deteksi Dini</option>
-                            <option {{ Route::is('p2m.desa_bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desa_bersinar.create') }}">Desa Bersinar</option>
-                            <option {{ Route::is('p2m.safari_religi.*') ? 'selected' : '' }} data-url="{{ route('p2m.safari_religi.create') }}">Safari Religi</option>
+                            <option {{ Route::is('p2m.tes-urine.*') ? 'selected' : '' }} data-url="{{ route('p2m.tes-urine.create') }}">Tes Urine / Deteksi Dini</option>
+                            <option {{ Route::is('p2m.desa-bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desa-bersinar.create') }}">Desa Bersinar</option>
+                            <option {{ Route::is('p2m.safari-religi.*') ? 'selected' : '' }} data-url="{{ route('p2m.safari-religi.create') }}">Safari Religi</option>
                         </select>
                     </div>
 

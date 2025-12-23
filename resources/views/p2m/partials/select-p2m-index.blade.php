@@ -18,11 +18,11 @@
                         <option {{ Route::is('p2m.lingkungan-bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.lingkungan-bersinar.index') }}">Lingkungan Bersinar</option>
                         <option {{ Route::is('p2m.cfd.*') ? 'selected' : '' }} data-url="{{ route('p2m.cfd.index') }}">Sosialisasi Car Free Days (CFD)</option>
                         <option {{ Route::is('p2m.elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.elektronik.index') }}">Media Elektronik</option>
-                        <option {{ Route::is('p2m.media_non_elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.media_non_elektronik.index') }}">Media Non Elektronik</option>
+                        <option {{ Route::is('p2m.non-elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.non-elektronik.index') }}">Media Non Elektronik</option>
                         <option {{ Route::is('p2m.online.*') ? 'selected' : '' }} data-url="{{ route('p2m.online.index') }}">Media Online</option>
-                        <option {{ Route::is('p2m.tes_urine.*') ? 'selected' : '' }} data-url="{{ route('p2m.tes_urine.index') }}">Test Urine</option>
-                        <option {{ Route::is('p2m.desa_bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desa_bersinar.index') }}">Desa Bersinar</option>
-                        <option {{ Route::is('p2m.safari_religi.*') ? 'selected' : '' }} data-url="{{ route('p2m.safari_religi.index') }}">Safari Religi</option>
+                        <option {{ Route::is('p2m.tes-urine.*') ? 'selected' : '' }} data-url="{{ route('p2m.tes-urine.index') }}">Test Urine</option>
+                        <option {{ Route::is('p2m.desa-bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desa-bersinar.index') }}">Desa Bersinar</option>
+                        <option {{ Route::is('p2m.safari-religi.*') ? 'selected' : '' }} data-url="{{ route('p2m.safari-religi.index') }}">Safari Religi</option>
                     </select>
                 </div>
             </div>

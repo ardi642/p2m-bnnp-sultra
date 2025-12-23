@@ -16,6 +16,7 @@ use App\Models\p2mcfd;
 use App\Http\Controllers\P2m\ElektronikController;
 use App\Http\Controllers\P2m\LingkunganBersinarController;
 use App\Http\Controllers\P2m\MediaNonElektronikController;
+use App\Http\Controllers\P2m\NonElektronikController;
 use App\Models\p2mElektronik;
 
 use App\Http\Controllers\P2m\OnlineController;
@@ -133,9 +134,15 @@ Route::middleware('auth')->group(function() {
             Route::get('/cfd', [CfdController::class, 'index'])->name("cfd.index");
             Route::get('/cfd/export', [CfdController::class, 'export'])->name('cfd.export');
 
-            // P2M elektronik
+            // P2M Media Elektronik
             Route::get('/elektronik', [ElektronikController::class, 'index'])->name("elektronik.index");
             Route::get('/elektronik/export', [ElektronikController::class, 'export'])->name('elektronik.export');
+
+            // P2M Non Elektronik
+            Route::get('/non-elektronik/export', [NonElektronikController::class, 'export'])
+            ->name('non-elektronik.export');
+            Route::get('/non-elektronik', [NonElektronikController::class, 'index'])
+            ->name("non-elektronik.index");
 
             // P2M online
             Route::get('/online', [OnlineController::class, 'index'])->name("online.index");
@@ -146,16 +153,20 @@ Route::middleware('auth')->group(function() {
             Route::get('/tes-urine/export', [TesUrineController::class, 'export'])->name('tes_urine.export');
 
             // P2M desa bersinar
-            Route::get('/desa-bersinar', [DesaBersinarController::class, 'index'])->name('desa_bersinar.index');
-            Route::get('/desa-bersinar/export', [DesaBersinarController::class, 'export'])->name('desa_bersinar.export');
+            Route::get('/desa-bersinar', [DesaBersinarController::class, 'index'])->name('desa-bersinar.index');
+            Route::get('/desa-bersinar/export', [DesaBersinarController::class, 'export'])->name('desa-bersinar.export');
             
             // P2M safari religi
             Route::get('/safari-religi', [SafariReligiController::class, 'index'])->name("safari_religi.index");
             Route::get('/safari-religi/export', [SafariReligiController::class, 'export'])->name('safari_religi.export');
 
-            // P2M media non elektronik
-            Route::get('/media_non_elektronik', [MediaNonElektronikController::class, 'index'])->name("media_non_elektronik.index");
-            Route::get('/media_non_elektronik/export', [MediaNonElektronikController::class, 'export'])->name('media_non_elektronik.export');
+            // P2M Tes Urine
+            Route::get('/tes-urine', [TesUrineController::class, 'index'])->name("tes-urine.index");
+            Route::get('/tes-urine/export', [TesUrineController::class, 'export'])->name('tes-urine.export');
+
+            // P2M Safari Religi
+            Route::get('/safari-religi', [SafariReligiController::class, 'index'])->name("safari-religi.index");
+            Route::get('/safari-religi/export', [SafariReligiController::class, 'export'])->name('safari-religi.export');
         });
 
         Route::middleware(['role:operator'])->group(function() {
@@ -194,31 +205,45 @@ Route::middleware('auth')->group(function() {
             Route::put('/cfd/{id}', [CfdController::class, 'update'])->name('cfd.update');
             Route::delete('/cfd/{id}', [CfdController::class, 'destroy'])->name("cfd.destroy");
 
-            // P2M Elektronik
+            // P2M Media Elektronik
             Route::get('/elektronik/create', [ElektronikController::class, 'create'])->name("elektronik.create");
             Route::post('/elektronik', [ElektronikController::class, 'store'])->name("elektronik.store");
             Route::get('/elektronik/{id}/edit', [ElektronikController::class, 'edit'])->name('elektronik.edit');
             Route::put('/elektronik/{id}', [ElektronikController::class, 'update'])->name('elektronik.update');
             Route::delete('/elektronik/{id}', [ElektronikController::class, 'destroy'])->name("elektronik.destroy");
 
+            // P2M Media Non Elektronik
+            Route::get('/non-elektronik/create', [NonElektronikController::class, 'create'])
+            ->name("non-elektronik.create");
+            Route::post('/non-elektronik', [NonElektronikController::class, 'store'])
+                ->name("non-elektronik.store");
+            Route::get('/non-elektronik/{id}/edit', [NonElektronikController::class, 'edit'])
+                ->name('non-elektronik.edit');
+            Route::put('/non-elektronik/{id}', [NonElektronikController::class, 'update'])
+                ->name('non-elektronik.update');
+            Route::delete('/non-elektronik/{id}', [NonElektronikController::class, 'destroy'])
+                ->name("non-elektronik.destroy");
+
             // P2M online
             Route::get('/online/create', [OnlineController::class, 'create'])->name("online.create");
             Route::post('/online', [OnlineController::class, 'store'])->name("online.store");
+            Route::get('/online/{id}/edit', [OnlineController::class, 'edit'])->name('online.edit');
+            Route::put('/online/{id}', [OnlineController::class, 'update'])->name('online.update');
             Route::delete('/online/{id}', [OnlineController::class, 'destroy'])->name("online.destroy");
 
             // P2M tes urine
-            Route::get('/tes-urine/create', [TesUrineController::class, 'create'])->name("tes_urine.create");
-            Route::post('/tes-urine', [TesUrineController::class, 'store'])->name("tes_urine.store");
-            Route::get('/tes-urine/{id}/edit', [TesUrineController::class, 'edit'])->name('tes_urine.edit');
-            Route::put('/tes-urine/{id}', [TesUrineController::class, 'update'])->name('tes_urine.update');
-            Route::delete('/tes-urine/{id}', [TesUrineController::class, 'destroy'])->name("tes_urine.destroy");
+            Route::get('/tes-urine/create', [TesUrineController::class, 'create'])->name("tes-urine.create");
+            Route::post('/tes-urine', [TesUrineController::class, 'store'])->name("tes-urine.store");
+            Route::get('/tes-urine/{id}/edit', [TesUrineController::class, 'edit'])->name('tes-urine.edit');
+            Route::put('/tes-urine/{id}', [TesUrineController::class, 'update'])->name('tes-urine.update');
+            Route::delete('/tes-urine/{id}', [TesUrineController::class, 'destroy'])->name("tes-urine.destroy");
 
             // P2M desa bersinar
-            Route::get('/desa-bersinar/create', [DesaBersinarController::class, 'create'])->name('desa_bersinar.create');
-            Route::post('/desa-bersinar', [DesaBersinarController::class, 'store'])->name('desa_bersinar.store');
-            Route::get('/desa-bersinar/{id}/edit', [DesaBersinarController::class, 'edit'])->name('desa_bersinar.edit');
-            Route::put('/desa-bersinar/{id}', [DesaBersinarController::class, 'update'])->name('desa_bersinar.update');
-            Route::delete('/desa-bersinar/{id}', [DesaBersinarController::class, 'destroy'])->name('desa_bersinar.destroy');
+            Route::get('/desa-bersinar/create', [DesaBersinarController::class, 'create'])->name('desa-bersinar.create');
+            Route::post('/desa-bersinar', [DesaBersinarController::class, 'store'])->name('desa-bersinar.store');
+            Route::get('/desa-bersinar/{id}/edit', [DesaBersinarController::class, 'edit'])->name('desa-bersinar.edit');
+            Route::put('/desa-bersinar/{id}', [DesaBersinarController::class, 'update'])->name('desa-bersinar.update');
+            Route::delete('/desa-bersinar/{id}', [DesaBersinarController::class, 'destroy'])->name('desa-bersinar.destroy');
 
             // P2M safari religi
             Route::get('/safari-religi/create', [SafariReligiController::class, 'create'])->name("safari_religi.create");
@@ -227,12 +252,12 @@ Route::middleware('auth')->group(function() {
             Route::put('/safari-religi/{id}', [SafariReligiController::class, 'update'])->name('safari_religi.update');
             Route::delete('/safari-religi/{id}', [SafariReligiController::class, 'destroy'])->name("safari_religi.destroy");
 
-            // P2M media non elektronik
-            Route::get('/media_non_elektronik/create', [MediaNonElektronikController::class, 'create'])->name("media_non_elektronik.create");
-            Route::post('/media_non_elektronik', [MediaNonElektronikController::class, 'store'])->name("media_non_elektronik.store");
-            Route::get('/media_non_elektronik/{id}/edit', [MediaNonElektronikController::class, 'edit'])->name('media_non_elektronik.edit');
-            Route::put('/media_non_elektronik/{id}', [MediaNonElektronikController::class, 'update'])->name('media_non_elektronik.update');
-            Route::delete('/media_non_elektronik/{id}', [MediaNonElektronikController::class, 'destroy'])->name("media_non_elektronik.destroy");
+            // 2. P2M Safari Religi
+            Route::get('/safari-religi/create', [SafariReligiController::class, 'create'])->name("safari-religi.create");
+            Route::post('/safari-religi', [SafariReligiController::class, 'store'])->name("safari-religi.store");
+            Route::get('/safari-religi/{id}/edit', [SafariReligiController::class, 'edit'])->name('safari-religi.edit');
+            Route::put('/safari-religi/{id}', [SafariReligiController::class, 'update'])->name('safari-religi.update');
+            Route::delete('/safari-religi/{id}', [SafariReligiController::class, 'destroy'])->name("safari-religi.destroy");
         });
     });
 

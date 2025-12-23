@@ -6,7 +6,7 @@
             <div class="row justify-content-center mb-4">
                 <div class="col-12 col-lg-10">
                     <h1 class="h3 mb-1 fw-bold text-dark">Input Kegiatan P2M</h1>
-                    <p class="text-muted mb-0">Kegiatan Media Online</p>
+                    <p class="text-muted mb-0">Kegiatan Media Non Elektronik</p>
                 </div>
             </div>
             
@@ -21,7 +21,7 @@
 
                         <div class="card-body p-4 p-lg-5">
                             
-                            <form action="{{ route('p2m.online.store') }}" 
+                            <form action="{{ route('p2m.non-elektronik.store') }}" 
                                   method="POST" 
                                   enctype="multipart/form-data" 
                                   id="form-create">
@@ -91,21 +91,6 @@
                                         @enderror
                                     </div>
 
-                                    {{-- Nama Media --}}
-                                    <div class="col-12">
-                                        <label class="form-label fw-semibold text-secondary small">
-                                            Nama Media <span class="text-danger">*</span>
-                                        </label>
-                                        <input type="text" 
-                                               class="form-control @error('nama_media') is-invalid @enderror" 
-                                               name="nama_media" 
-                                               value="{{ old('nama_media') }}" 
-                                               placeholder="Masukkan nama media">
-                                        @error('nama_media') 
-                                            <div class="invalid-feedback">{{ $message }}</div> 
-                                        @enderror
-                                    </div>
-
                                     {{-- Tanggal --}}
                                     <div class="col-12 col-md-6">
                                         <label class="form-label fw-semibold text-secondary small">
@@ -138,6 +123,19 @@
                                         @enderror
                                     </div>
 
+                                    {{-- Tempat --}}
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold text-secondary small">
+                                            Tempat Pemasangan <span class="text-danger">*</span>
+                                        </label>
+                                        <textarea class="form-control @error('tempat_pemasangan') is-invalid @enderror" 
+                                                  name="tempat_pemasangan" 
+                                                  rows="3" 
+                                                  placeholder="Masukkan lokasi pemasangan lengkap...">{{ old('tempat_pemasangan') }}</textarea>
+                                        @error('tempat_pemasangan') 
+                                            <div class="invalid-feedback">{{ $message }}</div> 
+                                        @enderror
+                                    </div>
                                 </div>
 
                                 {{-- SECTION 2 --}}

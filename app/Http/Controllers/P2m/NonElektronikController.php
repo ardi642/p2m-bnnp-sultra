@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\P2m;
 
 use App\Http\Controllers\Controller;
-use App\Models\P2mOnline;
+use App\Models\P2mNonElektronik;
 use App\Models\SatuanKerja;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
-use App\Exports\OnlineExport;
+use App\Exports\NonElektronikExport;
 use App\Helpers\SearchHelper;
 use App\Models\DokumentasiKegiatan;
 use App\Models\TemporaryFile;
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
 
-class OnlineController extends Controller
+class NonElektronikController extends Controller
 {
     private function getFilteredQuery(Request $request)
     {
@@ -25,8 +25,9 @@ class OnlineController extends Controller
         $user = Auth::user();
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
-        $query = P2mOnline::with('satuanKerja');
+        $query = P2mNonElektronik::with('satuanKerja');
 
+        // Filter Satker
         if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
@@ -35,6 +36,7 @@ class OnlineController extends Controller
             $query->where('satuan_kerja_id', $user->getSatkerId());
         }
 
+        // Filter Bulan & Tahun
         if ($request->filled('bulan')) {
             $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
@@ -49,6 +51,7 @@ class OnlineController extends Controller
             }
         });
 
+        // Filter Lainnya
         if ($request->filled('anggaran_pelaksanaan')) {
             $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
         }
@@ -57,11 +60,12 @@ class OnlineController extends Controller
             $query->whereIn('jenis_media', $request->jenis_media);
         }
 
+        // Search Logic
         if ($request->filled('search')) {
             $search = $request->search;
             $searchDate = SearchHelper::translateDateInput($search);
             $query->where(function($q) use ($search, $searchDate) {
-                $q->where('nama_media', 'LIKE', "%{$search}%")
+                $q->where('tempat_pemasangan', 'LIKE', "%{$search}%")
                     ->orWhere('jenis_media', 'LIKE', "%{$search}%")
                     ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%")
                     ->orWhere('durasi_pelaksanaan', 'LIKE', "%{$search}%")
@@ -72,15 +76,17 @@ class OnlineController extends Controller
             });
         }
 
+        // Sorting
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
-        $allowSort = ['jenis_media', 'nama_media', 'tanggal_mulai_pelaksanaan', 'durasi_pelaksanaan', 'created_at', 'satuan_kerja', 'anggaran_pelaksanaan'];
+        $allowSort = ['jenis_media', 'tanggal_mulai_pelaksanaan', 'durasi_pelaksanaan', 'created_at', 
+                        'satuan_kerja', 'anggaran_pelaksanaan', 'tempat_pemasangan'];
 
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {
-                $query->join('satuan_kerja', 'p2m_online.satuan_kerja_id', '=', 'satuan_kerja.id')
+                $query->join('satuan_kerja', 'p2m_non_elektronik.satuan_kerja_id', '=', 'satuan_kerja.id')
                         ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
-                        ->select('p2m_online.*');
+                        ->select('p2m_non_elektronik.*');
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }
@@ -101,7 +107,7 @@ class OnlineController extends Controller
             $satuanKerjas = [];
         }
 
-        $yearQuery = P2mOnline::selectRaw('YEAR(tanggal_mulai_pelaksanaan) as year');
+        $yearQuery = P2mNonElektronik::selectRaw('YEAR(tanggal_mulai_pelaksanaan) as year');
         if ($user->isOperator()) { $yearQuery->where('satuan_kerja_id', $user->getSatkerId()); }
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
@@ -112,15 +118,16 @@ class OnlineController extends Controller
         if (!in_array($perPage, [10, 25, 50, 100])) { $perPage = 10; }
         
         $datas = $query->paginate($perPage)->withQueryString(); 
-        $mediaOptions = P2mOnline::getJenisMediaOptions();
+        $mediaOptions = P2mNonElektronik::getJenisMediaOptions();
 
-        return view('p2m.online.index', compact('datas', 'satuanKerjas', 'years', 'user', 'mediaOptions'));
+        // PERBAIKAN: Nama View menggunakan 'non-elektronik'
+        return view('p2m.non-elektronik.index', compact('datas', 'satuanKerjas', 'years', 'user', 'mediaOptions'));
     }
 
     public function export(Request $request) 
     {
         $query = $this->getFilteredQuery($request);
-        return Excel::download(new OnlineExport($query), 'Laporan_P2M_Media_Online.xlsx');
+        return Excel::download(new NonElektronikExport($query), 'Laporan_P2M_Non_Elektronik.xlsx');
     }
 
     public function create(): View {
@@ -131,8 +138,10 @@ class OnlineController extends Controller
         } else {
             $satuanKerjas = [];
         }
-        $mediaOptions = P2mOnline::getJenisMediaOptions();
-        return view('p2m.online.create', compact('satuanKerjas', 'mediaOptions'));
+        $mediaOptions = P2mNonElektronik::getJenisMediaOptions();
+        
+        // PERBAIKAN: Nama View menggunakan 'non-elektronik'
+        return view('p2m.non-elektronik.create', compact('satuanKerjas', 'mediaOptions'));
     }
 
     public function store(Request $request) {
@@ -142,7 +151,7 @@ class OnlineController extends Controller
         $rules = [
             'anggaran_pelaksanaan'      => 'required',
             'jenis_media'               => 'required',
-            'nama_media'                => 'required',
+            'tempat_pemasangan'         => 'required',
             'tanggal_mulai_pelaksanaan' => 'required|date',
             'durasi_pelaksanaan'        => 'required|numeric|min:1',
             'dokumentasi'               => 'nullable|array',
@@ -158,7 +167,7 @@ class OnlineController extends Controller
             $dataInsert = collect($validasi)->except('dokumentasi')->toArray();
             if ($user->isOperator()) { $dataInsert['satuan_kerja_id'] = $user->getSatkerId(); }
 
-            $kegiatan = P2mOnline::create($dataInsert);
+            $kegiatan = P2mNonElektronik::create($dataInsert);
 
             if ($request->filled('dokumentasi')) {
                 foreach ($request->input('dokumentasi') as $folder) {
@@ -187,7 +196,8 @@ class OnlineController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('p2m.online.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data');
+            // PERBAIKAN: Redirect menggunakan 'non-elektronik'
+            return redirect()->route('p2m.non-elektronik.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data');
         } catch (\Exception $e) {
             DB::rollBack();
             foreach ($filesMoved as $path) { if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path); }
@@ -198,7 +208,7 @@ class OnlineController extends Controller
     public function edit($id): View {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $kegiatan = P2mOnline::findOrFail($id);
+        $kegiatan = P2mNonElektronik::findOrFail($id);
 
         if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
 
@@ -207,22 +217,23 @@ class OnlineController extends Controller
         } else {
             $satuanKerjas = [];
         }
-        $mediaOptions = P2mOnline::getJenisMediaOptions();
+        $mediaOptions = P2mNonElektronik::getJenisMediaOptions();
 
-        return view('p2m.online.edit', compact('kegiatan', 'satuanKerjas', 'mediaOptions'));
+        // PERBAIKAN: Nama View menggunakan 'non-elektronik'
+        return view('p2m.non-elektronik.edit', compact('kegiatan', 'satuanKerjas', 'mediaOptions'));
     }
 
     public function update(Request $request, $id) {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $kegiatan = P2mOnline::findOrFail($id);
+        $kegiatan = P2mNonElektronik::findOrFail($id);
 
         if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
 
         $rules = [
             'anggaran_pelaksanaan'      => 'required',
             'jenis_media'               => 'required',
-            'nama_media'                => 'required',
+            'tempat_pemasangan'         => 'required',
             'tanggal_mulai_pelaksanaan' => 'required|date',
             'durasi_pelaksanaan'        => 'required|numeric|min:1',
             'delete_files'              => 'nullable|array',
@@ -266,7 +277,8 @@ class OnlineController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('p2m.online.index')->with('success', 'update')->with('message', 'Data berhasil diperbarui');
+            // PERBAIKAN: Redirect menggunakan 'non-elektronik'
+            return redirect()->route('p2m.non-elektronik.index')->with('success', 'update')->with('message', 'Data berhasil diperbarui');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'update')->with('message', $e->getMessage());
@@ -274,7 +286,7 @@ class OnlineController extends Controller
     }
 
     public function destroy($id) {
-        $kegiatan = P2mOnline::findOrFail($id);
+        $kegiatan = P2mNonElektronik::findOrFail($id);
         $filesToDelete = [];
         foreach ($kegiatan->dokumentasi()->cursor() as $doc) { $filesToDelete[] = $doc->path_file; }
         

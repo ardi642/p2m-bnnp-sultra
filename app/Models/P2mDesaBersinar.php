@@ -3,41 +3,49 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\HasDokumentasi; 
 
 class P2mDesaBersinar extends Model
 {
-    use HasFactory;
+    use HasFactory, HasDokumentasi;
 
     protected $table = 'p2m_desa_bersinar';
+    protected $guarded = ['id'];
 
     protected $casts = [
-        'tanggal_pencanangan' => 'date',
+        'tanggal_pencanangan' => 'date'
     ];
 
-    protected $guarded = [];
+    protected static function boot()
+    {
+        parent::boot();
+        static::deleting(function ($kegiatan) {
+            $kegiatan->dokumentasi()->delete();
+        });
+    }
 
     public function satuanKerja(): BelongsTo
     {
-        return $this->belongsTo(SatuanKerja::class);
+        return $this->belongsTo(SatuanKerja::class, 'satuan_kerja_id');
     }
 
     public function kabupatenKota(): BelongsTo
     {
-        return $this->belongsTo(KabupatenKota::class);
+        return $this->belongsTo(KabupatenKota::class, 'kabupaten_kota_id');
     }
 
     public function pegawai(): BelongsToMany
     {
         return $this->belongsToMany(
-            Pegawai::class,
-            'pegawai_p2m_desa_bersinar',
-            'p2m_desa_bersinar_id',
-            'pegawai_nip',
-            'id',
+            Pegawai::class, 
+            'pegawai_p2m_desa_bersinar', 
+            'p2m_desa_bersinar_id', 
+            'pegawai_nip', 
+            'id', 
             'nip'
-        )->withTimestamps();
+        )->withPivot('saved_satuan_kerja_id')->withTimestamps();
     }
 }

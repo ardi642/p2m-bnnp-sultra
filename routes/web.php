@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\PegawaiController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Berantas\UngkapKasusController;
 use App\Http\Controllers\P2m\SosialisasiController;
 use App\Http\Controllers\P2m\UpacaraController;
 use App\Http\Controllers\P2m\KieController;
@@ -260,5 +261,24 @@ Route::middleware('auth')->group(function() {
             Route::delete('/safari-religi/{id}', [SafariReligiController::class, 'destroy'])->name("safari-religi.destroy");
         });
     });
+
+
+    Route::prefix('berantas')
+        ->name('berantas.')
+        ->group(function() {
+            Route::middleware(['role:admin,admin_satker,operator'])->group(function() {
+                Route::get('/ungkap-kasus/export', [UngkapKasusController::class, 'export'])->name('ungkap-kasus.export');
+                Route::get('/ungkap-kasus', [UngkapKasusController::class, 'index'])->name("ungkap-kasus.index");
+            });
+
+            Route::middleware(['role:operator'])->group(function() {
+                Route::get('/ungkap-kasus/create', [UngkapKasusController::class, 'create'])->name("ungkap-kasus.create");
+                Route::post('/ungkap-kasus', [UngkapKasusController::class, 'store'])->name("ungkap-kasus.store");
+                Route::get('/ungkap-kasus/{id}/edit', [UngkapKasusController::class, 'edit'])->name('ungkap-kasus.edit');
+                Route::put('/ungkap-kasus/{id}', [UngkapKasusController::class, 'update'])->name('ungkap-kasus.update');
+                Route::delete('/ungkap-kasus/{id}', [UngkapKasusController::class, 'destroy'])->name("ungkap-kasus.destroy");
+            });
+            
+        });
 
 });

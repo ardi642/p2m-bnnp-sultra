@@ -15,32 +15,23 @@ class BerantasUngkapKasus extends Model
     protected $table = 'berantas_ungkap_kasus';
     protected $guarded = ['id'];
 
-    // Casting tanggal agar otomatis jadi object Carbon
     protected $casts = [
         'tanggal_kejadian' => 'date',
     ];
 
-    /**
-     * Hapus otomatis anak-anaknya (Tersangka, BB, Dokumentasi) saat Kasus dihapus
-     */
     protected static function boot()
     {
         parent::boot();
-
         static::deleting(function ($kasus) {
-            // Hapus file fisik & record dokumentasi
             foreach ($kasus->dokumentasi as $doc) {
                 if (Storage::disk('public')->exists($doc->path_file)) {
                     Storage::disk('public')->delete($doc->path_file);
                 }
                 $doc->delete();
             }
-            
-            // Note: Tersangka & BB otomatis terhapus via Database Cascade (Migration)
         });
     }
 
-    // RELASI KE DOKUMENTASI (PENTING: Menggunakan tabel yang sama dengan P2M)
     public function dokumentasi(): MorphMany
     {
         return $this->morphMany(DokumentasiKegiatan::class, 'dokumentasiable');
@@ -55,6 +46,15 @@ class BerantasUngkapKasus extends Model
     {
         return $this->hasMany(BerantasUngkapBarangBukti::class, 'berantas_ungkap_kasus_id');
     }
+
+    // --- TAMBAHKAN INI (YANG HILANG) ---
+    // Mengambil BB yang tidak dimiliki tersangka spesifik (Milik Kasus/Bersama)
+    public function barangBuktiBersama(): HasMany
+    {
+        return $this->hasMany(BerantasUngkapBarangBukti::class, 'berantas_ungkap_kasus_id')
+                    ->whereNull('berantas_ungkap_tersangka_id');
+    }
+    // ------------------------------------
     
     public function satuanKerja()
     {

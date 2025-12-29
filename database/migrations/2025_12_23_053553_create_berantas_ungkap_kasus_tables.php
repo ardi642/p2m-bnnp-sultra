@@ -27,9 +27,10 @@ return new class extends Migration
             
             $table->string('nama_tersangka');
             $table->enum('jenis_kelamin', ['Laki-Laki', 'Perempuan']);
-            $table->string('pekerjaan')->nullable();
+            $table->string('pekerjaan')->nullable(); // FIELD INI ADA
             $table->string('status_tahap')->default('Proses Sidik'); 
             $table->string('foto_tersangka')->nullable();
+            $table->integer('urutan')->default(0); // FITUR URUTAN
             
             $table->timestamps();
         });
@@ -37,22 +38,18 @@ return new class extends Migration
         // 3. TABEL BARANG BUKTI
         Schema::create('berantas_ungkap_barang_bukti', function (Blueprint $table) {
             $table->id();
-            
-            // Link ke Kasus (Wajib)
             $table->unsignedBigInteger('berantas_ungkap_kasus_id');
             $table->foreign('berantas_ungkap_kasus_id', 'fk_buk_kasus')
                 ->references('id')->on('berantas_ungkap_kasus')->onDelete('cascade');
             
-            // Link ke Tersangka (Nullable)
-            // Jika NULL = Milik Bersama (Mapping ke semua TSK di LKN ini). 
-            // Jika Terisi = Milik Personal TSK tersebut.
             $table->unsignedBigInteger('berantas_ungkap_tersangka_id')->nullable();
             $table->foreign('berantas_ungkap_tersangka_id', 'fk_buk_tersangka')
-                ->references('id')->on('berantas_ungkap_tersangka')->onDelete('cascade');
+                ->references('id')->on('berantas_ungkap_tersangka')->onDelete('set null'); // AMAN SAAT HAPUS TERSANGKA
             
             $table->string('jenis_barang_bukti'); 
             $table->decimal('jumlah_barang_bukti', 12, 2);
             $table->string('satuan_barang_bukti')->default('Gram');
+            $table->integer('urutan')->default(0); // FITUR URUTAN
             
             $table->timestamps();
         });

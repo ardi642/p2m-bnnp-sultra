@@ -6,8 +6,6 @@
         
         <div class="row justify-content-center">
             <div class="col-12 col-lg-10">
-                
-                {{-- HEADER --}}
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h1 class="h3 mb-1 fw-bold text-dark">Tambah Ungkap Kasus</h1>
@@ -24,8 +22,6 @@
                     </div>
 
                     <div class="card-body p-4 p-lg-5">
-                        {{-- ERROR GLOBAL DIHAPUS SESUAI PERMINTAAN --}}
-
                         <form action="{{ route('berantas.ungkap-kasus.store') }}" method="POST" enctype="multipart/form-data" id="form-create">
                             @csrf
 
@@ -52,26 +48,30 @@
                             {{-- TERSANGKA --}}
                             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                                 <h6 class="text-uppercase text-secondary fw-bold small mb-0">Daftar Tersangka</h6>
-                                <button type="button" class="btn btn-sm btn-primary shadow-sm" id="btn-add-tersangka"><i class="bi bi-plus-lg"></i> Tambah Tersangka</button>
+                                <button type="button" class="btn btn-sm btn-primary shadow-sm" id="btn-add-tersangka">+ Tambah Tersangka</button>
                             </div>
 
                             <div class="table-responsive mb-5">
                                 <table class="table table-bordered mb-0 align-middle" id="table-tersangka">
                                     <thead class="bg-light text-secondary small text-uppercase">
                                         <tr>
+                                            <th style="width: 40px" class="text-center">#</th>
                                             <th style="width: 100px">Foto</th>
-                                            <th>Nama Tersangka <span class="text-danger">*</span></th>
-                                            <th>Jenis Kelamin</th>
-                                            <th>Status Tahap <span class="text-danger">*</span></th>
+                                            <th style="min-width: 150px">Nama <span class="text-danger">*</span></th>
+                                            <th style="min-width: 120px">JK</th>
+                                            <th style="min-width: 150px">Pekerjaan</th>
+                                            <th style="min-width: 120px">Status <span class="text-danger">*</span></th>
                                             <th style="width: 50px">Aksi</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        @php $tersangkaList = old('tersangka', [['temp_id' => 'temp_0']]); @endphp
-                                        @foreach($tersangkaList as $i => $tsk)
+                                    <tbody id="sortable-tersangka">
+                                        @foreach(old('tersangka', [['temp_id' => 'temp_0']]) as $i => $tsk)
                                         <tr class="row-tersangka">
                                             <input type="hidden" name="tersangka[{{ $i }}][temp_id]" value="{{ $tsk['temp_id'] ?? 'temp_'.$i }}" class="input-temp-id">
                                             
+                                            <td class="text-center align-middle handle" style="cursor: move;">
+                                                <i class="bi bi-grip-vertical text-secondary fs-5"></i>
+                                            </td>
                                             <td class="text-center">
                                                 <label for="foto-{{ $i }}" style="cursor: pointer;">
                                                     <img src="{{ asset('assets/images/user-placeholder.png') }}" id="preview-{{ $i }}" class="img-thumbnail rounded-circle object-fit-cover" style="width: 60px; height: 60px;">
@@ -79,29 +79,25 @@
                                                 <input type="file" name="tersangka[{{ $i }}][foto]" id="foto-{{ $i }}" class="d-none" accept="image/*" onchange="previewImage(this, {{ $i }})">
                                                 @error("tersangka.{$i}.foto") <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                             </td>
-
                                             <td>
-                                                <input type="text" name="tersangka[{{ $i }}][nama]" 
-                                                       class="form-control input-nama-tersangka @error("tersangka.{$i}.nama") is-invalid @enderror" 
-                                                       value="{{ old("tersangka.{$i}.nama") }}" placeholder="Masukkan nama">
+                                                <input type="text" name="tersangka[{{ $i }}][nama]" class="form-control input-nama-tersangka @error("tersangka.{$i}.nama") is-invalid @enderror" value="{{ old("tersangka.{$i}.nama") }}" placeholder="Nama">
                                                 @error("tersangka.{$i}.nama") <div class="invalid-feedback">{{ $message }}</div> @enderror
                                             </td>
-
                                             <td>
                                                 <select name="tersangka[{{ $i }}][jk]" class="form-select @error("tersangka.{$i}.jk") is-invalid @enderror">
-                                                    <option value="Laki-Laki" @selected(old("tersangka.{$i}.jk") == 'Laki-Laki')>Laki-Laki</option>
-                                                    <option value="Perempuan" @selected(old("tersangka.{$i}.jk") == 'Perempuan')>Perempuan</option>
+                                                    <option value="Laki-Laki" @selected(old("tersangka.{$i}.jk") == 'Laki-Laki')>Laki</option>
+                                                    <option value="Perempuan" @selected(old("tersangka.{$i}.jk") == 'Perempuan')>Pr</option>
                                                 </select>
                                                 @error("tersangka.{$i}.jk") <div class="invalid-feedback">{{ $message }}</div> @enderror
                                             </td>
-
+                                            {{-- FIELD PEKERJAAN --}}
                                             <td>
-                                                <input type="text" name="tersangka[{{ $i }}][tahap]" 
-                                                       class="form-control @error("tersangka.{$i}.tahap") is-invalid @enderror" 
-                                                       value="{{ old("tersangka.{$i}.tahap") }}" placeholder="Status hukum">
+                                                <input type="text" name="tersangka[{{ $i }}][pekerjaan]" class="form-control" value="{{ old("tersangka.{$i}.pekerjaan") }}" placeholder="Pekerjaan">
+                                            </td>
+                                            <td>
+                                                <input type="text" name="tersangka[{{ $i }}][tahap]" class="form-control @error("tersangka.{$i}.tahap") is-invalid @enderror" value="{{ old("tersangka.{$i}.tahap") }}" placeholder="Status">
                                                 @error("tersangka.{$i}.tahap") <div class="invalid-feedback">{{ $message }}</div> @enderror
                                             </td>
-
                                             <td><button type="button" class="btn btn-danger btn-sm btn-remove-row"><i class="bi bi-trash"></i></button></td>
                                         </tr>
                                         @endforeach
@@ -112,13 +108,13 @@
                             {{-- BARANG BUKTI --}}
                             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                                 <h6 class="text-uppercase text-secondary fw-bold small mb-0">Daftar Barang Bukti</h6>
-                                <button type="button" class="btn btn-sm btn-primary shadow-sm" id="btn-add-bb"><i class="bi bi-plus-lg"></i> Tambah BB</button>
+                                <button type="button" class="btn btn-sm btn-primary shadow-sm" id="btn-add-bb">+ Tambah BB</button>
                             </div>
-
                             <div class="table-responsive mb-5">
                                 <table class="table table-bordered mb-0 align-middle" id="table-bb">
                                     <thead class="bg-light text-secondary small text-uppercase">
                                         <tr>
+                                            <th style="width: 40px" class="text-center">#</th>
                                             <th>Pemilik</th>
                                             <th>Jenis Barang <span class="text-danger">*</span></th>
                                             <th>Jumlah <span class="text-danger">*</span></th>
@@ -126,30 +122,26 @@
                                             <th style="width: 50px">Aksi</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        @php $bbList = old('barang_bukti', [['id' => null]]); @endphp
-                                        @foreach($bbList as $x => $bb)
+                                    <tbody id="sortable-bb">
+                                        @foreach(old('barang_bukti', [['id' => null]]) as $x => $bb)
                                         <tr class="row-bb">
+                                            <td class="text-center align-middle handle" style="cursor: move;"><i class="bi bi-grip-vertical text-secondary fs-5"></i></td>
                                             <td>
                                                 <select name="barang_bukti[{{ $x }}][pemilik_id]" class="form-select select-pemilik"></select>
                                                 <input type="hidden" class="old-pemilik-val" value="{{ old("barang_bukti.{$x}.pemilik_id", 'kasus') }}">
                                             </td>
-                                            
                                             <td>
-                                                <input type="text" name="barang_bukti[{{ $x }}][jenis]" class="form-control @error("barang_bukti.{$x}.jenis") is-invalid @enderror" value="{{ old("barang_bukti.{$x}.jenis") }}" placeholder="Jenis barang">
+                                                <input type="text" name="barang_bukti[{{ $x }}][jenis]" class="form-control @error("barang_bukti.{$x}.jenis") is-invalid @enderror" value="{{ old("barang_bukti.{$x}.jenis") }}" placeholder="Jenis">
                                                 @error("barang_bukti.{$x}.jenis") <div class="invalid-feedback">{{ $message }}</div> @enderror
                                             </td>
-                                            
                                             <td>
                                                 <input type="number" name="barang_bukti[{{ $x }}][jumlah]" class="form-control @error("barang_bukti.{$x}.jumlah") is-invalid @enderror" value="{{ old("barang_bukti.{$x}.jumlah") }}" placeholder="0">
                                                 @error("barang_bukti.{$x}.jumlah") <div class="invalid-feedback">{{ $message }}</div> @enderror
                                             </td>
-                                            
                                             <td>
                                                 <input type="text" name="barang_bukti[{{ $x }}][satuan]" class="form-control @error("barang_bukti.{$x}.satuan") is-invalid @enderror" value="{{ old("barang_bukti.{$x}.satuan") }}" placeholder="Satuan">
                                                 @error("barang_bukti.{$x}.satuan") <div class="invalid-feedback">{{ $message }}</div> @enderror
                                             </td>
-                                            
                                             <td><button type="button" class="btn btn-danger btn-sm btn-remove-row"><i class="bi bi-trash"></i></button></td>
                                         </tr>
                                         @endforeach
@@ -157,10 +149,10 @@
                                 </table>
                             </div>
 
-                            {{-- DOKUMENTASI --}}
-                            <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">Dokumentasi</h6>
+                            {{-- LAMPIRAN --}}
+                            <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">Lampiran & Bukti Fisik</h6>
                             <div class="bg-light p-4 rounded-3 border border-dashed mb-4">
-                                <label class="form-label fw-bold h6 mb-1 text-dark"><i class="bi bi-cloud-arrow-up me-2"></i>Upload File</label>
+                                <label class="form-label fw-bold h6 mb-1 text-dark"><i class="bi bi-cloud-arrow-up me-2"></i>Upload Lampiran</label>
                                 <p class="text-muted small mb-3">Format: .jpg, .png, .pdf, .docx. Maks 10MB/file.</p>
                                 <input type="file" class="filepond" name="dokumentasi[]" multiple data-allow-reorder="true" data-max-file-size="10MB" data-max-files="10">
                             </div>
@@ -174,7 +166,6 @@
                                     <i class="bi bi-save me-1"></i> Simpan Data
                                 </button>
                             </div>
-
                         </form>
                     </div>
                 </div>
@@ -190,12 +181,27 @@
     .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; }
     .border-dashed { border-style: dashed !important; border-width: 2px !important; }
     img[src=""] { display: none; }
+    .sortable-ghost { opacity: 0.4; background-color: #f8f9fa; border: 2px dashed #ced4da; }
+    .handle { cursor: move; color: #adb5bd; }
+    .handle:hover { color: #6c757d; }
 </style>
 @endpush
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {
+        
+        function initSortable(elId) {
+            const el = document.getElementById(elId);
+            if(el) {
+                new Sortable(el, { handle: '.handle', animation: 150, ghostClass: 'sortable-ghost', onEnd: function() { updatePemilikDropdown(); } });
+            }
+        }
+        initSortable('sortable-tersangka');
+        initSortable('sortable-bb');
+
         const inputElement = document.querySelector('input.filepond');
         const form = document.getElementById('form-create');
         const submitBtn = document.getElementById('btn-submit');
@@ -237,12 +243,7 @@
             const isBusy = files.some(file => file.status !== 2 && file.status !== 5);
             if (isBusy) {
                 e.preventDefault(); e.stopPropagation();
-                Swal.fire({ 
-                    icon: 'warning', 
-                    title: 'Upload Belum Selesai', 
-                    text: 'Silakan tunggu proses upload selesai atau hapus file yang macet.', 
-                    confirmButtonText: 'Mengerti' 
-                });
+                Swal.fire({ icon: 'warning', title: 'Upload Belum Selesai', text: 'Silakan tunggu proses upload selesai atau hapus file yang macet.', confirmButtonText: 'Mengerti' });
             } else {
                 setButtonState(true, 'Menyimpan...');
             }
@@ -286,13 +287,13 @@
 
         document.getElementById('btn-add-tersangka').addEventListener('click', function() {
             const tempId = 'temp_' + Date.now();
-            const html = `<tr class="row-tersangka"><input type="hidden" name="tersangka[${tIndex}][temp_id]" value="${tempId}" class="input-temp-id"><td class="text-center"><label for="foto-${tIndex}" style="cursor: pointer;"><img src="{{ asset('assets/images/user-placeholder.png') }}" id="preview-${tIndex}" class="img-thumbnail rounded-circle object-fit-cover" style="width: 60px; height: 60px;"></label><input type="file" name="tersangka[${tIndex}][foto]" id="foto-${tIndex}" class="d-none" accept="image/*" onchange="previewImage(this, ${tIndex})"></td><td><input type="text" name="tersangka[${tIndex}][nama]" class="form-control input-nama-tersangka" placeholder="Masukkan nama"></td><td><select name="tersangka[${tIndex}][jk]" class="form-select"><option value="Laki-Laki">Laki-Laki</option><option value="Perempuan">Perempuan</option></select></td><td><input type="text" name="tersangka[${tIndex}][tahap]" class="form-control" placeholder="Status hukum"></td><td><button type="button" class="btn btn-danger btn-sm btn-remove-row"><i class="bi bi-trash"></i></button></td></tr>`;
+            const html = `<tr class="row-tersangka"><input type="hidden" name="tersangka[${tIndex}][temp_id]" value="${tempId}" class="input-temp-id"><td class="text-center align-middle handle" style="cursor: move;"><i class="bi bi-grip-vertical text-secondary fs-5"></i></td><td class="text-center"><label for="foto-${tIndex}" style="cursor: pointer;"><img src="{{ asset('assets/images/user-placeholder.png') }}" id="preview-${tIndex}" class="img-thumbnail rounded-circle object-fit-cover" style="width: 60px; height: 60px;"></label><input type="file" name="tersangka[${tIndex}][foto]" id="foto-${tIndex}" class="d-none" accept="image/*" onchange="previewImage(this, ${tIndex})"></td><td><input type="text" name="tersangka[${tIndex}][nama]" class="form-control input-nama-tersangka" placeholder="Masukkan nama"></td><td><select name="tersangka[${tIndex}][jk]" class="form-select"><option value="Laki-Laki">Laki-Laki</option><option value="Perempuan">Perempuan</option></select></td><td><input type="text" name="tersangka[${tIndex}][pekerjaan]" class="form-control" placeholder="Pekerjaan"></td><td><input type="text" name="tersangka[${tIndex}][tahap]" class="form-control" placeholder="Status hukum"></td><td><button type="button" class="btn btn-danger btn-sm btn-remove-row"><i class="bi bi-trash"></i></button></td></tr>`;
             document.querySelector('#table-tersangka tbody').insertAdjacentHTML('beforeend', html);
             tIndex++; updatePemilikDropdown();
         });
 
         document.getElementById('btn-add-bb').addEventListener('click', function() {
-            const html = `<tr class="row-bb"><td><select name="barang_bukti[${bbIndex}][pemilik_id]" class="form-select select-pemilik"></select><input type="hidden" class="old-pemilik-val" value="kasus"></td><td><input type="text" name="barang_bukti[${bbIndex}][jenis]" class="form-control" placeholder="Jenis barang"></td><td><input type="number" name="barang_bukti[${bbIndex}][jumlah]" class="form-control" placeholder="0"></td><td><input type="text" name="barang_bukti[${bbIndex}][satuan]" class="form-control" placeholder="Satuan"></td><td><button type="button" class="btn btn-danger btn-sm btn-remove-row"><i class="bi bi-trash"></i></button></td></tr>`;
+            const html = `<tr class="row-bb"><td class="text-center align-middle handle" style="cursor: move;"><i class="bi bi-grip-vertical text-secondary fs-5"></i></td><td><select name="barang_bukti[${bbIndex}][pemilik_id]" class="form-select select-pemilik"></select><input type="hidden" class="old-pemilik-val" value="kasus"></td><td><input type="text" name="barang_bukti[${bbIndex}][jenis]" class="form-control" placeholder="Jenis barang"></td><td><input type="number" name="barang_bukti[${bbIndex}][jumlah]" class="form-control" placeholder="0"></td><td><input type="text" name="barang_bukti[${bbIndex}][satuan]" class="form-control" placeholder="Satuan"></td><td><button type="button" class="btn btn-danger btn-sm btn-remove-row"><i class="bi bi-trash"></i></button></td></tr>`;
             document.querySelector('#table-bb tbody').insertAdjacentHTML('beforeend', html);
             bbIndex++; updatePemilikDropdown();
         });
@@ -311,7 +312,7 @@
                         if (select.value == suspectId) isUsed = true;
                     });
                     if (isUsed) {
-                        Swal.fire({ icon: 'error', title: 'Gagal Hapus', text: `${suspectName} masih terikat dengan Barang Bukti.`, confirmButtonText: 'Mengerti' });
+                        Swal.fire({ icon: 'error', title: 'Tidak Bisa Dihapus', text: `${suspectName} masih tercatat sebagai pemilik Barang Bukti.`, confirmButtonText: 'Mengerti' });
                         return;
                     }
                 }

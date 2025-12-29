@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel; // Tambahkan ini
+use App\Exports\UngkapKasusExport; // Tambahkan ini
 
 class UngkapKasusController extends Controller
 {
@@ -26,19 +28,21 @@ class UngkapKasusController extends Controller
         
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
 
-        $query = BerantasUngkapKasus::with(['satuanKerja', 'tersangka', 'barangBukti']);
+        // Eager load dengan sorting 'urutan'
+        $query = BerantasUngkapKasus::with([
+            'satuanKerja', 
+            'tersangka' => function($q) { $q->orderBy('urutan', 'asc'); }, 
+            'barangBukti' => function($q) { $q->orderBy('urutan', 'asc'); }
+        ]);
 
-        // 1. Filter Satuan Kerja
         if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
             }
         } else {
-            $satkerId = $user->getSatkerId();
-            $query->where('satuan_kerja_id', $satkerId);
+            $query->where('satuan_kerja_id', $user->getSatkerId());
         }
 
-        // 2. Filter Waktu
         if ($request->filled('bulan')) {
             $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
@@ -53,7 +57,6 @@ class UngkapKasusController extends Controller
             }
         });
 
-        // 3. Search Logic
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -92,6 +95,25 @@ class UngkapKasusController extends Controller
         return view('berantas.ungkap-kasus.index', compact('kasus', 'satuanKerjas', 'years'));
     }
 
+    // --- METHOD EXPORT EXCEL ---
+    public function export(Request $request) 
+    {
+        // Gunakan filter yang sama dengan index agar hasil export sesuai pencarian user
+        // Namun, untuk Export Class yang kita buat sebelumnya, logic-nya berbasis "Tersangka" (Row based)
+        // Jadi kita perlu menyesuaikan sedikit di Export Class-nya atau mengirim query Kasus ke Export Class.
+        
+        // Pilihan Terbaik: Kirim Query Kasus yang sudah difilter ke Export Class
+        // Nanti Export Class yang akan menguraikan Kasus -> Tersangka
+        
+        $query = $this->getFilteredQuery($request);
+
+        // Nama file dinamis
+        $fileName = 'Laporan_Ungkap_Kasus_' . date('Y-m-d_H-i') . '.xlsx';
+
+        // Pastikan Anda sudah membuat UngkapKasusExport yang menerima Query Builder di constructor
+        return Excel::download(new UngkapKasusExport($query), $fileName);
+    }
+
     public function create()
     {
         return view('berantas.ungkap-kasus.create');
@@ -107,26 +129,20 @@ class UngkapKasusController extends Controller
             return back()->with('error', 'Gagal Simpan: Akun Anda tidak terhubung dengan Satuan Kerja.');
         }
 
-        // VALIDASI BACKEND (HTML required dihapus)
         $rules = [
             'nomor_lkn'        => 'required|unique:berantas_ungkap_kasus,nomor_lkn',
             'tanggal_kejadian' => 'required|date',
             'alamat_tkp'       => 'required|string',
-            
-            // Tersangka & Foto
             'tersangka'        => 'required|array|min:1',
             'tersangka.*.nama' => 'required|string',
             'tersangka.*.jk'   => 'required|in:Laki-Laki,Perempuan',
-            'tersangka.*.tahap'=> 'required|string', // WAJIB DIISI
-            'tersangka.*.foto' => 'nullable|image|max:2048', 
-
-            // BB
+            'tersangka.*.pekerjaan'=> 'nullable|string',
+            'tersangka.*.tahap'=> 'required|string',
+            'tersangka.*.foto' => 'nullable|image|max:2048',
             'barang_bukti'     => 'required|array|min:1',
             'barang_bukti.*.jenis'  => 'required|string',
             'barang_bukti.*.jumlah' => 'required|numeric',
             'barang_bukti.*.satuan' => 'required|string',
-            
-            // Dokumentasi
             'dokumentasi'      => 'nullable|array',
         ];
 
@@ -154,6 +170,8 @@ class UngkapKasusController extends Controller
             $kasus = BerantasUngkapKasus::create($dataKasus);
 
             $mapId = []; 
+            // 1. SIMPAN TERSANGKA (DENGAN URUTAN)
+            $urutanTsk = 1;
             foreach ($request->tersangka as $index => $tData) {
                 $fotoPath = null;
                 if ($request->hasFile("tersangka.{$index}.foto")) {
@@ -165,8 +183,10 @@ class UngkapKasusController extends Controller
                 $tersangka = $kasus->tersangka()->create([
                     'nama_tersangka' => $tData['nama'],
                     'jenis_kelamin'  => $tData['jk'],
-                    'status_tahap'   => $tData['tahap'], // Sudah divalidasi required
+                    'pekerjaan'      => $tData['pekerjaan'] ?? null,
+                    'status_tahap'   => $tData['tahap'],
                     'foto_tersangka' => $fotoPath,
+                    'urutan'         => $urutanTsk++, 
                 ]);
 
                 if (isset($tData['temp_id'])) {
@@ -174,22 +194,22 @@ class UngkapKasusController extends Controller
                 }
             }
 
+            // 2. SIMPAN BB (DENGAN URUTAN)
+            $urutanBB = 1;
             foreach ($request->barang_bukti as $bbData) {
                 $pemilikRef = $bbData['pemilik_id'] ?? 'kasus';
-                $finalIdTersangka = null;
-
-                if ($pemilikRef !== 'kasus' && isset($mapId[$pemilikRef])) {
-                    $finalIdTersangka = $mapId[$pemilikRef];
-                }
+                $finalIdTersangka = ($pemilikRef !== 'kasus' && isset($mapId[$pemilikRef])) ? $mapId[$pemilikRef] : null;
 
                 $kasus->barangBukti()->create([
                     'berantas_ungkap_tersangka_id' => $finalIdTersangka,
                     'jenis_barang_bukti'  => $bbData['jenis'],
                     'jumlah_barang_bukti' => $bbData['jumlah'],
                     'satuan_barang_bukti' => $bbData['satuan'], 
+                    'urutan'              => $urutanBB++,
                 ]);
             }
 
+            // 3. FILEPOND MOVEMENT
             if ($request->filled('dokumentasi')) {
                 foreach ($request->input('dokumentasi') as $folder) {
                     $tempFile = TemporaryFile::where('folder', $folder)->first();
@@ -235,7 +255,12 @@ class UngkapKasusController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $kasus = BerantasUngkapKasus::with(['tersangka', 'barangBukti', 'dokumentasi'])->findOrFail($id);
+        
+        $kasus = BerantasUngkapKasus::with([
+            'tersangka' => function($q) { $q->orderBy('urutan', 'asc'); },
+            'barangBukti' => function($q) { $q->orderBy('urutan', 'asc'); },
+            'dokumentasi'
+        ])->findOrFail($id);
 
         if ($user->isOperator() && $kasus->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403, 'Anda tidak berhak mengubah data Satuan Kerja lain.');
@@ -250,9 +275,7 @@ class UngkapKasusController extends Controller
         $user = Auth::user();
         $kasus = BerantasUngkapKasus::findOrFail($id);
 
-        if ($user->isOperator() && $kasus->satuan_kerja_id !== $user->getSatkerId()) {
-            abort(403);
-        }
+        if ($user->isOperator() && $kasus->satuan_kerja_id !== $user->getSatkerId()) abort(403);
 
         $rules = [
             'nomor_lkn'        => 'required|unique:berantas_ungkap_kasus,nomor_lkn,' . $id,
@@ -261,7 +284,8 @@ class UngkapKasusController extends Controller
             'tersangka'        => 'required|array|min:1',
             'tersangka.*.nama' => 'required|string',
             'tersangka.*.jk'   => 'required|in:Laki-Laki,Perempuan',
-            'tersangka.*.tahap'=> 'required|string', // WAJIB DIISI
+            'tersangka.*.pekerjaan'=> 'nullable|string',
+            'tersangka.*.tahap'=> 'required|string',
             'tersangka.*.foto' => 'nullable|image|max:2048',
             'barang_bukti'     => 'required|array|min:1',
             'barang_bukti.*.jenis'  => 'required|string',
@@ -293,11 +317,10 @@ class UngkapKasusController extends Controller
             }
             $kasus->update($dataUpdate);
 
-            // Sync Tersangka
+            // SYNC TERSANGKA
             $inputTersangka = $request->tersangka ?? [];
             $existingIds = collect($inputTersangka)->pluck('id')->filter()->toArray();
             
-            // Hapus tersangka & fotonya jika dihapus dari form
             $deletedTersangkas = $kasus->tersangka()->whereNotIn('id', $existingIds)->get();
             foreach($deletedTersangkas as $dt) {
                 if($dt->foto_tersangka && Storage::disk('public')->exists($dt->foto_tersangka)) {
@@ -307,11 +330,14 @@ class UngkapKasusController extends Controller
             }
 
             $mapId = [];
+            $urutanTsk = 1;
             foreach ($inputTersangka as $index => $tData) {
                 $payload = [
                     'nama_tersangka' => $tData['nama'],
                     'jenis_kelamin'  => $tData['jk'],
+                    'pekerjaan'      => $tData['pekerjaan'] ?? null,
                     'status_tahap'   => $tData['tahap'],
+                    'urutan'         => $urutanTsk++,
                 ];
 
                 if ($request->hasFile("tersangka.{$index}.foto")) {
@@ -339,12 +365,13 @@ class UngkapKasusController extends Controller
                 }
             }
 
-            // Sync Barang Bukti
+            // SYNC BB
             $inputBB = $request->barang_bukti ?? [];
             $existingBBIds = collect($inputBB)->pluck('id')->filter()->toArray();
             $kasus->barangBukti()->whereNotIn('id', $existingBBIds)->delete();
 
-            foreach ($inputBB as $bbData) {
+            $urutanBB = 1;
+            foreach ($inputBB as $index => $bbData) {
                 $pemilikRef = $bbData['pemilik_id'] ?? 'kasus';
                 $finalIdTersangka = null;
 
@@ -361,6 +388,7 @@ class UngkapKasusController extends Controller
                     'jenis_barang_bukti'  => $bbData['jenis'],
                     'jumlah_barang_bukti' => $bbData['jumlah'],
                     'satuan_barang_bukti' => $bbData['satuan'],
+                    'urutan'              => $urutanBB++,
                 ];
 
                 if (isset($bbData['id']) && $bbData['id']) {
@@ -370,6 +398,7 @@ class UngkapKasusController extends Controller
                 }
             }
 
+            // FILES
             if ($request->has('delete_files')) {
                 $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
                 foreach ($filesToRemove as $file) {

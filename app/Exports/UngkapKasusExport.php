@@ -17,47 +17,107 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, WithEvents, ShouldAutoSize, WithStyles
 {
+    protected $kasusQuery;
+    private $rowNumber = 0;
+    private $lastLkn = null;
+    private $caseCounter = 0;
+    private $results = null;
+
+    public function __construct($kasusQuery)
+    {
+        $this->kasusQuery = $kasusQuery;
+    }
+
     public function collection()
     {
-        return BerantasUngkapTersangka::with([
-            'kasus.satuanKerja', 
-            'kasus.barangBuktiBersama', 
-            'barangBukti'
-        ])
-        ->join('berantas_ungkap_kasus', 'berantas_ungkap_tersangka.berantas_ungkap_kasus_id', '=', 'berantas_ungkap_kasus.id')
-        ->orderBy('berantas_ungkap_kasus.tanggal_kejadian', 'desc')
-        ->orderBy('berantas_ungkap_kasus.id')
-        ->orderBy('berantas_ungkap_tersangka.id')
-        ->select('berantas_ungkap_tersangka.*')
-        ->get();
+        if ($this->results) return $this->results;
+
+        $kasusIds = (clone $this->kasusQuery)->pluck('berantas_ungkap_kasus.id')->toArray();
+
+        $this->results = BerantasUngkapTersangka::query()
+            ->with(['kasus.satuanKerja', 'kasus.barangBuktiBersama', 'barangBukti'])
+            ->join('berantas_ungkap_kasus', 'berantas_ungkap_tersangka.berantas_ungkap_kasus_id', '=', 'berantas_ungkap_kasus.id')
+            ->whereIn('berantas_ungkap_kasus.id', $kasusIds)
+            ->select('berantas_ungkap_tersangka.*')
+            // SORTING: LKN -> Jenis BB -> Urutan TSK
+            ->orderBy('berantas_ungkap_kasus.tanggal_kejadian', 'desc')
+            ->orderBy('berantas_ungkap_kasus.nomor_lkn', 'asc')
+            ->orderBy('berantas_ungkap_tersangka.urutan', 'asc')
+            ->get();
+
+        return $this->results;
     }
 
     public function headings(): array
     {
-        return ['Nomor LKN', 'Tanggal Kejadian', 'Satuan Kerja', 'TKP', 'Nama Tersangka', 'Jenis Kelamin', 'Pekerjaan', 'Barang Bukti', 'Status Tahap', 'Foto Tersangka'];
+        // KITA PISAH KOLOMNYA
+        return [
+            'No', 
+            'Nomor LKN', 
+            'Tanggal Kejadian', 
+            'Satuan Kerja', 
+            'TKP', 
+            'Nama Tersangka', 
+            'JK', 
+            'Pekerjaan', 
+            'Jenis BB',        // Kolom I (Akan di-merge jika jenis sama)
+            'Berat (Bruto)',   // Kolom J (Hanya merge jika BB Bersama)
+            'Satuan',          // Kolom K
+            'Status', 
+            'Foto'
+        ];
     }
 
     public function map($row): array
     {
-        // Gabungkan BB Bersama & Personal dalam satu sel
-        $listItems = [];
-        foreach($row->kasus->barangBuktiBersama as $bb) {
-            $listItems[] = "[BERSAMA] " . $bb->jenis_barang_bukti . ' (' . $bb->jumlah_barang_bukti . ' ' . $bb->satuan_barang_bukti . ')';
+        $currentLkn = $row->kasus->nomor_lkn;
+        if ($currentLkn !== $this->lastLkn) {
+            $this->caseCounter++;
+            $this->lastLkn = $currentLkn;
         }
-        foreach($row->barangBukti as $bb) {
-            $listItems[] = $bb->jenis_barang_bukti . ' (' . $bb->jumlah_barang_bukti . ' ' . $bb->satuan_barang_bukti . ')';
+
+        // --- LOGIKA PINTAR PEMISAHAN BB ---
+        $arrJenis = [];
+        $arrBerat = [];
+        $arrSatuan = [];
+
+        // 1. BB BERSAMA (Prioritas)
+        if ($row->kasus && $row->kasus->barangBuktiBersama->isNotEmpty()) {
+            foreach($row->kasus->barangBuktiBersama as $bb) {
+                $arrJenis[]  = $bb->jenis_barang_bukti . " (Bersama)"; // Penanda
+                $arrBerat[]  = $bb->jumlah_barang_bukti * 1; // *1 untuk hapus .00 berlebih
+                $arrSatuan[] = $bb->satuan_barang_bukti;
+            }
         }
-        $stringBB = empty($listItems) ? '-' : implode("\n", $listItems);
+
+        // 2. BB PERSONAL
+        if ($row->barangBukti->isNotEmpty()) {
+            foreach($row->barangBukti as $bb) {
+                $arrJenis[]  = $bb->jenis_barang_bukti;
+                $arrBerat[]  = $bb->jumlah_barang_bukti * 1;
+                $arrSatuan[] = $bb->satuan_barang_bukti;
+            }
+        }
+
+        // Jika kosong
+        if (empty($arrJenis)) {
+            $arrJenis[] = '-'; $arrBerat[] = '-'; $arrSatuan[] = '-';
+        }
 
         return [
+            $this->caseCounter,
             $row->kasus->nomor_lkn,
-            $row->kasus->tanggal_kejadian->format('d-m-Y'),
+            $row->kasus->tanggal_kejadian ? $row->kasus->tanggal_kejadian->format('d-m-Y') : '-',
             $row->kasus->satuanKerja->satuan_kerja ?? 'BNNP',
             $row->kasus->alamat_tkp,
             $row->nama_tersangka,
             $row->jenis_kelamin,
             $row->pekerjaan ?? '-',
-            $stringBB,
+            
+            implode("\n", $arrJenis),  // Kolom I
+            implode("\n", $arrBerat),  // Kolom J
+            implode("\n", $arrSatuan), // Kolom K
+            
             $row->status_tahap,
             '' 
         ];
@@ -65,11 +125,14 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('D')->getAlignment()->setWrapText(true);
-        $sheet->getStyle('H')->getAlignment()->setWrapText(true);
-        $sheet->getStyle('A:J')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-        $sheet->getStyle('A:J')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-        return [ 1 => ['font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4e73df']], 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]] ];
+        return [
+            1 => [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '4E73DF']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
+            ],
+        ];
     }
 
     public function registerEvents(): array
@@ -77,66 +140,98 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
         return [
             AfterSheet::class => function(AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
-                $rows = $this->collection();
-                $rowCount = $rows->count();
+                $data = $this->collection();
+                $rowCount = $data->count();
+                $startRow = 2;
+
+                // WRAP TEXT
+                $sheet->getStyle('E')->getAlignment()->setWrapText(true); // TKP
+                $sheet->getStyle('I')->getAlignment()->setWrapText(true); // Jenis
                 
-                $currentRow = 2;
-                $startRowLkn = 2;
-                $startRowBB = 2;
-                $prevLkn = null;
-                $prevBB = null;
-                $prevLknForBB = null;
+                // ALIGNMENT
+                $sheet->getStyle("A1:M" . ($rowCount + 1))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+                $sheet->getStyle("A2:D" . ($rowCount + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("G2:G" . ($rowCount + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // JK
+                $sheet->getStyle("J2:K" . ($rowCount + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Berat & Satuan
 
-                foreach ($rows as $index => $tersangka) {
-                    $sheet->getRowDimension($currentRow)->setRowHeight(80);
-                    if ($tersangka->foto_tersangka && file_exists(storage_path('app/public/' . $tersangka->foto_tersangka))) {
+                // --- LOGIKA MERGE PINTAR ---
+                $mergeStart = $startRow;
+
+                for ($i = 0; $i < $rowCount; $i++) {
+                    $currentRow = $startRow + $i;
+                    
+                    // 1. FOTO
+                    $fotoPath = $data[$i]->foto_tersangka;
+                    if ($fotoPath && file_exists(storage_path('app/public/' . $fotoPath))) {
                         $drawing = new Drawing();
-                        $drawing->setPath(storage_path('app/public/' . $tersangka->foto_tersangka));
-                        $drawing->setHeight(90);
-                        $drawing->setCoordinates('J' . $currentRow);
-                        $drawing->setOffsetX(10); $drawing->setOffsetY(10);
+                        $drawing->setPath(storage_path('app/public/' . $fotoPath));
+                        $drawing->setHeight(80);
+                        $drawing->setCoordinates('M' . $currentRow);
+                        $drawing->setOffsetX(5); $drawing->setOffsetY(5);
                         $drawing->setWorksheet($sheet);
+                        $sheet->getRowDimension($currentRow)->setRowHeight(90);
                     } else {
-                        $sheet->setCellValue('J' . $currentRow, 'Tidak Ada Foto');
-                        $sheet->getStyle('J' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                        $sheet->setCellValue('M' . $currentRow, '-');
+                        $sheet->getStyle('M' . $currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                        $sheet->getRowDimension($currentRow)->setRowHeight(40);
                     }
 
-                    $currLkn = $tersangka->kasus->nomor_lkn;
-                    $currBB = $sheet->getCell("H{$currentRow}")->getValue();
+                    // 2. CEK APAKAH BARIS SELANJUTNYA MASIH KASUS (LKN) YANG SAMA?
+                    $isLastRow = ($i === $rowCount - 1);
+                    $isNextDifferentLKN = !$isLastRow && ($data[$i]->kasus->nomor_lkn !== $data[$i+1]->kasus->nomor_lkn);
 
-                    // --- MERGE LKN ---
-                    if (($currLkn !== $prevLkn && $index > 0) || $index === $rowCount - 1) {
-                        $endRow = ($currLkn !== $prevLkn && $index > 0) ? $currentRow - 1 : $currentRow;
-                        if ($startRowLkn < $endRow) {
-                            $sheet->mergeCells("A{$startRowLkn}:A{$endRow}");
-                            $sheet->mergeCells("B{$startRowLkn}:B{$endRow}");
-                            $sheet->mergeCells("C{$startRowLkn}:C{$endRow}");
-                            $sheet->mergeCells("D{$startRowLkn}:D{$endRow}");
+                    if ($isLastRow || $isNextDifferentLKN) {
+                        $endRow = $currentRow;
+
+                        // JIKA ADA > 1 TERSANGKA DALAM 1 KASUS -> LAKUKAN MERGE
+                        if ($mergeStart < $endRow) {
+                            // A. Merge Kolom Metadata Kasus (Pasti Sama)
+                            $sheet->mergeCells("A{$mergeStart}:A{$endRow}"); // No
+                            $sheet->mergeCells("B{$mergeStart}:B{$endRow}"); // LKN
+                            $sheet->mergeCells("C{$mergeStart}:C{$endRow}"); // Tgl
+                            $sheet->mergeCells("D{$mergeStart}:D{$endRow}"); // Satker
+                            $sheet->mergeCells("E{$mergeStart}:E{$endRow}"); // TKP
+
+                            // B. MERGE KOLOM JENIS BB (I)
+                            // Logika: Jika Row 1 "Shabu" dan Row 2 "Shabu", maka Merge.
+                            // Jika Row 1 "Shabu" dan Row 2 "Ganja", jangan Merge.
+                            $this->smartMergeColumn($sheet, 'I', $mergeStart, $endRow);
+
+                            // C. MERGE KOLOM BERAT (J) & SATUAN (K)
+                            // Logika: Jika Row 1 "100" dan Row 2 "100" (BB Bersama), Merge.
+                            // Jika Row 1 "10" dan Row 2 "20" (BB Personal), JANGAN Merge.
+                            $this->smartMergeColumn($sheet, 'J', $mergeStart, $endRow);
+                            $this->smartMergeColumn($sheet, 'K', $mergeStart, $endRow);
                         }
-                        $startRowLkn = $currentRow;
+                        
+                        $mergeStart = $currentRow + 1;
                     }
-
-                    // --- MERGE BB SEQUENTIAL (Jika isi sama persis & LKN sama) ---
-                    $isDifferentBB = ($currBB !== $prevBB);
-                    $isDifferentLKN = ($currLkn !== $prevLknForBB);
-                    $isLastRow = ($index === $rowCount - 1);
-
-                    if (($isDifferentBB || $isDifferentLKN) && $index > 0) {
-                        $endRowBB = $currentRow - 1;
-                        if ($startRowBB < $endRowBB) $sheet->mergeCells("H{$startRowBB}:H{$endRowBB}");
-                        $startRowBB = $currentRow;
-                    }
-                    if ($isLastRow) {
-                        if (!$isDifferentBB && !$isDifferentLKN && $startRowBB < $currentRow) $sheet->mergeCells("H{$startRowBB}:H{$currentRow}");
-                    }
-
-                    $prevLkn = $currLkn;
-                    $prevLknForBB = $currLkn;
-                    $prevBB = $currBB;
-                    $currentRow++;
                 }
-                $sheet->getStyle('A1:J' . ($currentRow - 1))->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+                // Border
+                $lastRow = $startRow + $rowCount - 1;
+                $sheet->getStyle("A1:M{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
             },
         ];
+    }
+
+    /**
+     * Helper: Merge kolom hanya jika isinya identik dari baris awal sampai akhir range
+     */
+    private function smartMergeColumn($sheet, $col, $start, $end)
+    {
+        $firstVal = $sheet->getCell("{$col}{$start}")->getValue();
+        $allSame = true;
+
+        for ($r = $start + 1; $r <= $end; $r++) {
+            if ($sheet->getCell("{$col}{$r}")->getValue() !== $firstVal) {
+                $allSame = false;
+                break;
+            }
+        }
+
+        if ($allSame) {
+            $sheet->mergeCells("{$col}{$start}:{$col}{$end}");
+        }
     }
 }

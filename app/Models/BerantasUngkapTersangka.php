@@ -10,8 +10,7 @@ class BerantasUngkapTersangka extends Model
     protected $table = 'berantas_ungkap_tersangka';
     protected $guarded = ['id'];
 
-    protected static function boot()
-    {
+    protected static function boot() {
         parent::boot();
         static::deleting(function ($t) {
             if ($t->foto_tersangka && Storage::disk('public')->exists($t->foto_tersangka)) {
@@ -19,14 +18,14 @@ class BerantasUngkapTersangka extends Model
             }
         });
     }
-    
-    public function barangBukti()
-    {
-        return $this->hasMany(BerantasUngkapBarangBukti::class, 'berantas_ungkap_tersangka_id');
-    }
 
-    public function kasus()
-    {
-        return $this->belongsTo(BerantasUngkapKasus::class, 'berantas_ungkap_kasus_id');
+    // Relasi Many-to-Many ke BB
+    public function barangBukti() {
+        return $this->belongsToMany(
+            BerantasUngkapBarangBukti::class, 
+            'berantas_barang_bukti_tersangka', // Nama Tabel Pivot
+            'tersangka_id', 
+            'barang_bukti_id'
+        );
     }
 }

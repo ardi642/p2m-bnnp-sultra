@@ -1,5 +1,19 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
+/* Bootstrap Core */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* --- PLUGIN STYLES --- */
+/* Bootstrap Icons (Tambahkan ini) */
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+
+/* Plugin Global Lain (Misal TomSelect dipake dimana-mana, simpan disini) */
+@import 'tom-select/dist/css/tom-select.bootstrap5.css';
+
+/* Admin Custom Layout */
+@import './admin.css';
+
+/* Config Tailwind */
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';

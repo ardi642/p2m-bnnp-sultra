@@ -15,8 +15,12 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
+        "@alpinejs/collapse": "^3.15.3",
+        "@popperjs/core": "^2.11.8",
         "alpinejs": "^3.15.2",
         "apexcharts": "^5.3.6",
+        "bootstrap": "^5.3.8",
+        "bootstrap-icons": "^1.13.1",
         "filepond": "^4.32.10",
         "filepond-plugin-file-validate-size": "^2.2.8",
         "filepond-plugin-file-validate-type": "^1.2.9",

@@ -55,7 +55,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function() {
     Route::get('/', function () {
         return view('welcome');
-    });
+    })->name('dashboard');
 
     Route::get('/dokumentasi/{id}/download', function ($id) {
         

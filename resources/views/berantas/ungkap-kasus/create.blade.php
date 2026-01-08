@@ -91,7 +91,7 @@
                                             <tr>
                                                 <input type="hidden" :name="`tersangka[${index}][temp_id]`" :value="t.temp_id">
                                                 
-                                                {{-- FOTO (PERBAIKAN DISINI: Ganti $refs dengan document.getElementById) --}}
+                                                {{-- FOTO --}}
                                                 <td class="text-center bg-white">
                                                     <div class="position-relative d-inline-block" 
                                                          @click="document.getElementById('file_'+t.temp_id).click()" 
@@ -104,7 +104,6 @@
                                                             <i class="bi bi-camera-fill text-secondary" style="font-size: 10px;"></i>
                                                         </div>
                                                     </div>
-                                                    {{-- Gunakan ID dinamis --}}
                                                     <input type="file" 
                                                            :name="`tersangka[${index}][foto]`" 
                                                            class="d-none" 
@@ -166,7 +165,6 @@
                                         </template>
                                     </tbody>
                                 </table>
-                                {{-- General Error --}}
                                 @error('tersangka') <div class="alert alert-danger py-2 small"><i class="bi bi-exclamation-circle me-1"></i> {{ $message }}</div> @enderror
                             </div>
 
@@ -176,7 +174,7 @@
                                     <i class="bi bi-box-seam me-1"></i> Daftar Barang Bukti
                                 </h6>
                                 <button type="button" class="btn btn-primary btn-sm shadow-sm" @click="addBB">
-                                    <i class="bi bi-plus-lg me-1"></i> Tambah BB
+                                    <i class="bi bi-plus-lg me-1"></i> Tambah Barang Bukti
                                 </button>
                             </div>
 
@@ -184,10 +182,11 @@
                                 <table class="table table-bordered align-middle">
                                     <thead class="bg-light text-secondary small text-uppercase">
                                         <tr>
-                                            <th width="35%">Pemilik (Bisa Banyak)</th>
-                                            <th>Jenis Barang</th>
-                                            <th width="15%">Jumlah</th>
-                                            <th width="15%">Satuan</th>
+                                            <th width="25%">Pemilik</th>
+                                            <th width="15%">Kategori</th>
+                                            <th>Barang Bukti</th>
+                                            <th width="12%">Jumlah</th>
+                                            <th width="12%">Satuan</th>
                                             <th width="50" class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
@@ -195,31 +194,47 @@
                                         <template x-for="(bb, i) in bbList" :key="bb.temp_id">
                                             <tr>
                                                 <td class="bg-white">
-                                                    {{-- TOM SELECT WRAPPER --}}
-                                                    <div wire:ignore 
-                                                         :class="{'border border-danger rounded': hasError('barang_bukti', i, 'pemilik_id')}">
-                                                        <select :name="`barang_bukti[${i}][pemilik_id][]`" 
-                                                                multiple 
-                                                                placeholder="Pilih Pemilik..."
-                                                                autocomplete="off"
-                                                                x-init="initTomSelect($el, bb)">
-                                                        </select>
+                                                    <div wire:ignore :class="{'border border-danger rounded': hasError('barang_bukti', i, 'pemilik_id')}">
+                                                        <select :name="`barang_bukti[${i}][pemilik_id][]`" multiple placeholder="Pilih Pemilik..." autocomplete="off" x-init="initTomSelectOwner($el, bb)"></select>
                                                     </div>
-                                                    <small class="text-muted fst-italic" style="font-size: 0.75rem" x-show="!hasError('barang_bukti', i, 'pemilik_id')">*Kosong = Milik Kasus (Tak Bertuan)</small>
-                                                    
-                                                    <div class="text-danger small mt-1" 
-                                                         style="font-size: 0.875em;"
-                                                         x-show="hasError('barang_bukti', i, 'pemilik_id')" 
-                                                         x-text="getErrorMessage('barang_bukti', i, 'pemilik_id')"></div>
+                                                    <div class="text-danger small mt-1" x-show="hasError('barang_bukti', i, 'pemilik_id')" x-text="getErrorMessage('barang_bukti', i, 'pemilik_id')"></div>
                                                 </td>
 
+                                                {{-- KATEGORI --}}
                                                 <td class="bg-white">
-                                                    <input type="text" :name="`barang_bukti[${i}][jenis]`" x-model="bb.jenis" 
-                                                           class="form-control form-control-sm" 
-                                                           :class="{'is-invalid': hasError('barang_bukti', i, 'jenis')}"
-                                                           placeholder="Jenis BB">
-                                                    <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'jenis')"></div>
+                                                    <select :name="`barang_bukti[${i}][kategori]`" x-model="bb.kategori" 
+                                                            class="form-select form-select-sm"
+                                                            :class="{'is-invalid': hasError('barang_bukti', i, 'kategori')}">
+                                                        <option value="Narkotika">Narkotika</option>
+                                                        <option value="Non-Narkotika">Non-Narkotika</option>
+                                                    </select>
                                                 </td>
+
+                                                {{-- DINAMIS: NARKOTIKA VS NON-NARKOTIKA --}}
+                                                <td class="bg-white">
+                                                    
+                                                    {{-- JIKA NARKOTIKA: TOMSELECT MASTER --}}
+                                                    <div x-show="bb.kategori === 'Narkotika'" class="w-100">
+                                                        <div wire:ignore :class="{'border border-danger rounded': hasError('barang_bukti', i, 'narkotika_id')}">
+                                                            <select :name="`barang_bukti[${i}][narkotika_id]`" 
+                                                                    placeholder="Cari Narkotika..." 
+                                                                    autocomplete="off" 
+                                                                    x-init="initTomSelectNarkotika($el, bb)">
+                                                            </select>
+                                                        </div>
+                                                        <div class="text-danger small mt-1" x-show="hasError('barang_bukti', i, 'narkotika_id')" x-text="getErrorMessage('barang_bukti', i, 'narkotika_id')"></div>
+                                                    </div>
+
+                                                    {{-- JIKA NON-NARKOTIKA: TEXT INPUT --}}
+                                                    <div x-show="bb.kategori === 'Non-Narkotika'" class="w-100">
+                                                        <input type="text" :name="`barang_bukti[${i}][nama_barang_bukti]`" x-model="bb.nama_barang_bukti" 
+                                                               class="form-control form-control-sm" 
+                                                               :class="{'is-invalid': hasError('barang_bukti', i, 'nama_barang_bukti')}"
+                                                               placeholder="Nama Barang Bukti (HP, Uang, dll)">
+                                                        <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'nama_barang_bukti')"></div>
+                                                    </div>
+                                                </td>
+
                                                 <td class="bg-white">
                                                     <input type="number" step="0.0001" :name="`barang_bukti[${i}][jumlah]`" x-model="bb.jumlah" 
                                                            class="form-control form-control-sm" 
@@ -251,7 +266,7 @@
 
                             {{-- SECTION 4: LAMPIRAN --}}
                             <h6 class="text-uppercase text-secondary fw-bold small mb-4 border-bottom pb-2">
-                                <i class="bi bi-paperclip me-1"></i> Lampiran & Bukti Fisik
+                                <i class="bi bi-paperclip me-1"></i> Lampiran
                             </h6>
                             
                             <div class="bg-body-tertiary p-4 rounded-3 border border-dashed mb-4">
@@ -300,29 +315,11 @@
 @push('styles')
     @vite(['resources/css/filepond.css', 'resources/js/filepond.js'])
     <style>
-        .ts-control {
-            border: 1px solid #dee2e6;
-            padding: 0.4rem 0.75rem; 
-            border-radius: 0.375rem;
-            box-shadow: none;
-            font-size: 0.875rem; 
-        }
-        .ts-control.focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-        /* Fix dropdown overflow */
-        .ts-dropdown {
-            z-index: 9999 !important;
-        }
-        .filepond--panel-root {
-            background-color: #ffffff;
-            border: 1px solid #dee2e6;
-        }
-        .border-dashed {
-            border-style: dashed !important;
-            border-width: 2px !important;
-        }
+        .ts-control { border: 1px solid #dee2e6; padding: 0.4rem 0.75rem; border-radius: 0.375rem; box-shadow: none; font-size: 0.875rem; }
+        .ts-control.focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+        .ts-dropdown { z-index: 9999 !important; }
+        .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; }
+        .border-dashed { border-style: dashed !important; border-width: 2px !important; }
     </style>
 @endpush
 
@@ -334,10 +331,11 @@
             tersangkaList: [],
             bbList: [],
             isUploading: false,
-            tomSelectInstances: {}, 
+            tomSelectOwners: {}, 
+            tomSelectNarkotika: {},
             errors: @json($errors->toArray()),
+            masterNarkotika: @json($masterNarkotika),
 
-            // INITIALIZATION
             init() {
                 const oldTersangka = @json(old('tersangka', []));
                 const oldBB = @json(old('barang_bukti', []));
@@ -363,7 +361,9 @@
                     oldBB.forEach(b => {
                         this.bbList.push({
                             temp_id: 'bb_' + Math.random().toString(36).substr(2, 9),
-                            jenis: b.jenis || '',
+                            kategori: b.kategori || 'Narkotika',
+                            narkotika_id: b.narkotika_id || '',
+                            nama_barang_bukti: b.nama_barang_bukti || '',
                             jumlah: b.jumlah || '',
                             satuan: b.satuan || 'Gram', 
                             initial_pemilik: b.pemilik_id || [] 
@@ -373,7 +373,7 @@
                     this.addBB(); 
                 }
 
-                // Init FilePond
+                // Init FilePond (Code sama persis)
                 if(window.FilePond) {
                     const el = document.querySelector('input.filepond');
                     FilePond.create(el, {
@@ -394,7 +394,6 @@
                 }
             },
 
-            // HELPER ERROR
             hasError(field, index, key) {
                 const errorKey = `${field}.${index}.${key}`;
                 return this.errors && this.errors[errorKey];
@@ -405,7 +404,6 @@
                 return this.errors[errorKey] ? this.errors[errorKey][0] : '';
             },
 
-            // --- LOGIC TERSANGKA ---
             addTersangka() {
                 this.tersangkaList.push({ 
                     temp_id: 't_' + Date.now() + Math.random(), 
@@ -416,30 +414,15 @@
 
             removeTersangka(index) {
                 const suspectId = this.tersangkaList[index].temp_id;
-                const suspectName = this.tersangkaList[index].nama || 'Tersangka ini';
-
                 let isUsed = false;
-                Object.values(this.tomSelectInstances).forEach(ts => {
-                    const selectedValues = ts.getValue();
-                    if (selectedValues.includes(suspectId)) {
-                        isUsed = true;
-                    }
+                Object.values(this.tomSelectOwners).forEach(ts => {
+                    if (ts.getValue().includes(suspectId)) isUsed = true;
                 });
-
                 if (isUsed) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal Hapus',
-                        text: `"${suspectName}" sedang dipilih sebagai pemilik Barang Bukti. Harap hapus dari daftar pemilik terlebih dahulu.`,
-                        confirmButtonColor: '#d33'
-                    });
+                    Swal.fire({icon: 'error', title: 'Gagal Hapus', text: `Tersangka sedang dipilih sebagai pemilik Barang Bukti.`});
                     return;
                 }
-
-                if (this.tersangkaList.length === 1) {
-                    Swal.fire('Info', 'Minimal harus ada satu data tersangka.', 'info');
-                    return;
-                }
+                if (this.tersangkaList.length === 1) return;
                 this.tersangkaList.splice(index, 1);
                 this.$nextTick(() => { this.updateAllTomSelects(); });
             },
@@ -449,106 +432,126 @@
                 if(file) this.tersangkaList[index].preview_url = URL.createObjectURL(file);
             },
 
-            // --- LOGIC BARANG BUKTI ---
             addBB() {
                 this.bbList.push({ 
                     temp_id: 'bb_' + Date.now() + Math.random(), 
-                    jenis: '', jumlah: '', 
-                    satuan: 'Gram', // DEFAULT
+                    kategori: 'Narkotika',
+                    narkotika_id: '',
+                    nama_barang_bukti: '',
+                    jumlah: '', 
+                    satuan: 'Gram', 
                     initial_pemilik: [] 
                 });
             },
 
             removeBB(index) {
-                if (this.bbList.length === 1) {
-                    Swal.fire('Info', 'Minimal harus ada satu data Barang Bukti.', 'info');
-                    return;
-                }
+                if (this.bbList.length === 1) return;
                 const bbTempId = this.bbList[index].temp_id;
-                if(this.tomSelectInstances[bbTempId]) {
-                    this.tomSelectInstances[bbTempId].destroy();
-                    delete this.tomSelectInstances[bbTempId];
+                if(this.tomSelectOwners[bbTempId]) {
+                    this.tomSelectOwners[bbTempId].destroy();
+                    delete this.tomSelectOwners[bbTempId];
+                }
+                if(this.tomSelectNarkotika[bbTempId]) {
+                    this.tomSelectNarkotika[bbTempId].destroy();
+                    delete this.tomSelectNarkotika[bbTempId];
                 }
                 this.bbList.splice(index, 1);
             },
 
-            // --- LOGIC TOM SELECT ---
-            initTomSelect(el, bbData) {
+            // --- TOM SELECT OWNERS (Pemilik) ---
+            initTomSelectOwner(el, bbData) {
                 const ts = new TomSelect(el, {
                     plugins: ['remove_button', 'dropdown_input'],
-                    valueField: 'value', 
-                    labelField: 'text', 
-                    searchField: 'text', 
-                    create: false, 
-                    maxOptions: null,
-                    placeholder: "Pilih pemilik...",
-                    dropdownParent: 'body'
+                    valueField: 'value', labelField: 'text', searchField: 'text', create: false, maxOptions: null, placeholder: "Pilih pemilik...", dropdownParent: 'body'
                 });
-                
-                this.tomSelectInstances[bbData.temp_id] = ts;
+                this.tomSelectOwners[bbData.temp_id] = ts;
                 this.refreshOptionsForInstance(ts);
-
                 if (bbData.initial_pemilik && bbData.initial_pemilik.length > 0) {
                     ts.setValue(bbData.initial_pemilik);
                     bbData.pemilik_id = bbData.initial_pemilik; 
                 }
-
                 ts.on('change', (val) => { bbData.pemilik_id = val; });
             },
 
             updateAllTomSelects() {
-                Object.values(this.tomSelectInstances).forEach(ts => { this.refreshOptionsForInstance(ts); });
+                Object.values(this.tomSelectOwners).forEach(ts => { this.refreshOptionsForInstance(ts); });
             },
 
             refreshOptionsForInstance(ts) {
                 this.tersangkaList.forEach(t => {
                     const label = t.nama.trim() === '' ? '(Tanpa Nama)' : t.nama;
-                    if (ts.options[t.temp_id]) {
-                        ts.updateOption(t.temp_id, { value: t.temp_id, text: label });
-                    } else {
-                        ts.addOption({ value: t.temp_id, text: label });
-                    }
+                    if (ts.options[t.temp_id]) ts.updateOption(t.temp_id, { value: t.temp_id, text: label });
+                    else ts.addOption({ value: t.temp_id, text: label });
                 });
-
                 const validIds = this.tersangkaList.map(t => t.temp_id);
                 Object.keys(ts.options).forEach(optVal => {
-                    if (!validIds.includes(optVal)) {
-                        ts.removeOption(optVal);
-                    }
+                    if (!validIds.includes(optVal)) ts.removeOption(optVal);
                 });
                 ts.refreshOptions(false); 
             },
 
-            // --- SUBMIT ---
-            submitData(e) {
-                if (this.isUploading) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Upload Belum Selesai',
-                        text: 'Mohon tunggu hingga semua file selesai diupload.',
-                        confirmButtonColor: '#0d6efd'
-                    });
-                    return;
+            // --- TOM SELECT NARKOTIKA (Master Data) ---
+            initTomSelectNarkotika(el, bbData) {
+                // Mapping options dari Data Master (Blade -> JS)
+                const options = this.masterNarkotika.map(m => ({
+                    id: m.id,
+                    text: m.nama_narkotika,
+                    golongan: m.golongan
+                }));
+
+                const ts = new TomSelect(el, {
+                    valueField: 'id',
+                    labelField: 'text',
+                    searchField: ['text', 'golongan'],
+                    options: options,
+                    create: false,
+                    placeholder: 'Cari Narkotika...',
+                    dropdownParent: 'body',
+                    // Custom Render untuk menampilkan nama + golongan (kecil)
+                    render: {
+                        option: function(data, escape) {
+                            return '<div>' + escape(data.text) + ' <span class="text-muted small ms-2" style="font-size: 0.8em; opacity: 0.7;">' + escape(data.golongan) + '</span></div>';
+                        },
+                        item: function(data, escape) {
+                            return '<div>' + escape(data.text) + '</div>';
+                        }
+                    }
+                });
+
+                this.tomSelectNarkotika[bbData.temp_id] = ts;
+
+                // Set value jika old input ada
+                if (bbData.narkotika_id) {
+                    ts.setValue(bbData.narkotika_id);
                 }
 
+                ts.on('change', (val) => { bbData.narkotika_id = val; });
+            },
+
+            submitData(e) {
+                if (this.isUploading) return; 
                 if (this.tersangkaList.length === 0 || this.bbList.length === 0) {
                      Swal.fire('Data Belum Lengkap', 'Mohon isi minimal 1 Tersangka dan 1 Barang Bukti.', 'warning');
                      return;
                 }
 
+                // Validasi Client Side Tambahan
+                let valid = true;
+                this.bbList.forEach(bb => {
+                    if (bb.kategori === 'Narkotika' && !bb.narkotika_id) valid = false;
+                    if (bb.kategori === 'Non-Narkotika' && !bb.nama_barang_bukti.trim()) valid = false;
+                });
+
+                if(!valid) {
+                     Swal.fire('Data Belum Lengkap', 'Mohon lengkapi jenis narkotika atau nama barang bukti.', 'warning');
+                     return;
+                }
+
                 const selectedOwners = this.bbList.flatMap(bb => bb.pemilik_id || []);
                 const orphanSuspects = this.tersangkaList.filter(t => !selectedOwners.includes(t.temp_id));
-
                 if (orphanSuspects.length > 0) {
-                    const names = orphanSuspects.map(t => t.nama || 'Tanpa Nama').join(', ');
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Validasi Gagal',
-                        html: `Tersangka berikut belum dikaitkan dengan Barang Bukti:<br><b>${names}</b><br><br>Mohon pilih tersangka tersebut di kolom "Pemilik" pada tabel Barang Bukti.`,
-                        confirmButtonText: 'Perbaiki',
-                        confirmButtonColor: '#d33'
-                    });
-                    return;
+                     Swal.fire({icon: 'error', title: 'Validasi Gagal', html: 'Ada tersangka belum punya BB.'});
+                     return;
                 }
 
                 e.target.submit();

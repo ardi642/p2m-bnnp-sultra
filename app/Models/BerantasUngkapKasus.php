@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Models;
-
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
@@ -23,19 +21,8 @@ class BerantasUngkapKasus extends Model
         });
     }
 
-    public function tersangka() {
-        return $this->hasMany(BerantasUngkapTersangka::class, 'berantas_ungkap_kasus_id');
-    }
-
-    public function barangBukti() {
-        return $this->hasMany(BerantasUngkapBarangBukti::class, 'berantas_ungkap_kasus_id');
-    }
-
-    public function satuanKerja() {
-        return $this->belongsTo(SatuanKerja::class, 'satuan_kerja_id');
-    }
-
-    public function dokumentasi() {
-        return $this->morphMany(DokumentasiKegiatan::class, 'dokumentasiable');
-    }
+    public function tersangka() { return $this->hasMany(BerantasUngkapTersangka::class, 'berantas_ungkap_kasus_id'); }
+    public function barangBukti() { return $this->hasMany(BerantasUngkapBarangBukti::class, 'berantas_ungkap_kasus_id'); }
+    public function satuanKerja() { return $this->belongsTo(SatuanKerja::class, 'satuan_kerja_id'); }
+    public function dokumentasi() { return $this->morphMany(DokumentasiKegiatan::class, 'dokumentasiable'); }
 }

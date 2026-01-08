@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\PegawaiController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Berantas\NarkotikaController;
 use App\Http\Controllers\Berantas\TatController;
 use App\Http\Controllers\Berantas\UngkapKasusController;
 use App\Http\Controllers\P2m\SosialisasiController;
@@ -276,6 +277,9 @@ Route::middleware('auth')->group(function() {
                 // TAT (Tim Asesmen Terpadu)
                 Route::get('/tat/export', [TatController::class, 'export'])->name('tat.export');
                 Route::get('/tat', [TatController::class, 'index'])->name("tat.index");
+
+                // Master Narkotika
+                Route::get('/narkotika', [NarkotikaController::class, 'index'])->name('narkotika.index');
             });
 
             Route::middleware(['role:operator'])->group(function() {
@@ -293,6 +297,11 @@ Route::middleware('auth')->group(function() {
                 Route::get('/tat/{id}/edit', [TatController::class, 'edit'])->name('tat.edit');
                 Route::put('/tat/{id}', [TatController::class, 'update'])->name('tat.update');
                 Route::delete('/tat/{id}', [TatController::class, 'destroy'])->name("tat.destroy");
+
+                // Master Narkotika
+                Route::post('/narkotika', [NarkotikaController::class, 'store'])->name('narkotika.store');
+                Route::put('/narkotika/{id}', [NarkotikaController::class, 'update'])->name('narkotika.update');
+                Route::delete('/narkotika/{id}', [NarkotikaController::class, 'destroy'])->name('narkotika.destroy');
             });
             
         });

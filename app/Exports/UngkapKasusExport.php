@@ -42,7 +42,9 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
         // Ambil data dengan Sorting BB yang konsisten
         $data = BerantasUngkapTersangka::query()
             ->with(['kasus.satuanKerja', 'barangBukti' => function($q) {
-                $q->orderBy('jenis_barang_bukti', 'asc')
+                $q->with('masterNarkotika') // Load relasi master
+                  ->orderBy('kategori_barang_bukti', 'asc')
+                  ->orderBy('jenis_barang_bukti', 'asc')
                   ->orderBy('jumlah_barang_bukti', 'desc');
             }, 'barangBukti.tersangka']) 
             ->join('berantas_ungkap_kasus', 'berantas_ungkap_tersangka.berantas_ungkap_kasus_id', '=', 'berantas_ungkap_kasus.id')
@@ -64,7 +66,6 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
     /**
      * LOGIKA "INVENTORY CHECK":
      * Menentukan kapan (1), (2) muncul.
-     * Aturan: Munculkan nomor HANYA JIKA merge vertikal tidak mungkin dilakukan.
      */
     private function calculateSmartSuffixes($data)
     {
@@ -74,17 +75,15 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
         foreach ($groupedByLkn as $lkn => $tersangkas) {
             
             // A. Buat "Tanda Tangan Inventaris" per Tersangka
-            // Kita harus tahu apa saja isi kantong setiap tersangka
             $suspectInventorySignature = [];
             foreach ($tersangkas as $t) {
-                // Signature = String gabungan semua ID BB milik dia (urutan sorted)
                 $bbIds = $t->barangBukti->pluck('id')->sort()->implode('-');
                 $suspectInventorySignature[$t->id] = $bbIds;
             }
 
             // B. Cek Setiap Barang Bukti
             $groupCounter = 1;
-            $processedForSuffix = []; // Agar counter tidak naik berkali-kali untuk BB yg sama
+            $processedForSuffix = []; 
 
             foreach ($tersangkas as $t) {
                 foreach ($t->barangBukti as $bb) {
@@ -92,13 +91,7 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                     
                     $owners = $bb->tersangka;
                     
-                    // Cek 1: Apakah Milik Bersama?
                     if ($owners->count() > 1) {
-                        
-                        // Cek 2: Apakah Inventaris Semua Pemilik SAMA PERSIS?
-                        // Jika Inventaris sama -> Isi Sel Excel Sama -> Bisa Merge Vertikal -> TIDAK PERLU NOMOR
-                        // Jika Inventaris beda -> Isi Sel Excel Beda -> Tidak Merge -> BUTUH NOMOR (Fallback)
-                        
                         $firstSignature = $suspectInventorySignature[$owners->first()->id];
                         $allIdentical = true;
 
@@ -110,15 +103,12 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                         }
 
                         if ($allIdentical) {
-                            // Perfect Match: Clean Merge (Tanpa Suffix)
                             $this->bbSuffixes[$bb->id] = ""; 
                         } else {
-                            // Imperfect: Ada yg punya barang lain -> Kasih Nomor (1)
                             $this->bbSuffixes[$bb->id] = " ($groupCounter)";
                             $groupCounter++;
                         }
                     } else {
-                        // Milik Sendiri -> Tidak perlu suffix
                         $this->bbSuffixes[$bb->id] = "";
                     }
 
@@ -156,15 +146,24 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
         $arrBerat = []; 
 
         foreach ($row->barangBukti as $bb) {
-            // A. VISUAL: Ambil Suffix Pintar dari Logic di atas
+            // A. VISUAL: Ambil Suffix Pintar
             $suffix = $this->bbSuffixes[$bb->id] ?? "";
 
-            $arrJenis[] = $bb->jenis_barang_bukti . $suffix;
+            // UPDATE LOGIKA NAMA: HANYA NAMA SAJA (Tanpa Golongan)
+            $namaBB = $bb->jenis_barang_bukti; // Default (Input Manual / String Database)
+
+            if ($bb->kategori_barang_bukti === 'Narkotika' && $bb->masterNarkotika) {
+                // REVISI: Cukup ambil nama_narkotika
+                $namaBB = $bb->masterNarkotika->nama_narkotika;
+            }
+
+            $arrJenis[] = $namaBB . $suffix;
             $arrBerat[] = ($bb->jumlah_barang_bukti * 1) . ' ' . $bb->satuan_barang_bukti . $suffix; 
 
             // B. TOTAL: Mencegah Double Count
             if (!in_array($bb->id, $this->processedBBIds)) {
-                $jenisKey = strtoupper(trim($bb->jenis_barang_bukti));
+                $jenisKey = strtoupper(trim($namaBB));
+                
                 $satuan = $bb->satuan_barang_bukti;
                 $jumlah = $bb->jumlah_barang_bukti;
 
@@ -221,7 +220,7 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                 // Layouting
                 $sheet->getColumnDimension('B')->setWidth(35);
                 $sheet->getColumnDimension('F')->setWidth(40);
-                $sheet->getColumnDimension('G')->setWidth(25);
+                $sheet->getColumnDimension('G')->setWidth(35);
                 $sheet->getColumnDimension('H')->setWidth(20);
                 $sheet->getColumnDimension('I')->setWidth(20);
                 
@@ -266,10 +265,7 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                             $sheet->mergeCells("F{$mergeStart}:F{$endRow}"); 
                         }
 
-                        // SMART MERGE BB (Kolom G & H)
-                        // Karena kita sudah mengatur Suffix di atas:
-                        // - Jika Inventory Sama -> Teks Sama -> Fungsi ini akan otomatis Merge Vertikal.
-                        // - Jika Inventory Beda -> Teks Beda (krn ada item lain / suffix) -> Tidak Merge.
+                        // SMART MERGE BB
                         $this->smartMergeInner($sheet, 'G', $mergeStart, $endRow);
                         $this->smartMergeInner($sheet, 'H', $mergeStart, $endRow);
 
@@ -291,6 +287,8 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
 
                 // Total BB Display
                 $totalString = [];
+                ksort($this->totals); 
+                
                 foreach ($this->totals as $jenis => $totalGram) {
                     $display = '';
                     if ($totalGram >= 1000000) {
@@ -312,9 +310,6 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
         ];
     }
 
-    /**
-     * Merge Vertikal Selektif: Hanya merge jika teks sama persis.
-     */
     private function smartMergeInner($sheet, $col, $start, $end)
     {
         $mStart = $start;

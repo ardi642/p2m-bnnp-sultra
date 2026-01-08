@@ -14,7 +14,8 @@ class DatabaseSeeder extends Seeder
         // 1. Buat Data Master
         $this->call([
             SatuanKerjaSeeder::class,
-            KabupatenKotaSeeder::class
+            KabupatenKotaSeeder::class,
+            BerantasNarkotikaSeeder::class
         ]);
         
         // 2. Buat Data Pegawai

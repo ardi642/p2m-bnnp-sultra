@@ -197,11 +197,15 @@
                                             @endif
                                         </td>
 
-                                        {{-- List Barang Bukti --}}
+                                        {{-- List Barang Bukti (OTOMATIS SUPPORT FITUR BARU) --}}
                                         <td class="text-start small">
                                             @if($data->barangBukti->count() > 0)
                                                 <ul class="mb-0 ps-3">
                                                     @foreach($data->barangBukti->take(2) as $bb)
+                                                        {{-- 
+                                                            $bb->jenis_barang_bukti SUDAH BERISI STRING YANG BENAR 
+                                                            KARENA LOGIKA DI CONTROLLER STORE/UPDATE 
+                                                        --}}
                                                         <li>{{ $bb->jenis_barang_bukti }} ({{ $bb->jumlah_barang_bukti }} {{ $bb->satuan_barang_bukti }})</li>
                                                     @endforeach
                                                     @if($data->barangBukti->count() > 2)

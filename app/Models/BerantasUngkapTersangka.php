@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Models;
-
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
@@ -18,19 +16,8 @@ class BerantasUngkapTersangka extends Model
             }
         });
     }
-
-    // Relasi ke Parent (Kasus)
-    public function kasus() {
-        return $this->belongsTo(BerantasUngkapKasus::class, 'berantas_ungkap_kasus_id');
-    }
-
-    // Relasi Many-to-Many ke BB
+    public function kasus() { return $this->belongsTo(BerantasUngkapKasus::class, 'berantas_ungkap_kasus_id'); }
     public function barangBukti() {
-        return $this->belongsToMany(
-            BerantasUngkapBarangBukti::class, 
-            'berantas_barang_bukti_tersangka', // Nama Tabel Pivot
-            'tersangka_id', 
-            'barang_bukti_id'
-        );
+        return $this->belongsToMany(BerantasUngkapBarangBukti::class, 'berantas_barang_bukti_tersangka', 'tersangka_id', 'barang_bukti_id');
     }
 }

@@ -106,7 +106,7 @@
 @endsection
 
 @push('styles')
-    @vite(['resources/css/tom-select.css', 'resources/css/filepond.css', 'resources/js/filepond.js'])
+    @vite([ 'resources/css/filepond.css', 'resources/js/filepond.js'])
     <style>
         .ts-control { border: 1px solid #dee2e6; padding: 0.5rem 0.75rem; border-radius: 0.375rem; box-shadow: none; }
         .ts-control.focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }

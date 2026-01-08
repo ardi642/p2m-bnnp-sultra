@@ -270,7 +270,7 @@
 @endsection
 
 @push('styles')
-    @vite(['resources/css/tom-select.css', 'resources/css/filepond.css', 'resources/js/filepond.js'])
+    @vite([ 'resources/css/filepond.css', 'resources/js/filepond.js'])
     <style> 
         .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; } 
         .border-dashed { border-style: dashed !important; border-width: 2px !important; } 

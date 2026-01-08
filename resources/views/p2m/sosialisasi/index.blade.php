@@ -367,7 +367,7 @@
 @endsection
 
 @push('styles')
-@vite('resources/css/tom-select.css')
+
 <style>
     /* FIX: Dropdown TomSelect di atas Sticky Header */
     .ts-dropdown, .ts-dropdown.single { z-index: 2000 !important; }

@@ -346,7 +346,7 @@
 @endsection
 
 @push('styles')
-@vite('resources/css/tom-select.css')
+
 <style>
     /* FIX Z-INDEX TOMSELECT */
     .ts-dropdown, .ts-dropdown.single { z-index: 2000 !important; }

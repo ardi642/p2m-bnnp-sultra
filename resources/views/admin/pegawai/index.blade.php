@@ -219,7 +219,7 @@
 @endsection
 
 @push('styles')
-@vite('resources/css/tom-select.css') 
+ 
 <style>
     /* CSS Tabel Scroll & Sticky */
     .custom-table-scroll { max-height: 65vh; overflow-y: auto; position: relative; }

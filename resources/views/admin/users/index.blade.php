@@ -152,7 +152,7 @@
 @endsection
 
 @push('styles') 
-@vite('resources/css/tom-select.css') 
+ 
 <style>
     /* CSS KHUSUS UNTUK TABEL SCROLL & STICKY */
     .custom-table-scroll {

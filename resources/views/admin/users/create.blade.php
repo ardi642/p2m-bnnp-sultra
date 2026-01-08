@@ -68,7 +68,7 @@
 </main>
 @endsection
 
-@push('styles') @vite('resources/css/tom-select.css') @endpush
+@push('styles')  @endpush
 @push('scripts')
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {

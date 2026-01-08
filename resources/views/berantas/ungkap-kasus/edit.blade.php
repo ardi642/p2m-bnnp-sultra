@@ -15,6 +15,20 @@
             </a>
         </div>
 
+        {{-- ALERT ERROR KHUSUS ORPHAN SUSPECT --}}
+        @error('tersangka_orphan')
+            <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-exclamation-octagon-fill fs-4 me-3"></i>
+                    <div>
+                        <strong>Data Tidak Konsisten!</strong><br>
+                        {{ $message }}
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @enderror
+
         <div class="row justify-content-center mt-4">
             <div class="col-12 col-lg-12">
                 <div class="card border-0 shadow-sm">
@@ -76,13 +90,15 @@
                                     <tbody class="border-top-0">
                                         <template x-for="(t, index) in tersangkaList" :key="t.temp_id">
                                             <tr>
-                                                {{-- Hidden Inputs --}}
                                                 <input type="hidden" :name="`tersangka[${index}][temp_id]`" :value="t.temp_id">
                                                 <input type="hidden" :name="`tersangka[${index}][id]`" :value="t.id">
                                                 
-                                                {{-- FOTO --}}
+                                                {{-- FOTO (Fix: document.getElementById) --}}
                                                 <td class="text-center bg-white">
-                                                    <div class="position-relative d-inline-block" @click="$refs['file_'+t.temp_id].click()" style="cursor: pointer;" title="Klik untuk ganti foto">
+                                                    <div class="position-relative d-inline-block" 
+                                                         @click="document.getElementById('file_'+t.temp_id).click()" 
+                                                         style="cursor: pointer;" 
+                                                         title="Klik untuk ganti foto">
                                                         <img :src="t.preview_url || '{{ asset('assets/images/user-placeholder.png') }}'" 
                                                              class="rounded-circle border object-fit-cover shadow-sm" 
                                                              width="60" height="60">
@@ -90,8 +106,12 @@
                                                             <i class="bi bi-camera-fill text-secondary" style="font-size: 10px;"></i>
                                                         </div>
                                                     </div>
-                                                    <input type="file" :name="`tersangka[${index}][foto]`" class="d-none" 
-                                                           :x-ref="'file_'+t.temp_id" accept="image/*" @change="handleFoto($event, index)">
+                                                    <input type="file" 
+                                                           :name="`tersangka[${index}][foto]`" 
+                                                           class="d-none" 
+                                                           :id="'file_'+t.temp_id" 
+                                                           accept="image/*" 
+                                                           @change="handleFoto($event, index)">
                                                     
                                                     <div class="text-danger small mt-1" 
                                                          x-show="hasError('tersangka', index, 'foto')" 
@@ -102,7 +122,7 @@
                                                 <td class="bg-white">
                                                     <div class="row g-2">
                                                         <div class="col-md-6">
-                                                            <label class="small text-muted">Nama Lengkap</label>
+                                                            <label class="small text-muted">Nama Lengkap <span class="text-danger">*</span></label>
                                                             <input type="text" :name="`tersangka[${index}][nama]`" x-model="t.nama" 
                                                                    @input.debounce.300ms="updateAllTomSelects()" 
                                                                    class="form-control form-control-sm" 
@@ -111,7 +131,7 @@
                                                             <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'nama')"></div>
                                                         </div>
                                                         <div class="col-md-6">
-                                                            <label class="small text-muted">Jenis Kelamin</label>
+                                                            <label class="small text-muted">Jenis Kelamin <span class="text-danger">*</span></label>
                                                             <select :name="`tersangka[${index}][jk]`" x-model="t.jk" 
                                                                     class="form-select form-select-sm"
                                                                     :class="{'is-invalid': hasError('tersangka', index, 'jk')}">
@@ -121,7 +141,7 @@
                                                             <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'jk')"></div>
                                                         </div>
                                                         <div class="col-md-6">
-                                                            <label class="small text-muted">Pekerjaan</label>
+                                                            <label class="small text-muted">Pekerjaan <span class="text-danger">*</span></label>
                                                             <input type="text" :name="`tersangka[${index}][pekerjaan]`" x-model="t.pekerjaan" 
                                                                    class="form-control form-control-sm"
                                                                    :class="{'is-invalid': hasError('tersangka', index, 'pekerjaan')}"
@@ -129,7 +149,7 @@
                                                             <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'pekerjaan')"></div>
                                                         </div>
                                                         <div class="col-md-6">
-                                                            <label class="small text-muted">Status / Tahap</label>
+                                                            <label class="small text-muted">Status / Tahap <span class="text-danger">*</span></label>
                                                             <input type="text" :name="`tersangka[${index}][tahap]`" x-model="t.tahap" 
                                                                    class="form-control form-control-sm" 
                                                                    :class="{'is-invalid': hasError('tersangka', index, 'tahap')}"
@@ -177,6 +197,7 @@
                                                 <input type="hidden" :name="`barang_bukti[${i}][id]`" :value="bb.id">
                                                 
                                                 <td class="bg-white">
+                                                    {{-- TOM SELECT WRAPPER --}}
                                                     <div wire:ignore 
                                                          :class="{'border border-danger rounded': hasError('barang_bukti', i, 'pemilik_id')}">
                                                         <select :name="`barang_bukti[${i}][pemilik_id][]`" 
@@ -202,19 +223,25 @@
                                                     <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'jenis')"></div>
                                                 </td>
                                                 <td class="bg-white">
-                                                    <input type="number" step="0.01" :name="`barang_bukti[${i}][jumlah]`" x-model="bb.jumlah" 
+                                                    <input type="number" step="0.0001" :name="`barang_bukti[${i}][jumlah]`" x-model="bb.jumlah" 
                                                            class="form-control form-control-sm" 
                                                            :class="{'is-invalid': hasError('barang_bukti', i, 'jumlah')}"
                                                            placeholder="0">
                                                     <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'jumlah')"></div>
                                                 </td>
+                                                
+                                                {{-- SATUAN SELECT (Fix: Enum Select) --}}
                                                 <td class="bg-white">
-                                                    <input type="text" :name="`barang_bukti[${i}][satuan]`" x-model="bb.satuan" 
-                                                           class="form-control form-control-sm" 
-                                                           :class="{'is-invalid': hasError('barang_bukti', i, 'satuan')}"
-                                                           placeholder="Gram/Pcs">
+                                                    <select :name="`barang_bukti[${i}][satuan]`" x-model="bb.satuan" 
+                                                            class="form-select form-select-sm" 
+                                                            :class="{'is-invalid': hasError('barang_bukti', i, 'satuan')}">
+                                                        <option value="Gram">Gram</option>
+                                                        <option value="Kg">Kg</option>
+                                                        <option value="Ton">Ton</option>
+                                                    </select>
                                                     <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'satuan')"></div>
                                                 </td>
+
                                                 <td class="text-center bg-white">
                                                     <button type="button" class="btn btn-outline-danger btn-sm" @click="removeBB(i)">
                                                         <i class="bi bi-trash"></i>
@@ -332,7 +359,10 @@
             border-color: #86b7fe;
             box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
         }
-        .ts-dropdown { z-index: 9999 !important; }
+        /* Fix dropdown overflow */
+        .ts-dropdown {
+            z-index: 9999 !important;
+        }
         .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; }
         .border-dashed { border-style: dashed !important; border-width: 2px !important; }
         .border-danger-subtle-thick { border-color: #dc3545 !important; border-width: 2px !important; }
@@ -379,11 +409,8 @@
 
             // INITIALIZATION (EDIT MODE)
             init() {
-                // 1. Data dari Database
                 const dbTersangka = {!! json_encode($kasus->tersangka) !!};
                 const dbBB = {!! json_encode($kasus->barangBukti) !!};
-                
-                // 2. Data Old Input (Jika Validasi Gagal)
                 const oldTersangka = @json(old('tersangka', []));
                 const oldBB = @json(old('barang_bukti', []));
 
@@ -416,7 +443,7 @@
                     this.addTersangka();
                 }
 
-                // B. SETUP BARANG BUKTI
+                // B. SETUP BB
                 if (oldBB.length > 0) {
                     oldBB.forEach(b => {
                         this.bbList.push({
@@ -424,8 +451,8 @@
                             id: b.id || null,
                             jenis: b.jenis || '',
                             jumlah: b.jumlah || '',
-                            satuan: b.satuan || '',
-                            initial_pemilik: b.pemilik_id || []
+                            satuan: b.satuan || 'Gram', 
+                            initial_pemilik: b.pemilik_id || [] 
                         });
                     });
                 } else if (dbBB.length > 0) {
@@ -522,7 +549,9 @@
                 this.bbList.push({ 
                     temp_id: 'bb_' + Date.now() + Math.random(), 
                     id: null,
-                    jenis: '', jumlah: '', satuan: 'Gram', initial_pemilik: [] 
+                    jenis: '', jumlah: '', 
+                    satuan: 'Gram', 
+                    initial_pemilik: [] 
                 });
             },
 
@@ -548,16 +577,21 @@
                     create: false, 
                     maxOptions: null,
                     placeholder: "Pilih pemilik...",
+                    // FIX: Dropdown di Body
                     dropdownParent: 'body'
                 });
                 
                 this.tomSelectInstances[bbData.temp_id] = ts;
                 this.refreshOptionsForInstance(ts);
 
-                // Set Value (Pre-fill)
+                // Set Value (Old Input / DB)
                 if (bbData.initial_pemilik && bbData.initial_pemilik.length > 0) {
                     ts.setValue(bbData.initial_pemilik);
+                    bbData.pemilik_id = bbData.initial_pemilik; // SYNC
                 }
+
+                // FIX: Sync Event Listener
+                ts.on('change', (val) => { bbData.pemilik_id = val; });
             },
 
             updateAllTomSelects() {
@@ -597,6 +631,22 @@
                 if (this.tersangkaList.length === 0 || this.bbList.length === 0) {
                      Swal.fire('Data Belum Lengkap', 'Mohon isi minimal 1 Tersangka dan 1 Barang Bukti.', 'warning');
                      return;
+                }
+
+                // ORPHAN CHECK
+                const selectedOwners = this.bbList.flatMap(bb => bb.pemilik_id || []);
+                const orphanSuspects = this.tersangkaList.filter(t => !selectedOwners.includes(t.temp_id));
+
+                if (orphanSuspects.length > 0) {
+                    const names = orphanSuspects.map(t => t.nama || 'Tanpa Nama').join(', ');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Validasi Gagal',
+                        html: `Tersangka berikut belum dikaitkan dengan Barang Bukti:<br><b>${names}</b><br><br>Mohon pilih tersangka tersebut di kolom "Pemilik" pada tabel Barang Bukti.`,
+                        confirmButtonText: 'Perbaiki',
+                        confirmButtonColor: '#d33'
+                    });
+                    return;
                 }
 
                 e.target.submit();

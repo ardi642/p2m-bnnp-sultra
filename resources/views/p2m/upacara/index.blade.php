@@ -355,7 +355,7 @@
 @endsection
 
 @push('styles')
-@vite('resources/css/tom-select.css')
+
 <style>
     .ts-control { border: none !important; box-shadow: none !important; padding-top: 0.5rem; padding-bottom: 0.5rem; background-color: transparent !important; min-height: 40px; }
     .ts-wrapper.focus .ts-control { box-shadow: none !important; }

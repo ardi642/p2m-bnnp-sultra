@@ -187,7 +187,7 @@
 @endsection
 
 @push('styles')
-    @vite(['resources/css/tom-select.css', 'resources/css/filepond.css', 'resources/js/filepond.js'])
+    @vite([ 'resources/css/filepond.css', 'resources/js/filepond.js'])
     <style>
         .ts-control {
             border: 1px solid #dee2e6;

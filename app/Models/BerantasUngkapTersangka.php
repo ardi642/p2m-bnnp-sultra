@@ -19,6 +19,11 @@ class BerantasUngkapTersangka extends Model
         });
     }
 
+    // Relasi ke Parent (Kasus)
+    public function kasus() {
+        return $this->belongsTo(BerantasUngkapKasus::class, 'berantas_ungkap_kasus_id');
+    }
+
     // Relasi Many-to-Many ke BB
     public function barangBukti() {
         return $this->belongsToMany(

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\P2m;
 
+use App\Exports\LingkunganBersinarExport;
 use App\Http\Controllers\Controller;
 use App\Models\P2mLingkungan;
 use App\Models\SatuanKerja;
@@ -122,7 +123,7 @@ class LingkunganController extends Controller
         // Bedanya: Kita tidak pakai paginate(), tapi langsung lempar ke Class Export
         $query = $this->getFilteredQuery($request);
 
-        return Excel::download(new LingkunganExport($query), 'Laporan_P2M_Lingkungan.xlsx');
+        return Excel::download(new LingkunganBersinarExport($query), 'Laporan_P2M_Lingkungan.xlsx');
     }
 
     public function create(): View {

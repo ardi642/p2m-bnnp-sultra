@@ -20,33 +20,44 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
 {
     protected $kasusQuery;
     
-    // State Variables
     private $caseCounter = 0;
     private $lastLkn = null;
     private $totals = []; 
     private $processedBBIds = []; 
-
-    // Map Suffix (1), (2)
     private $bbSuffixes = [];
     private $cachedData = null;
 
+    // Variabel untuk mendeteksi keberadaan Narkotika dalam data
+    private $hasNarkotikaInData = false;
+
     public function __construct($kasusQuery)
     {
+        // Query ini berasal dari model BerantasUngkapKasus yang sudah difilter di Controller
         $this->kasusQuery = $kasusQuery;
     }
 
     public function collection()
     {
-        $kasusIds = (clone $this->kasusQuery)->pluck('berantas_ungkap_kasus.id')->toArray();
+        // 1. Ambil data Kasus berdasarkan query yang sudah difilter di Controller
+        $kasusData = $this->kasusQuery->get();
 
-        // Ambil data dengan Sorting BB yang konsisten
+        // 2. Ambil ID Kasus yang sudah difilter
+        $kasusIds = $kasusData->pluck('id')->toArray();
+
+        // 3. Ambil aturan filter (Eager Loads) dari query asal
+        // Ini akan mengambil closure filter barangBukti yang Anda tulis di getFilteredQuery()
+        $eagerLoads = $this->kasusQuery->getEagerLoads();
+        $bbConstraint = $eagerLoads['barangBukti'] ?? function($q) { 
+            $q->orderBy('kategori', 'asc')->orderBy('kuantitas', 'desc'); 
+        };
+
+        // 4. Jalankan query Tersangka dengan filter Barang Bukti yang sinkron
         $data = BerantasUngkapTersangka::query()
-            ->with(['kasus.satuanKerja', 'barangBukti' => function($q) {
-                $q->with('masterNarkotika') // Load relasi master
-                  ->orderBy('kategori_barang_bukti', 'asc')
-                  ->orderBy('jenis_barang_bukti', 'asc')
-                  ->orderBy('jumlah_barang_bukti', 'desc');
-            }, 'barangBukti.tersangka']) 
+            ->with([
+                'kasus.satuanKerja', 
+                'barangBukti' => $bbConstraint, // Menggunakan filter yang sama dengan tampilan web
+                'barangBukti.tersangka'
+            ]) 
             ->join('berantas_ungkap_kasus', 'berantas_ungkap_tersangka.berantas_ungkap_kasus_id', '=', 'berantas_ungkap_kasus.id')
             ->whereIn('berantas_ungkap_kasus.id', $kasusIds)
             ->select('berantas_ungkap_tersangka.*')
@@ -56,32 +67,30 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
             ->get();
 
         $this->cachedData = $data;
-        
-        // JALANKAN LOGIKA CERDAS SEBELUM EXPORT
-        $this->calculateSmartSuffixes($data);
 
+        // Cek apakah ada minimal 1 Narkotika untuk logika label "(non-narkotika)"
+        foreach ($data as $t) {
+            if ($t->barangBukti->contains('kategori', 'Narkotika')) {
+                $this->hasNarkotikaInData = true;
+                break;
+            }
+        }
+
+        $this->calculateSmartSuffixes($data);
         return $data;
     }
 
-    /**
-     * LOGIKA "INVENTORY CHECK":
-     * Menentukan kapan (1), (2) muncul.
-     */
     private function calculateSmartSuffixes($data)
     {
-        // 1. Grouping per LKN
         $groupedByLkn = $data->groupBy(fn($item) => $item->kasus->nomor_lkn);
 
         foreach ($groupedByLkn as $lkn => $tersangkas) {
-            
-            // A. Buat "Tanda Tangan Inventaris" per Tersangka
             $suspectInventorySignature = [];
             foreach ($tersangkas as $t) {
                 $bbIds = $t->barangBukti->pluck('id')->sort()->implode('-');
                 $suspectInventorySignature[$t->id] = $bbIds;
             }
 
-            // B. Cek Setiap Barang Bukti
             $groupCounter = 1;
             $processedForSuffix = []; 
 
@@ -90,28 +99,24 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                     if (in_array($bb->id, $processedForSuffix)) continue;
                     
                     $owners = $bb->tersangka;
-                    
                     if ($owners->count() > 1) {
-                        $firstSignature = $suspectInventorySignature[$owners->first()->id];
+                        $firstSignature = $suspectInventorySignature[$owners->first()->id] ?? '';
                         $allIdentical = true;
-
                         foreach ($owners as $owner) {
                             if (($suspectInventorySignature[$owner->id] ?? '') !== $firstSignature) {
                                 $allIdentical = false;
                                 break;
                             }
                         }
-
                         if ($allIdentical) {
                             $this->bbSuffixes[$bb->id] = ""; 
                         } else {
-                            $this->bbSuffixes[$bb->id] = " ($groupCounter)";
+                            $this->bbSuffixes[$bb->id] = " [b$groupCounter]";
                             $groupCounter++;
                         }
                     } else {
                         $this->bbSuffixes[$bb->id] = "";
                     }
-
                     $processedForSuffix[] = $bb->id;
                 }
             }
@@ -122,13 +127,12 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
     {
         return [
             'NO', 'NOMOR LKN/ TGL', 'NAMA TERSANGKA', 'JENIS KELAMIN', 'PEKERJAAN', 
-            'ALAMAT TKP', 'JENIS BARANG BUKTI', 'JUMLAH BB (BRUTO)', 'FOTO TERSANGKA', 'TAHAP'
+            'ALAMAT TKP', 'JENIS BARANG BUKTI', 'JUMLAH BB (GRAM)', 'FOTO TERSANGKA', 'TAHAP'
         ];
     }
 
     public function map($row): array
     {
-        // Penomoran LKN
         $currentLkn = $row->kasus->nomor_lkn;
         $no = '';
         if ($currentLkn !== $this->lastLkn) {
@@ -137,43 +141,39 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
             $this->lastLkn = $currentLkn;
         }
 
-        // Format LKN
         $tgl = $row->kasus->tanggal_kejadian ? $row->kasus->tanggal_kejadian->format('d M Y') : '-';
         $lknStr = $row->kasus->nomor_lkn . "\n" . ($row->kasus->satuanKerja->satuan_kerja ?? '') . ", Tgl " . $tgl;
 
-        // Mapping BB
         $arrJenis = [];
         $arrBerat = []; 
 
         foreach ($row->barangBukti as $bb) {
-            // A. VISUAL: Ambil Suffix Pintar
             $suffix = $this->bbSuffixes[$bb->id] ?? "";
+            $namaBB = $bb->nama_barang; 
 
-            // UPDATE LOGIKA NAMA: HANYA NAMA SAJA (Tanpa Golongan)
-            $namaBB = $bb->jenis_barang_bukti; // Default (Input Manual / String Database)
+            if ($this->hasNarkotikaInData && $bb->kategori !== 'Narkotika') {
+                $namaBB .= " (non-narkotika)";
+            }
 
-            if ($bb->kategori_barang_bukti === 'Narkotika' && $bb->masterNarkotika) {
-                // REVISI: Cukup ambil nama_narkotika
-                $namaBB = $bb->masterNarkotika->nama_narkotika;
+            $satuan = $bb->satuan;
+            $kuantitas = (float)$bb->kuantitas;
+
+            $gramValue = $kuantitas;
+            if ($satuan === 'Kg') {
+                $gramValue = $kuantitas * 1000;
+            } elseif ($satuan === 'Ton') {
+                $gramValue = $kuantitas * 1000000;
             }
 
             $arrJenis[] = $namaBB . $suffix;
-            $arrBerat[] = ($bb->jumlah_barang_bukti * 1) . ' ' . $bb->satuan_barang_bukti . $suffix; 
+            $arrBerat[] = $gramValue . ' Gram' . $suffix; 
 
-            // B. TOTAL: Mencegah Double Count
-            if (!in_array($bb->id, $this->processedBBIds)) {
-                $jenisKey = strtoupper(trim($namaBB));
-                
-                $satuan = $bb->satuan_barang_bukti;
-                $jumlah = $bb->jumlah_barang_bukti;
-
-                if (!isset($this->totals[$jenisKey])) $this->totals[$jenisKey] = 0;
-
-                $gram = $jumlah;
-                if ($satuan === 'Kg') $gram = $jumlah * 1000;
-                if ($satuan === 'Ton') $gram = $jumlah * 1000000;
-                
-                $this->totals[$jenisKey] += $gram;
+            if ($bb->kategori === 'Narkotika' && !in_array($bb->id, $this->processedBBIds)) {
+                $jenisKey = strtoupper(trim($bb->nama_barang));
+                if (!isset($this->totals[$jenisKey])) {
+                    $this->totals[$jenisKey] = 0;
+                }
+                $this->totals[$jenisKey] += $gramValue;
                 $this->processedBBIds[] = $bb->id;
             }
         }
@@ -183,16 +183,9 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
         }
 
         return [
-            $no, 
-            $lknStr, 
-            $row->nama_tersangka, 
-            $row->jenis_kelamin, 
-            $row->pekerjaan ?? '-', 
-            $row->kasus->alamat_tkp, 
-            implode("\n", $arrJenis), 
-            implode("\n", $arrBerat), 
-            '', 
-            $row->tahap 
+            $no, $lknStr, $row->nama_tersangka, $row->jenis_kelamin, 
+            $row->pekerjaan ?? '-', $row->kasus->alamat_tkp, 
+            implode("\n", $arrJenis), implode("\n", $arrBerat), '', $row->tahap 
         ];
     }
 
@@ -217,11 +210,10 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                 $rowCount = $data->count();
                 $startRow = 2;
 
-                // Layouting
                 $sheet->getColumnDimension('B')->setWidth(35);
                 $sheet->getColumnDimension('F')->setWidth(40);
                 $sheet->getColumnDimension('G')->setWidth(35);
-                $sheet->getColumnDimension('H')->setWidth(20);
+                $sheet->getColumnDimension('H')->setWidth(25);
                 $sheet->getColumnDimension('I')->setWidth(20);
                 
                 $sheet->getStyle("A1:J" . ($rowCount + 10))->getAlignment()->setWrapText(true);
@@ -232,79 +224,49 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                 $sheet->getStyle("H2:H" . ($rowCount + 10))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle("J2:J" . ($rowCount + 10))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-                // Merge Loop
                 $mergeStart = $startRow;
                 for ($i = 0; $i < $rowCount; $i++) {
                     $currentRow = $startRow + $i;
-                    
-                    // Foto
                     $fotoPath = $data[$i]->foto_tersangka;
+                    
                     if ($fotoPath && file_exists(storage_path('app/public/' . $fotoPath))) {
                         $drawing = new Drawing();
                         $drawing->setPath(storage_path('app/public/' . $fotoPath));
                         $drawing->setHeight(80);
                         $drawing->setCoordinates('I' . $currentRow);
-                        $drawing->setOffsetX(10); $drawing->setOffsetY(10);
-                        $drawing->setWorksheet($sheet);
+                        $drawing->setOffsetX(10)->setOffsetY(10)->setWorksheet($sheet);
                         $sheet->getRowDimension($currentRow)->setRowHeight(90); 
                     } else {
                         $sheet->getRowDimension($currentRow)->setRowHeight(40);
                     }
 
-                    // Merge LKN Group
-                    $isLastRow = ($i === $rowCount - 1);
-                    $isNextDifferentLKN = !$isLastRow && ($data[$i]->kasus->nomor_lkn !== $data[$i+1]->kasus->nomor_lkn);
-
-                    if ($isLastRow || $isNextDifferentLKN) {
+                    if (($i === $rowCount - 1) || ($data[$i]->kasus->nomor_lkn !== $data[$i+1]->kasus->nomor_lkn)) {
                         $endRow = $currentRow;
-                        
-                        // Merge Kolom Umum
                         if ($mergeStart < $endRow) {
                             $sheet->mergeCells("A{$mergeStart}:A{$endRow}"); 
                             $sheet->mergeCells("B{$mergeStart}:B{$endRow}"); 
                             $sheet->mergeCells("F{$mergeStart}:F{$endRow}"); 
                         }
-
-                        // SMART MERGE BB
                         $this->smartMergeInner($sheet, 'G', $mergeStart, $endRow);
                         $this->smartMergeInner($sheet, 'H', $mergeStart, $endRow);
-
                         $mergeStart = $currentRow + 1;
                     }
                 }
 
-                // Footer Total
                 $footerRow = $startRow + $rowCount;
                 $sheet->setCellValue('A' . $footerRow, 'JUMLAH');
                 $sheet->mergeCells("A{$footerRow}:B{$footerRow}");
-                $sheet->getStyle("A{$footerRow}")->getFont()->setBold(true);
-                $sheet->getStyle("A{$footerRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle("A{$footerRow}:J{$footerRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E0E0E0');
-
                 $sheet->setCellValue('C' . $footerRow, $rowCount . ' ORANG');
-                $sheet->getStyle('C' . $footerRow)->getFont()->setBold(true);
-                $sheet->getStyle('C' . $footerRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-                // Total BB Display
                 $totalString = [];
                 ksort($this->totals); 
-                
                 foreach ($this->totals as $jenis => $totalGram) {
-                    $display = '';
-                    if ($totalGram >= 1000000) {
-                        $display = round($totalGram / 1000000, 4) . " Ton";
-                    } elseif ($totalGram >= 1000) {
-                        $display = round($totalGram / 1000, 4) . " Kg";
-                    } else {
-                        $display = round($totalGram, 4) . " Gram";
-                    }
-                    $totalString[] = "$jenis : $display";
+                    $totalString[] = "$jenis : " . $totalGram . " Gram";
                 }
 
                 $sheet->setCellValue('H' . $footerRow, implode("\n", $totalString));
-                $sheet->getStyle('H' . $footerRow)->getFont()->setBold(true);
-                $sheet->getStyle('H' . $footerRow)->getAlignment()->setWrapText(true);
-                
+                $sheet->getStyle("A{$footerRow}:J{$footerRow}")->getFont()->setBold(true);
+                $sheet->getStyle("A{$footerRow}:J{$footerRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E0E0E0');
                 $sheet->getStyle("A1:J{$footerRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
             },
         ];
@@ -314,18 +276,11 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
     {
         $mStart = $start;
         for ($r = $start; $r < $end; $r++) {
-            $valCurrent = $sheet->getCell("$col$r")->getValue();
-            $valNext = $sheet->getCell("$col" . ($r + 1))->getValue();
-
-            if ($valCurrent !== $valNext) {
-                if ($mStart < $r) {
-                    $sheet->mergeCells("$col$mStart:$col$r");
-                }
+            if ($sheet->getCell("$col$r")->getValue() !== $sheet->getCell("$col" . ($r + 1))->getValue()) {
+                if ($mStart < $r) $sheet->mergeCells("$col$mStart:$col$r");
                 $mStart = $r + 1;
             }
         }
-        if ($mStart < $end) {
-            $sheet->mergeCells("$col$mStart:$col$end");
-        }
+        if ($mStart < $end) $sheet->mergeCells("$col$mStart:$col$end");
     }
 }

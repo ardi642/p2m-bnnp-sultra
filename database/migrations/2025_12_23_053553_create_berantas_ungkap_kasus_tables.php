@@ -6,12 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        // 1. MASTER NARKOTIKA (Dibuat paling awal karena akan direlasikan)
+        // MASTER NARKOTIKA
         Schema::create('berantas_narkotika', function (Blueprint $table) {
             $table->id();
             $table->string('nama_narkotika');
@@ -19,21 +16,19 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // 2. TABEL KASUS (PARENT)
+        // TABEL KASUS (PARENT)
         Schema::create('berantas_ungkap_kasus', function (Blueprint $table) {
             $table->id();
-            // Asumsi tabel 'satuan_kerja' sudah ada sebelumnya (karena tidak diminta di prompt ini)
             $table->unsignedBigInteger('satuan_kerja_id');
             $table->string('nomor_lkn')->unique();
             $table->date('tanggal_kejadian');
             $table->text('alamat_tkp');
             $table->timestamps();
             
-            // FK ke Satuan Kerja
             $table->foreign('satuan_kerja_id')->references('id')->on('satuan_kerja')->onDelete('cascade');
         });
 
-        // 3. TABEL TERSANGKA
+        // TABEL TERSANGKA
         Schema::create('berantas_ungkap_tersangka', function (Blueprint $table) {
             $table->id();
             $table->foreignId('berantas_ungkap_kasus_id')
@@ -46,42 +41,42 @@ return new class extends Migration
             $table->string('tahap'); 
             $table->string('foto_tersangka')->nullable();
             $table->integer('urutan')->default(0);
-            
             $table->timestamps();
         });
 
-        // 4. TABEL BARANG BUKTI (Dengan Kolom Baru Kategori & Relasi Master)
+        // TABEL BARANG BUKTI (FINAL)
         Schema::create('berantas_ungkap_barang_bukti', function (Blueprint $table) {
             $table->id();
             $table->foreignId('berantas_ungkap_kasus_id')
                   ->constrained('berantas_ungkap_kasus')
                   ->cascadeOnDelete();
             
-            // --- KOLOM BARU ---
-            // Pembeda Narkotika / Non-Narkotika
-            $table->enum('kategori_barang_bukti', ['Narkotika', 'Non-Narkotika'])->default('Narkotika');
+            $table->enum('kategori', ['Narkotika', 'Non-Narkotika'])->default('Narkotika');
             
-            // Relasi ke Master (Nullable, karena Non-Narkotika tidak punya ID ini)
-            // Jika master narkotika dihapus, set null (jangan hapus barang buktinya)
+            // A. Field Narkotika (Relasi)
             $table->foreignId('narkotika_id')
                   ->nullable()
                   ->constrained('berantas_narkotika')
                   ->nullOnDelete(); 
-            // ------------------
 
-            // Kolom String Manual (Untuk Non-Narkotika ATAU Backup Nama Narkotika)
-            $table->string('jenis_barang_bukti')->nullable(); 
+            // B. Field Non-Narkotika (Manual)
+            $table->string('nama_barang_non_narkotika')->nullable(); 
             
-            // Decimal presisi tinggi (16 digit total, 4 di belakang koma)
-            $table->decimal('jumlah_barang_bukti', 16, 4); 
+            // Kuantitas (Decimal Presisi)
+            $table->decimal('kuantitas', 16, 4); 
             
-            $table->enum('satuan_barang_bukti', ['Gram', 'Kg', 'Ton'])->default('Gram');
+            // --- SATUAN ---
+            // 1. Satuan Narkotika (ENUM: Gram, Kg, Ton)
+            $table->enum('satuan_narkotika', ['Gram', 'Kg', 'Ton'])->nullable();
+
+            // 2. Satuan Non-Narkotika (STRING: Bebas)
+            $table->string('satuan_non_narkotika')->nullable();
             
             $table->integer('urutan')->default(0);
             $table->timestamps();
         });
 
-        // 5. TABEL PIVOT (MANY-TO-MANY: Barang Bukti <-> Tersangka)
+        // TABEL PIVOT
         Schema::create('berantas_barang_bukti_tersangka', function (Blueprint $table) {
             $table->id();
             $table->foreignId('barang_bukti_id')
@@ -93,16 +88,12 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        // Drop urutan dibalik agar tidak error constraint FK
         Schema::dropIfExists('berantas_barang_bukti_tersangka');
-        Schema::dropIfExists('berantas_ungkap_barang_bukti'); // Child
-        Schema::dropIfExists('berantas_ungkap_tersangka');    // Child
-        Schema::dropIfExists('berantas_ungkap_kasus');        // Parent
-        Schema::dropIfExists('berantas_narkotika');           // Master
+        Schema::dropIfExists('berantas_ungkap_barang_bukti');
+        Schema::dropIfExists('berantas_ungkap_tersangka');
+        Schema::dropIfExists('berantas_ungkap_kasus');
+        Schema::dropIfExists('berantas_narkotika');
     }
 };

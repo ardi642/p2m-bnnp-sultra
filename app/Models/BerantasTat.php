@@ -3,25 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Facades\Storage;
 
 class BerantasTat extends Model
 {
     protected $table = 'berantas_tat';
     protected $guarded = ['id'];
-
     protected $casts = [
         'tanggal_pelaksanaan' => 'date',
         'tanggal_penangkapan' => 'date',
         'tanggal_permohonan'  => 'date',
-        'biaya'               => 'decimal:2',
-        'usia'                => 'integer',
     ];
 
-    protected static function boot()
-    {
+    protected static function boot() {
         parent::boot();
         static::deleting(function ($model) {
             foreach ($model->dokumentasi as $doc) {
@@ -33,13 +27,8 @@ class BerantasTat extends Model
         });
     }
 
-    public function satuanKerja(): BelongsTo
-    {
-        return $this->belongsTo(SatuanKerja::class, 'satuan_kerja_id');
-    }
-
-    public function dokumentasi(): MorphMany
-    {
-        return $this->morphMany(DokumentasiKegiatan::class, 'dokumentasiable');
-    }
+    public function tersangka() { return $this->hasMany(BerantasTatTersangka::class, 'berantas_tat_id'); }
+    public function barangBukti() { return $this->hasMany(BerantasTatBarangBukti::class, 'berantas_tat_id'); }
+    public function satuanKerja() { return $this->belongsTo(SatuanKerja::class); }
+    public function dokumentasi() { return $this->morphMany(DokumentasiKegiatan::class, 'dokumentasiable'); }
 }

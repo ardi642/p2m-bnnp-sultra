@@ -208,16 +208,28 @@
                 <div class="card-body p-4">
                     <h5 class="card-title fw-bold mb-4 text-dark border-bottom pb-2">Detail Kasus & Asesmen</h5>
                     <div class="row g-3">
-                        <div class="col-12"><label class="form-label fw-semibold small text-secondary">Pasal Disangkakan</label><textarea name="pasal_disangkakan" class="form-control py-2 auto-resize" rows="2" placeholder="Masukkan pasal...">{{ old('pasal_disangkakan', $tat->pasal_disangkakan) }}</textarea></div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-secondary">Pasal Disangkakan</label>
+                            <textarea name="pasal_disangkakan" class="form-control py-2 auto-resize" x-on:input="autoResize($el)" rows="2" placeholder="Masukkan pasal...">{{ old('pasal_disangkakan', $tat->pasal_disangkakan) }}</textarea>
+                        </div>
                         <div class="col-md-6"><label class="form-label fw-semibold small text-secondary">Instansi Pengirim</label><input type="text" name="instansi_pengirim" value="{{ old('instansi_pengirim', $tat->instansi_pengirim) }}" class="form-control py-2" placeholder="Nama instansi..."></div>
                         <div class="col-md-3"><label class="form-label fw-semibold small text-secondary">Tgl Penangkapan</label><input type="date" name="tanggal_penangkapan" value="{{ old('tanggal_penangkapan', $tat->tanggal_penangkapan?->format('Y-m-d')) }}" class="form-control py-2"></div>
                         <div class="col-md-3"><label class="form-label fw-semibold small text-secondary">Tgl Permohonan</label><input type="date" name="tanggal_permohonan" value="{{ old('tanggal_permohonan', $tat->tanggal_permohonan?->format('Y-m-d')) }}" class="form-control py-2"></div>
-                        <div class="col-md-6"><label class="form-label fw-semibold small text-secondary">Tim Hukum</label><textarea name="tim_hukum" class="form-control py-2 auto-resize" rows="2" placeholder="Tim Hukum...">{{ old('tim_hukum', $tat->tim_hukum) }}</textarea></div>
-                        <div class="col-md-6"><label class="form-label fw-semibold small text-secondary">Tim Medis</label><textarea name="tim_medis" class="form-control py-2 auto-resize" rows="2" placeholder="Tim Medis...">{{ old('tim_medis', $tat->tim_medis) }}</textarea></div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-secondary">Tim Hukum</label>
+                            <textarea name="tim_hukum" class="form-control py-2 auto-resize" x-on:input="autoResize($el)" rows="2" placeholder="Tim Hukum...">{{ old('tim_hukum', $tat->tim_hukum) }}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-secondary">Tim Medis</label>
+                            <textarea name="tim_medis" class="form-control py-2 auto-resize" x-on:input="autoResize($el)" rows="2" placeholder="Tim Medis...">{{ old('tim_medis', $tat->tim_medis) }}</textarea>
+                        </div>
                         <div class="col-12"><label class="form-label fw-semibold small text-secondary">Lembaga Rehab</label><input type="text" name="lembaga_rehab" value="{{ old('lembaga_rehab', $tat->lembaga_rehab) }}" class="form-control py-2" placeholder="Nama lembaga..."></div>
                         <div class="col-md-6"><label class="form-label fw-semibold small text-secondary">Rekomendasi</label><select name="tindak_lanjut_rekomendasi" class="form-select py-2"><option value="dilaksanakan" @selected(old('tindak_lanjut_rekomendasi', $tat->tindak_lanjut_rekomendasi)=='dilaksanakan')>Dilaksanakan</option><option value="tidak dilaksanakan" @selected(old('tindak_lanjut_rekomendasi', $tat->tindak_lanjut_rekomendasi)=='tidak dilaksanakan')>Tidak Dilaksanakan</option></select></div>
                         <div class="col-md-6"><label class="form-label fw-semibold small text-secondary">Biaya (Rp)</label><input type="number" name="biaya" value="{{ old('biaya', $tat->biaya) }}" class="form-control py-2"></div>
-                        <div class="col-12"><label class="form-label fw-semibold small text-secondary">Proses Hukum Lanjut</label><textarea name="proses_hukum_lanjut" class="form-control py-2 auto-resize" rows="2" placeholder="Keterangan...">{{ old('proses_hukum_lanjut', $tat->proses_hukum_lanjut) }}</textarea></div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-secondary">Proses Hukum Lanjut</label>
+                            <textarea name="proses_hukum_lanjut" class="form-control py-2 auto-resize" x-on:input="autoResize($el)" rows="2" placeholder="Keterangan...">{{ old('proses_hukum_lanjut', $tat->proses_hukum_lanjut) }}</textarea>
+                        </div>
                         
                         <div class="col-12 mt-4">
                             <div class="bg-light p-3 rounded border">
@@ -325,9 +337,20 @@
                 } else { this.addBB(); }
 
                 this.initFilePond();
-                this.$nextTick(() => { document.querySelectorAll('textarea.auto-resize').forEach(el => { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }) });
+                
+                // Initialize textarea auto-resize
+                this.$nextTick(() => {
+                    document.querySelectorAll('textarea.auto-resize').forEach(el => {
+                        this.autoResize(el);
+                    });
+                });
             },
             
+            autoResize(el) {
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
+            },
+
             getQuantityLabel() {
                 if (this.bbList.length === 0) return 'Berat / Jumlah';
                 const allNarkotika = this.bbList.every(bb => bb.kategori === 'Narkotika');

@@ -19,8 +19,6 @@ class TatController extends Controller
 {
     /**
      * Logic filter item barang bukti untuk PENCARIAN KASUS (whereHas)
-     * Ini digunakan untuk menentukan APAKAH suatu kasus harus muncul atau tidak.
-     * Di sini kita HARUS spesifik (misal: hanya cari kasus yang punya Sabu).
      */
     private function applyCaseFilter($query, Request $request)
     {
@@ -34,7 +32,7 @@ class TatController extends Controller
             if (in_array('Narkotika', $kategori)) {
                 $q->orWhere(function($sub) use ($request) {
                     $sub->where('kategori', 'Narkotika');
-                    // Filter spesifik jenis narkotika (Hanya untuk pencarian kasus)
+                    // Filter spesifik jenis narkotika
                     if ($request->filled('narkotika_ids')) {
                         $sub->whereIn('narkotika_id', (array)$request->narkotika_ids);
                     }
@@ -45,7 +43,7 @@ class TatController extends Controller
             if (in_array('Non-Narkotika', $kategori)) {
                 $q->orWhere(function($sub) use ($request) {
                     $sub->where('kategori', 'Non-Narkotika');
-                    // Filter spesifik nama barang (Hanya untuk pencarian kasus)
+                    // Filter spesifik nama barang
                     if ($request->filled('search_non_narkotika')) {
                         $keywords = (array)$request->search_non_narkotika;
                         $sub->where(function($kQ) use ($keywords) {
@@ -64,17 +62,13 @@ class TatController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
         
-        // Eager Loading dengan Filter Tampilan Item (PERBAIKAN UTAMA DISINI)
-        // Kita hanya memfilter berdasarkan KATEGORI, bukan item spesifik.
-        // Agar jika user cari "Sabu", item "Ganja" (sesama Narkotika) tetap muncul.
+        // Eager Loading dengan Filter Tampilan Item
         $query = BerantasTat::with([
             'satuanKerja', 
             'tersangka', 
             'barangBukti' => function($q) use ($request) {
+                // Tampilkan item sesuai kategori yang dipilih user
                 if ($request->filled('kategori_bb')) {
-                    // Hanya tampilkan item yang sesuai dengan KATEGORI yang dipilih user.
-                    // Misal: Pilih Narkotika -> Tampilkan semua Narkotika (Sabu, Ganja, dll).
-                    // Item Non-Narkotika akan disembunyikan.
                     $q->whereIn('kategori', (array)$request->kategori_bb);
                 }
             },
@@ -112,7 +106,6 @@ class TatController extends Controller
         }
 
         // 4. Filter Kategori Barang Bukti (Filter Baris Kasus)
-        // Gunakan logika spesifik untuk MENENTUKAN KASUS MANA yang muncul
         if ($request->filled('kategori_bb')) {
             $query->whereHas('barangBukti', function($q) use ($request) {
                 $this->applyCaseFilter($q, $request);
@@ -122,7 +115,15 @@ class TatController extends Controller
         // Sorting
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
+        
+        // PERBAIKAN: Menambahkan 'tanggal_pelaksanaan' ke daftar kolom yang boleh di-sort
+        $allowedSorts = ['no_register', 'satuan_kerja_id', 'created_at', 'tanggal_pelaksanaan'];
+        
+        if (in_array($sortBy, $allowedSorts)) {
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
 
         return $query;
     }
@@ -150,7 +151,6 @@ class TatController extends Controller
 
     public function store(Request $request)
     {
-        // ... (Kode Store SAMA, tidak ada perubahan) ...
         /** @var \App\Models\User $user */
         $user = Auth::user();
         
@@ -286,11 +286,8 @@ class TatController extends Controller
             'barang_bukti'        => 'required|array|min:1',
             'tersangka.*.nama'    => 'required|string',
             'tersangka.*.nik'     => 'required|numeric',
-            'tersangka.*.usia'    => 'required|numeric|min:0',
             'barang_bukti.*.jumlah' => 'required|numeric|min:0',
             'barang_bukti.*.satuan' => 'required|string',
-            'pasal_disangkakan'   => 'nullable|string',
-            'biaya'               => 'nullable|numeric|min:0',
         ], $messages);
 
         $validator->after(function ($validator) use ($request) {

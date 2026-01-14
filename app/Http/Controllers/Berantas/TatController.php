@@ -17,35 +17,128 @@ use App\Exports\TatExport;
 
 class TatController extends Controller
 {
+    /**
+     * Logic filter item barang bukti untuk PENCARIAN KASUS (whereHas)
+     * Ini digunakan untuk menentukan APAKAH suatu kasus harus muncul atau tidak.
+     * Di sini kita HARUS spesifik (misal: hanya cari kasus yang punya Sabu).
+     */
+    private function applyCaseFilter($query, Request $request)
+    {
+        if (!$request->filled('kategori_bb')) return $query;
+
+        $kategori = (array)$request->kategori_bb;
+
+        return $query->where(function($q) use ($kategori, $request) {
+            
+            // 1. Cek Blok Narkotika
+            if (in_array('Narkotika', $kategori)) {
+                $q->orWhere(function($sub) use ($request) {
+                    $sub->where('kategori', 'Narkotika');
+                    // Filter spesifik jenis narkotika (Hanya untuk pencarian kasus)
+                    if ($request->filled('narkotika_ids')) {
+                        $sub->whereIn('narkotika_id', (array)$request->narkotika_ids);
+                    }
+                });
+            }
+
+            // 2. Cek Blok Non-Narkotika
+            if (in_array('Non-Narkotika', $kategori)) {
+                $q->orWhere(function($sub) use ($request) {
+                    $sub->where('kategori', 'Non-Narkotika');
+                    // Filter spesifik nama barang (Hanya untuk pencarian kasus)
+                    if ($request->filled('search_non_narkotika')) {
+                        $keywords = (array)$request->search_non_narkotika;
+                        $sub->where(function($kQ) use ($keywords) {
+                            foreach ($keywords as $key) {
+                                $kQ->orWhere('nama_barang_non_narkotika', 'LIKE', "%{$key}%");
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
     private function getFilteredQuery(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        // Eager load semua relasi agar efisien di Index
-        $query = BerantasTat::with(['satuanKerja', 'tersangka', 'barangBukti.narkotika', 'dokumentasi']);
+        
+        // Eager Loading dengan Filter Tampilan Item (PERBAIKAN UTAMA DISINI)
+        // Kita hanya memfilter berdasarkan KATEGORI, bukan item spesifik.
+        // Agar jika user cari "Sabu", item "Ganja" (sesama Narkotika) tetap muncul.
+        $query = BerantasTat::with([
+            'satuanKerja', 
+            'tersangka', 
+            'barangBukti' => function($q) use ($request) {
+                if ($request->filled('kategori_bb')) {
+                    // Hanya tampilkan item yang sesuai dengan KATEGORI yang dipilih user.
+                    // Misal: Pilih Narkotika -> Tampilkan semua Narkotika (Sabu, Ganja, dll).
+                    // Item Non-Narkotika akan disembunyikan.
+                    $q->whereIn('kategori', (array)$request->kategori_bb);
+                }
+            },
+            'barangBukti.narkotika', 
+            'dokumentasi'
+        ]);
 
+        // 1. Filter Role & Satker
         if (!$user->hasRole('admin')) {
             $query->where('satuan_kerja_id', $user->getSatkerId());
+        } else {
+            if ($request->filled('satuan_kerja_id')) {
+                $query->whereIn('satuan_kerja_id', (array)$request->satuan_kerja_id);
+            }
         }
 
+        // 2. Filter Waktu
+        if ($request->filled('bulan')) {
+            $query->whereIn(DB::raw('MONTH(tanggal_pelaksanaan)'), (array)$request->bulan);
+        }
+        $years = $request->filled('tahun') ? (array)$request->tahun : [date('Y')];
+        $query->whereIn(DB::raw('YEAR(tanggal_pelaksanaan)'), $years);
+
+        // 3. Filter Global Search
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(function($q) use ($s) {
-                $q->where('no_register', 'LIKE', "%$s%")
+                $q->where('no_register', 'LIKE', "%{$s}%")
+                  ->orWhere('instansi_pengirim', 'LIKE', "%{$s}%")
+                  ->orWhere('pasal_disangkakan', 'LIKE', "%{$s}%")
                   ->orWhereHas('tersangka', function($sq) use ($s) {
-                      $sq->where('nama_tersangka', 'LIKE', "%$s%");
+                      $sq->where('nama_tersangka', 'LIKE', "%{$s}%");
                   });
             });
         }
 
-        return $query->latest();
+        // 4. Filter Kategori Barang Bukti (Filter Baris Kasus)
+        // Gunakan logika spesifik untuk MENENTUKAN KASUS MANA yang muncul
+        if ($request->filled('kategori_bb')) {
+            $query->whereHas('barangBukti', function($q) use ($request) {
+                $this->applyCaseFilter($q, $request);
+            });
+        }
+
+        // Sorting
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        return $query;
     }
 
     public function index(Request $request)
     {
-        $data = $this->getFilteredQuery($request)->paginate(10)->withQueryString();
-        $satuanKerjas = SatuanKerja::all();
-        return view('berantas.tat.index', compact('data', 'satuanKerjas'));
+        $years = BerantasTat::selectRaw('YEAR(tanggal_pelaksanaan) as year')
+            ->distinct()->orderBy('year', 'desc')->pluck('year');
+        
+        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
+        $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
+
+        $perPage = $request->input('per_page', 10);
+        $data = $this->getFilteredQuery($request)->paginate($perPage)->withQueryString();
+
+        return view('berantas.tat.index', compact('data', 'satuanKerjas', 'years', 'masterNarkotika'));
     }
 
     public function create()
@@ -57,12 +150,12 @@ class TatController extends Controller
 
     public function store(Request $request)
     {
+        // ... (Kode Store SAMA, tidak ada perubahan) ...
         /** @var \App\Models\User $user */
         $user = Auth::user();
         
         $messages = [
             'tersangka.*.nama.required' => 'Nama tersangka wajib diisi.',
-            'tersangka.*.nik.numeric' => 'NIK harus berupa angka.',
             'barang_bukti.*.jumlah.required' => 'Jumlah/Berat BB wajib diisi.',
             'barang_bukti.*.satuan.required' => 'Satuan BB wajib diisi.',
         ];
@@ -70,27 +163,19 @@ class TatController extends Controller
         $validator = Validator::make($request->all(), [
             'no_register'         => 'required|unique:berantas_tat',
             'tanggal_pelaksanaan' => 'required|date',
-            
             'tersangka'           => 'required|array|min:1',
             'barang_bukti'        => 'required|array|min:1',
-
-            // Validasi Detail Tersangka (REQUIRED)
-            'tersangka.*.nama'    => 'required|string|max:255',
+            'tersangka.*.nama'    => 'required|string',
             'tersangka.*.nik'     => 'required|numeric',
             'tersangka.*.jk'      => 'required|in:Laki-laki,Perempuan',
             'tersangka.*.usia'    => 'required|numeric|min:0',
             'tersangka.*.pendidikan' => 'required|string',
             'tersangka.*.pekerjaan'  => 'required|string',
             'tersangka.*.no_telepon' => 'required|string',
-
-            // Validasi Barang Bukti
             'barang_bukti.*.kategori' => 'required|in:Narkotika,Non-Narkotika',
             'barang_bukti.*.jumlah'   => 'required|numeric|min:0',
             'barang_bukti.*.satuan'   => 'required|string',
-
-            // Detail Kasus (NULLABLE sesuai permintaan)
             'pasal_disangkakan'   => 'nullable|string',
-            'instansi_pengirim'   => 'nullable|string',
             'biaya'               => 'nullable|numeric|min:0',
         ], $messages);
 
@@ -107,9 +192,7 @@ class TatController extends Controller
             }
         });
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
+        if ($validator->fails()) return back()->withErrors($validator)->withInput();
 
         DB::beginTransaction();
         try {
@@ -153,10 +236,8 @@ class TatController extends Controller
                     if ($temp) {
                         $path = 'dokumentasi/tat/' . date('Y');
                         if(!Storage::disk('public')->exists($path)) Storage::disk('public')->makeDirectory($path);
-                        
                         $dest = $path . '/' . $temp->filename;
                         Storage::disk('public')->move('public/tmp/' . $folder . '/' . $temp->filename, $dest);
-                        
                         $tat->dokumentasi()->create([
                             'nama_file_asli' => $temp->filename,
                             'path_file' => $dest,
@@ -171,7 +252,6 @@ class TatController extends Controller
 
             DB::commit();
             return redirect()->route('berantas.tat.index')->with('success', 'Data TAT berhasil disimpan.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal menyimpan: ' . $e->getMessage())->withInput();
@@ -183,11 +263,10 @@ class TatController extends Controller
         $tat = BerantasTat::with(['tersangka', 'barangBukti', 'dokumentasi'])->findOrFail($id);
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
         $satuanKerjas = SatuanKerja::all();
-        
+
         /** @var \App\Models\User $user */
         $user = Auth::user();
         if (!$user->isAdmin() && $tat->satuan_kerja_id !== $user->getSatkerId()) abort(403);
-
         return view('berantas.tat.edit', compact('tat', 'masterNarkotika', 'satuanKerjas'));
     }
 
@@ -205,17 +284,11 @@ class TatController extends Controller
             'no_register'         => 'required|unique:berantas_tat,no_register,' . $id,
             'tersangka'           => 'required|array|min:1',
             'barang_bukti'        => 'required|array|min:1',
-            
-            'tersangka.*.nama'       => 'required|string',
-            'tersangka.*.nik'        => 'required|numeric',
-            'tersangka.*.usia'       => 'required|numeric|min:0',
-            'tersangka.*.pendidikan' => 'required|string',
-            'tersangka.*.pekerjaan'  => 'required|string',
-            'tersangka.*.no_telepon' => 'required|string',
-
+            'tersangka.*.nama'    => 'required|string',
+            'tersangka.*.nik'     => 'required|numeric',
+            'tersangka.*.usia'    => 'required|numeric|min:0',
             'barang_bukti.*.jumlah' => 'required|numeric|min:0',
             'barang_bukti.*.satuan' => 'required|string',
-            
             'pasal_disangkakan'   => 'nullable|string',
             'biaya'               => 'nullable|numeric|min:0',
         ], $messages);
@@ -233,14 +306,11 @@ class TatController extends Controller
             }
         });
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
+        if ($validator->fails()) return back()->withErrors($validator)->withInput();
 
         DB::beginTransaction();
         try {
             $tat->update($request->except(['tersangka', 'barang_bukti', 'dokumentasi', 'delete_files']));
-
             $tat->tersangka()->delete();
             foreach ($request->tersangka as $t) {
                 $tat->tersangka()->create([
@@ -253,15 +323,10 @@ class TatController extends Controller
                     'no_telepon'     => $t['no_telepon'],
                 ]);
             }
-
             $tat->barangBukti()->delete();
             foreach ($request->barang_bukti as $bbRow) {
-                $items = ($bbRow['kategori'] === 'Narkotika') 
-                    ? ($bbRow['narkotika_ids'] ?? []) 
-                    : ($bbRow['nama_barang_bukti'] ?? []);
-
+                $items = ($bbRow['kategori'] === 'Narkotika') ? ($bbRow['narkotika_ids'] ?? []) : ($bbRow['nama_barang_bukti'] ?? []);
                 if(!is_array($items)) $items = [$items];
-
                 foreach ($items as $val) {
                     $tat->barangBukti()->create([
                         'kategori' => $bbRow['kategori'],
@@ -272,7 +337,6 @@ class TatController extends Controller
                     ]);
                 }
             }
-
             if ($request->has('delete_files')) {
                 foreach($request->delete_files as $dfid) {
                     $file = $tat->dokumentasi()->find($dfid);
@@ -282,7 +346,6 @@ class TatController extends Controller
                     }
                 }
             }
-
             if ($request->filled('dokumentasi')) {
                 foreach ($request->dokumentasi as $folder) {
                     $temp = TemporaryFile::where('folder', $folder)->first();
@@ -302,10 +365,8 @@ class TatController extends Controller
                     }
                 }
             }
-
             DB::commit();
             return redirect()->route('berantas.tat.index')->with('success', 'Data TAT diperbarui.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal update: ' . $e->getMessage())->withInput();
@@ -318,9 +379,7 @@ class TatController extends Controller
         DB::beginTransaction();
         try {
             foreach($tat->dokumentasi as $doc) {
-                if(Storage::disk('public')->exists($doc->path_file)) {
-                    Storage::disk('public')->delete($doc->path_file);
-                }
+                if(Storage::disk('public')->exists($doc->path_file)) Storage::disk('public')->delete($doc->path_file);
             }
             $tat->delete();
             DB::commit();

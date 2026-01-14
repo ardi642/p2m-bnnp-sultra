@@ -84,8 +84,7 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
 
         foreach ($groupedByLkn as $lkn => $tersangkas) {
             
-            // 1. Petakan Inventory Lengkap Setiap Tersangka di Kasus Ini
-            // Array [ID_Tersangka => "10-11-12"] (String ID Barang Bukti)
+            // 1. Petakan Inventory Lengkap Setiap Tersangka
             $suspectInventories = [];
             foreach ($tersangkas as $t) {
                 $suspectInventories[$t->id] = $t->barangBukti->pluck('id')->sort()->values()->implode('-');
@@ -94,16 +93,12 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
             $ownerGroupMap = []; 
             $groupCounter = 1;
             
-            // Ambil semua BB unik di kasus ini
             $allEvidenceInCase = $tersangkas->flatMap->barangBukti->unique('id');
 
             foreach ($allEvidenceInCase as $bb) {
                 $owners = $bb->tersangka;
 
-                // Jika Sharing (Pemilik > 1)
                 if ($owners->count() > 1) {
-                    
-                    // Signature Group (misal: "1-2")
                     $signature = $owners->pluck('id')->sort()->values()->implode('-');
 
                     if (!isset($ownerGroupMap[$signature])) {
@@ -111,28 +106,25 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                     }
                     $groupNum = $ownerGroupMap[$signature];
 
-                    // --- CEK KESIMETRISAN ---
-                    // Apakah SEMUA pemilik barang ini punya daftar barang yang SAMA PERSIS?
+                    // Cek Kesimetrisan
                     $isSymmetric = true;
                     $firstOwnerInv = $suspectInventories[$owners->first()->id] ?? '';
                     
                     foreach ($owners as $owner) {
                         $currentInv = $suspectInventories[$owner->id] ?? '';
                         if ($currentInv !== $firstOwnerInv) {
-                            $isSymmetric = false; // Beda isi tas (Asimetris)
+                            $isSymmetric = false;
                             break;
                         }
                     }
 
-                    // Simpan Info Suffix
                     $this->bbSuffixInfo[$bb->id] = [
-                        'sort_key' => "_{$groupNum}",      // Key untuk grouping/sorting
-                        'label' => " [b{$groupNum}]",       // Teks Label
-                        'hide_label' => $isSymmetric        // Hapus label JIKA simetris
+                        'sort_key' => "_{$groupNum}",
+                        'label' => " [b{$groupNum}]",
+                        'hide_label' => $isSymmetric
                     ];
 
                 } else {
-                    // Barang Pribadi (Milik Sendiri)
                     $this->bbSuffixInfo[$bb->id] = [
                         'sort_key' => "_999", 
                         'label' => "", 
@@ -147,7 +139,7 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
     {
         return [
             'NO', 'NOMOR LKN/ TGL', 'NAMA TERSANGKA', 'JENIS KELAMIN', 'PEKERJAAN', 
-            'ALAMAT TKP', 'JENIS BARANG BUKTI', 'JUMLAH BB (GRAM)', 'FOTO TERSANGKA', 'TAHAP'
+            'ALAMAT TKP', 'JENIS BARANG BUKTI', 'JUMLAH BB (BERAT/SATUAN)', 'FOTO TERSANGKA', 'TAHAP'
         ];
     }
 
@@ -167,47 +159,61 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
         $items = [];
         
         foreach ($row->barangBukti as $bb) {
-            // Ambil Info Suffix
             $info = $this->bbSuffixInfo[$bb->id] ?? ['sort_key' => '_999', 'label' => '', 'hide_label' => true];
-            
-            // LOGIKA TAMPILAN:
-            // Jika Simetris (hide_label=true) -> Label Kosong "" -> Nanti Auto Merge
-            // Jika Asimetris (hide_label=false) -> Label Muncul "[b1]" -> Tidak Merge (Duplikat Tampil)
             $suffixStr = $info['hide_label'] ? "" : $info['label'];
 
             $namaBB = $bb->nama_barang; 
+            // Label (non-narkotika) opsional, bisa dihapus jika ingin lebih bersih
             if ($this->hasNarkotikaInData && $bb->kategori !== 'Narkotika') {
                 $namaBB .= " (non-narkotika)";
             }
 
             $satuan = $bb->satuan;
             $kuantitas = (float)$bb->kuantitas;
-            $gramValue = $kuantitas;
-            if ($satuan === 'Kg') $gramValue = $kuantitas * 1000;
-            elseif ($satuan === 'Ton') $gramValue = $kuantitas * 1000000;
+            
+            // --- PERBAIKAN LOGIKA SATUAN ---
+            $tampilanJumlah = "";
+            $gramValueForTotal = 0; // Hanya hitung total jika Narkotika
+
+            if ($bb->kategori === 'Narkotika') {
+                // Konversi Narkotika ke Gram untuk Total Footer
+                if ($satuan === 'Kg') {
+                    $gramValueForTotal = $kuantitas * 1000;
+                    $tampilanJumlah = $gramValueForTotal . " Gram";
+                } elseif ($satuan === 'Ton') {
+                    $gramValueForTotal = $kuantitas * 1000000;
+                    $tampilanJumlah = $gramValueForTotal . " Gram";
+                } else {
+                    $gramValueForTotal = $kuantitas;
+                    $tampilanJumlah = $kuantitas . " Gram";
+                }
+            } else {
+                // NON-NARKOTIKA: Gunakan Satuan Asli (Unit, Buah, Lembar, dll)
+                // Tidak dikonversi ke Gram
+                $tampilanJumlah = $kuantitas . " " . ucfirst($satuan);
+            }
 
             $items[] = [
                 'tampilan_jenis' => $namaBB . $suffixStr,
-                'tampilan_berat' => $gramValue . ' Gram' . $suffixStr,
+                'tampilan_berat' => $tampilanJumlah . $suffixStr,
                 'sort_key' => $info['sort_key'],
                 'raw_name' => $namaBB
             ];
 
+            // Hitung Total Footer (Khusus Narkotika)
             if ($bb->kategori === 'Narkotika' && !in_array($bb->id, $this->processedBBIds)) {
                 $jenisKey = strtoupper(trim($bb->nama_barang));
                 if (!isset($this->totals[$jenisKey])) $this->totals[$jenisKey] = 0;
-                $this->totals[$jenisKey] += $gramValue;
+                $this->totals[$jenisKey] += $gramValueForTotal;
                 $this->processedBBIds[] = $bb->id;
             }
         }
 
         // --- SORTING ---
         usort($items, function($a, $b) {
-            // 1. Grouping [b1] vs [b2] vs Pribadi
             if ($a['sort_key'] !== $b['sort_key']) {
                 return strcmp($a['sort_key'], $b['sort_key']);
             }
-            // 2. Nama Barang
             return strcmp($a['raw_name'], $b['raw_name']);
         });
 
@@ -256,7 +262,6 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                 $sheet->getColumnDimension('F')->setWidth(40);
                 $sheet->getColumnDimension('G')->setWidth(35);
                 $sheet->getColumnDimension('H')->setWidth(25);
-                // Lebar kolom Foto (I) 22 agar pas di tengah
                 $sheet->getColumnDimension('I')->setWidth(22);
                 
                 $sheet->getStyle("A1:J" . ($rowCount + 10))->getAlignment()->setWrapText(true);
@@ -286,16 +291,11 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                     if ($hasPhoto) {
                         $drawing = new Drawing();
                         $drawing->setPath(storage_path('app/public/' . $fotoPath));
-                        
-                        // [FIX] Tinggi 50px (Proporsional)
                         $drawing->setHeight(50); 
                         $drawing->setResizeProportional(true);
                         $drawing->setCoordinates('I' . $currentRow);
-                        
-                        // [FIX] Center Offset
                         $drawing->setOffsetX(10); 
                         $drawing->setOffsetY(5); 
-                        
                         $drawing->setWorksheet($sheet);
                         $finalHeight = max(60, $textHeight);
                     } else {
@@ -312,8 +312,6 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                             $sheet->mergeCells("F{$mergeStart}:F{$endRow}"); 
                         }
                         
-                        // Auto Merge hanya jika isinya SAMA PERSIS (Kasus Simetris)
-                        // Kasus Asimetris (Ada barang lain) teksnya beda, jadi tidak akan di-merge.
                         $this->smartMergeInner($sheet, 'G', $mergeStart, $endRow);
                         $this->smartMergeInner($sheet, 'H', $mergeStart, $endRow);
                         $this->smartMergeInner($sheet, 'E', $mergeStart, $endRow);
@@ -352,7 +350,6 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
             $currVal = $sheet->getCell("$col$r")->getValue();
             $nextVal = $sheet->getCell("$col" . ($r + 1))->getValue();
 
-            // Hanya merge jika Value-nya SAMA PERSIS
             if ($currVal !== $nextVal) {
                 if ($mStart < $r) $sheet->mergeCells("$col$mStart:$col$r");
                 $mStart = $r + 1;

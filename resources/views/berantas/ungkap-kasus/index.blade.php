@@ -38,20 +38,13 @@
 
         {{-- PHP HELPER --}}
         @php
-            // Ambil semua filter dari request
             $allFilters = request()->only(['satuan_kerja_id', 'bulan', 'tahun', 'search', 'kategori_bb', 'narkotika_ids', 'search_non_narkotika']);
+            if (empty($allFilters['tahun'])) { $allFilters['tahun'] = [date('Y')]; }
             
-            // Inisialisasi default tahun jika kosong
-            if (empty($allFilters['tahun'])) { 
-                $allFilters['tahun'] = [date('Y')]; 
-            }
-            
-            // Hitung filter aktif untuk indikator badge pada tombol filter
             $activeFilters = collect($allFilters)->filter(function($value) { 
                 return !empty($value) && ($value !== ['']); 
             })->count();
             
-            // Helper untuk link pengurutan (sorting)
             $sortLink = function($col, $label) {
                 $currentCol = request('sort_by', 'created_at'); 
                 $currentOrder = request('sort_order', 'desc'); 
@@ -64,7 +57,6 @@
                 return '<a href="'.$url.'" class="text-decoration-none text-secondary fw-bold d-flex align-items-center justify-content-between gap-2">'.$label.' <i class="bi '.$icon.'"></i></a>';
             };
 
-            // Helper format angka (koma sebagai desimal)
             $formatAngka = function($nilai) {
                 return str_replace('.', ',', (string)(float)$nilai);
             };
@@ -121,7 +113,7 @@
                                             </div>
                                         @endif
 
-                                        {{-- Row 2: Filter Kategori BB (Default Kosong) --}}
+                                        {{-- Row 2: Filter Kategori BB --}}
                                         <div class="col-md-6 {{ Auth::user()->hasRole('admin') ? 'col-lg-6' : 'col-lg-4' }}">
                                             <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Kategori Barang Bukti</label>
                                             <div class="shadow-sm bg-white rounded">
@@ -166,7 +158,6 @@
                                             </div>
                                         </div>
 
-                                        {{-- Dinamis: Nama Barang Non-Narkotika (MODIFIED: CREATE MODE & NO ICON) --}}
                                         <div class="col-lg-6" id="wrapper-non-narkotika" style="display: none;">
                                             <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Nama Barang (Non-Narkotika)</label>
                                             <div class="shadow-sm bg-white rounded">
@@ -208,14 +199,32 @@
                                         <th class="py-3 bg-light text-start" style="min-width: 200px;">{!! $sortLink('satuan_kerja', 'Satuan Kerja') !!}</th>
                                         <th class="py-3 bg-light text-start" style="min-width: 150px;">{!! $sortLink('nomor_lkn', 'No. LKN') !!}</th>
                                         <th class="py-3 bg-light text-start" style="min-width: 150px;">{!! $sortLink('tanggal_kejadian', 'Tanggal') !!}</th>
-                                        <th class="py-3 bg-light text-start" style="min-width: 320px;">Tersangka</th>
-                                        <th class="py-3 bg-light text-start" style="min-width: 200px;">Barang Bukti</th>
+                                        
+                                        {{-- LEBAR KOLOM --}}
+                                        <th class="py-3 bg-light text-start" style="min-width: 350px;">Tersangka (Pemilik)</th>
+                                        <th class="py-3 bg-light text-start" style="min-width: 300px;">Barang Bukti</th>
+                                        
                                         <th class="py-3 bg-light" style="min-width: 150px;">{!! $sortLink('created_at', 'Dibuat') !!}</th>
                                         <th class="py-3 bg-light pe-3">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="border-top-0">
                                     @forelse ($kasus as $item)
+                                        {{-- LOGIKA GROUPING --}}
+                                        @php
+                                            // 1. Group Barang Bukti berdasarkan Signature Pemilik
+                                            $evidenceGroups = $item->barangBukti->groupBy(function($bb) {
+                                                return $bb->tersangka->pluck('id')->sort()->values()->implode('-');
+                                            });
+
+                                            // 2. Cari Tersangka Yatim
+                                            $suspectsWithEvidenceIds = $item->barangBukti->flatMap->tersangka->pluck('id')->unique()->toArray();
+                                            $orphanSuspects = $item->tersangka->whereNotIn('id', $suspectsWithEvidenceIds);
+
+                                            // 3. LOGIKA LABEL: HANYA jika ada > 1 kelompok (ASIMETRIS)
+                                            $showLabel = ($evidenceGroups->count() > 1);
+                                        @endphp
+
                                         <tr class="align-top" :class="expanded.includes({{ $item->id }}) ? 'bg-light' : ''">
                                             <td class="text-center fw-bold text-secondary ps-3 py-3">{{ $kasus->firstItem() + $loop->index }}</td>
                                             
@@ -236,42 +245,102 @@
                                                 <span class="small text-muted text-nowrap">{{ $item->tanggal_kejadian->locale('id')->translatedFormat('d M Y') }}</span>
                                             </td>
 
-                                            <td class="text-start py-3">
-                                                @if($item->tersangka->count() > 0)
-                                                    <div class="d-flex flex-column gap-2">
-                                                        @foreach($item->tersangka as $t)
-                                                            <div class="d-flex align-items-center bg-white p-1 rounded border shadow-sm" style="width: fit-content;">
-                                                                <i class="bi bi-person-fill text-secondary mx-1 small"></i>
-                                                                <div>
-                                                                    <span class="small fw-bold text-dark">{{ $t->nama_tersangka }}</span>
-                                                                    <span class="text-muted ms-1 small" style="font-size: 0.7rem;">({{ $t->jenis_kelamin }})</span>
+                                            {{-- ================= KOLOM TERSANGKA ================= --}}
+                                            {{-- FIX: Tambahkan style height: 1px agar child h-100 berfungsi sempurna untuk alignment --}}
+                                            <td class="text-start p-0 align-top" style="height: 1px;"> 
+                                                <div class="d-flex flex-column h-100">
+                                                    @foreach($evidenceGroups as $signature => $evidenceList)
+                                                        @php 
+                                                            $owners = $evidenceList->first()->tersangka; 
+                                                            // BORDER LOGIC: Selalu border-bottom, KECUALI item terakhir DAN tidak ada orphan
+                                                            $hasBorder = !($loop->last && $orphanSuspects->isEmpty());
+                                                        @endphp
+                                                        {{-- FLEX GROW: Agar tinggi container tersangka SAMA dengan container barang bukti di sebelahnya --}}
+                                                        <div class="p-2 {{ $hasBorder ? 'border-bottom' : '' }} d-flex flex-column gap-2 justify-content-center flex-grow-1" style="min-height: 60px;">
+                                                            
+                                                            {{-- LABEL NOMOR (MINIMALIS, HANYA JIKA ASIMETRIS) --}}
+                                                            @if($showLabel)
+                                                                <div class="fw-bold text-secondary" style="font-size: 0.65rem; opacity: 0.7;">
+                                                                    #{{ $loop->iteration }}
                                                                 </div>
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                @else
-                                                    <span class="text-muted small fst-italic">-</span>
-                                                @endif
+                                                            @endif
+
+                                                            @foreach($owners as $t)
+                                                                <div class="d-flex align-items-center bg-white p-1 rounded border shadow-sm" style="width: fit-content;">
+                                                                    <i class="bi bi-person-fill text-secondary mx-1 small"></i>
+                                                                    <div>
+                                                                        <span class="small fw-bold text-dark">{{ $t->nama_tersangka }}</span>
+                                                                        <span class="text-muted ms-1 small" style="font-size: 0.7rem;">({{ $t->jenis_kelamin }})</span>
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    @endforeach
+
+                                                    {{-- Tersangka Yatim (Tanpa BB) --}}
+                                                    @if($orphanSuspects->count() > 0)
+                                                        <div class="p-2 d-flex flex-column gap-2 justify-content-center flex-grow-1" style="min-height: 60px;">
+                                                            @foreach($orphanSuspects as $t)
+                                                                <div class="d-flex align-items-center bg-danger-subtle p-1 rounded border border-danger-subtle shadow-sm" style="width: fit-content;">
+                                                                    <i class="bi bi-person-exclamation text-danger mx-1 small"></i>
+                                                                    <div>
+                                                                        <span class="small fw-bold text-dark">{{ $t->nama_tersangka }}</span>
+                                                                        <span class="text-danger ms-1 small" style="font-size: 0.7rem;">(Tanpa BB)</span>
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+
+                                                    @if($evidenceGroups->isEmpty() && $orphanSuspects->isEmpty())
+                                                        <div class="p-3 text-muted small fst-italic">-</div>
+                                                    @endif
+                                                </div>
                                             </td>
 
-                                            <td class="text-start py-3">
-                                                @if($item->barangBukti->count() > 0)
-                                                    <div class="d-flex flex-column gap-1">
-                                                        @foreach($item->barangBukti as $bb)
-                                                            <div class="small d-flex align-items-center">
-                                                                @if($bb->kategori === 'Narkotika') 
-                                                                    <i class="bi bi-capsule text-danger me-2" title="Narkotika"></i> 
-                                                                @else 
-                                                                    <i class="bi bi-box-seam text-success me-2" title="Non-Narkotika"></i> 
-                                                                @endif
-                                                                <span class="text-dark me-1 fw-semibold">{{ $bb->nama_barang }}</span>
-                                                                <span class="text-muted">({{ $formatAngka($bb->kuantitas) }} {{ $bb->satuan }})</span>
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                @else
-                                                    <span class="text-muted small fst-italic">-</span>
-                                                @endif
+                                            {{-- ================= KOLOM BARANG BUKTI ================= --}}
+                                            {{-- FIX: Tambahkan style height: 1px agar child h-100 berfungsi sempurna untuk alignment --}}
+                                            <td class="text-start p-0 align-top" style="height: 1px;">
+                                                <div class="d-flex flex-column h-100">
+                                                    @foreach($evidenceGroups as $signature => $evidenceList)
+                                                        @php 
+                                                            $hasBorder = !($loop->last && $orphanSuspects->isEmpty());
+                                                        @endphp
+                                                        {{-- FLEX GROW: Menjamin tinggi container ini SAMA dengan sebelah (Tersangka) -> Border Sejajar --}}
+                                                        <div class="p-2 {{ $hasBorder ? 'border-bottom' : '' }} d-flex flex-column gap-1 justify-content-center flex-grow-1" style="min-height: 60px;">
+                                                            
+                                                            {{-- LABEL NOMOR (MINIMALIS) --}}
+                                                            @if($showLabel)
+                                                                <div class="fw-bold text-secondary" style="font-size: 0.65rem; opacity: 0.7;">
+                                                                    #{{ $loop->iteration }}
+                                                                </div>
+                                                            @endif
+
+                                                            @foreach($evidenceList as $bb)
+                                                                <div class="small d-flex align-items-center">
+                                                                    @if($bb->kategori === 'Narkotika') 
+                                                                        <i class="bi bi-capsule text-danger me-2" title="Narkotika"></i> 
+                                                                    @else 
+                                                                        <i class="bi bi-box-seam text-success me-2" title="Non-Narkotika"></i> 
+                                                                    @endif
+                                                                    <span class="text-dark me-1 fw-semibold">{{ $bb->nama_barang }}</span>
+                                                                    <span class="text-muted">({{ $formatAngka($bb->kuantitas) }} {{ $bb->satuan }})</span>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    @endforeach
+
+                                                    {{-- Slot Kosong untuk Yatim --}}
+                                                    @if($orphanSuspects->count() > 0)
+                                                        <div class="p-2 d-flex align-items-center justify-content-center text-muted small fst-italic bg-light flex-grow-1" style="min-height: 60px;">
+                                                            -
+                                                        </div>
+                                                    @endif
+
+                                                    @if($evidenceGroups->isEmpty() && $orphanSuspects->isEmpty())
+                                                        <div class="p-3 text-muted small fst-italic">-</div>
+                                                    @endif
+                                                </div>
                                             </td>
 
                                             <td class="text-center small py-3">
@@ -281,8 +350,9 @@
 
                                             <td class="text-center pe-3 py-3">
                                                 <div class="btn-group btn-group-sm shadow-sm">
-                                                    <button type="button" class="btn btn-light border text-secondary" 
-                                                            :class="expanded.includes({{ $item->id }}) ? 'btn-primary text-white' : 'btn-light border text-secondary'"
+                                                    {{-- FIX: TOMBOL MATA - Menggunakan class standar Bootstrap agar otomatis putih saat aktif --}}
+                                                    <button type="button" class="btn" 
+                                                            :class="expanded.includes({{ $item->id }}) ? 'btn-primary' : 'btn-light border text-secondary'"
                                                             @click="expanded.includes({{ $item->id }}) ? expanded = expanded.filter(id => id !== {{ $item->id }}) : expanded.push({{ $item->id }})"
                                                             title="Lihat Detail">
                                                         <i class="bi" :class="expanded.includes({{ $item->id }}) ? 'bi-chevron-up' : 'bi-eye'"></i>
@@ -305,7 +375,6 @@
                                                             <h6 class="card-title fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-info-circle me-2"></i>Detail Kasus Lengkap</h6>
                                                             
                                                             <div class="row g-3 text-start">
-                                                                {{-- INFO UTAMA --}}
                                                                 <div class="col-md-6">
                                                                     <dl class="row mb-0 small">
                                                                         <dt class="col-sm-4 text-secondary mb-2">No. LKN</dt>
@@ -329,7 +398,6 @@
 
                                                                 <div class="col-12"><hr class="border-secondary-subtle"></div>
 
-                                                                {{-- TERSANGKA DETAIL --}}
                                                                 <div class="col-12">
                                                                     <label class="small text-secondary fw-bold text-uppercase mb-2">Detail Tersangka</label>
                                                                     <div class="row g-2">
@@ -411,13 +479,11 @@
 
 @push('styles')
 <style>
-    /* FIX: Dropdown TomSelect di atas Sticky Header */
     .ts-dropdown, .ts-dropdown.single { z-index: 2000 !important; }
     .ts-control { border: none !important; box-shadow: none !important; padding-top: 0.5rem; padding-bottom: 0.5rem; background-color: transparent !important; min-height: 40px; }
     .ts-wrapper.focus .ts-control { box-shadow: none !important; }
     
     .custom-table-scroll { max-height: 70vh; overflow-y: auto; position: relative; border: 1px solid #dee2e6; border-radius: 6px; }
-    /* Sticky Header dengan z-index cukup (10) agar di bawah TomSelect (2000) */
     .custom-table-scroll thead th { position: sticky !important; top: 0 !important; z-index: 10; background-color: #f8f9fa !important; box-shadow: inset 0 -1px 0 #dee2e6; }
     
     .btn-xs { padding: 1px 5px; font-size: 0.75rem; }
@@ -431,12 +497,10 @@
     document.addEventListener("DOMContentLoaded", function() {
         const configTomSelect = { plugins: ['remove_button', 'clear_button'], persist: false, create: false, maxOptions: null };
         
-        // 1. Inisialisasi Filter Standar
         ['select-satker', 'select-bulan', 'select-tahun', 'select-narkotika'].forEach(id => { 
             if(document.getElementById(id)) new TomSelect('#' + id, configTomSelect); 
         });
 
-        // 2. Inisialisasi Filter Kategori BB dengan Listener (Dynamic)
         if(document.getElementById('select-kategori-bb')) {
             const tsKategori = new TomSelect('#select-kategori-bb', {
                 ...configTomSelect,
@@ -448,7 +512,6 @@
                 const wrapperNarkotika = document.getElementById('wrapper-narkotika');
                 const wrapperNonNarkotika = document.getElementById('wrapper-non-narkotika');
 
-                // Logic: Jika kosong, hide semua. Jika ada, show sesuai pilihan.
                 if (selected.length === 0) {
                     if(wrapperNarkotika) wrapperNarkotika.style.display = 'none';
                     if(wrapperNonNarkotika) wrapperNonNarkotika.style.display = 'none';
@@ -457,11 +520,9 @@
                     if(wrapperNonNarkotika) wrapperNonNarkotika.style.display = selected.includes('Non-Narkotika') ? 'block' : 'none';
                 }
             }
-            // Jalankan saat load
             updateBBVisibility();
         }
         
-        // 3. Inisialisasi Pencarian Non-Narkotika (Create Mode & No Icon)
         if(document.getElementById('select-non-narkotika')) {
              new TomSelect('#select-non-narkotika', {
                 plugins: ['remove_button', 'clear_button'],

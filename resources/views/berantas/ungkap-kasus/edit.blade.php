@@ -4,6 +4,7 @@
 <main class="admin-main" x-data="kasusForm">
     <div class="container-fluid p-4 p-lg-5">
         
+        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="h3 mb-1 fw-bold text-dark">Edit Ungkap Kasus</h1>
@@ -15,6 +16,7 @@
             </a>
         </div>
 
+        {{-- ALERT ERROR --}}
         @error('tersangka_orphan')
             <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
                 <div class="d-flex align-items-center">
@@ -45,10 +47,11 @@
                             @csrf
                             @method('PUT')
 
-                            {{-- SECTION 1: DATA LKN --}}
+                            {{-- ================= SECTION 1: DATA LKN ================= --}}
                             <h6 class="text-uppercase text-secondary fw-bold small mb-4 border-bottom pb-2">
                                 <i class="bi bi-info-circle me-1"></i> Data LKN
                             </h6>
+
                             <div class="row g-4 mb-5">
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold text-secondary small">
@@ -57,7 +60,8 @@
                                     <input type="text" 
                                            name="nomor_lkn" 
                                            class="form-control @error('nomor_lkn') is-invalid @enderror" 
-                                           value="{{ old('nomor_lkn', $kasus->nomor_lkn) }}">
+                                           value="{{ old('nomor_lkn', $kasus->nomor_lkn) }}"
+                                           placeholder="Masukkan Nomor LKN">
                                     @error('nomor_lkn') 
                                         <div class="invalid-feedback">{{ $message }}</div> 
                                     @enderror
@@ -80,14 +84,15 @@
                                     </label>
                                     <textarea name="alamat_tkp" 
                                               class="form-control @error('alamat_tkp') is-invalid @enderror" 
-                                              rows="2">{{ old('alamat_tkp', $kasus->alamat_tkp) }}</textarea>
+                                              rows="2"
+                                              placeholder="Masukkan alamat lengkap TKP">{{ old('alamat_tkp', $kasus->alamat_tkp) }}</textarea>
                                     @error('alamat_tkp') 
                                         <div class="invalid-feedback">{{ $message }}</div> 
                                     @enderror
                                 </div>
                             </div>
 
-                            {{-- SECTION 2: TERSANGKA --}}
+                            {{-- ================= SECTION 2: TERSANGKA ================= --}}
                             <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-2">
                                 <h6 class="text-uppercase text-secondary fw-bold small m-0">
                                     <i class="bi bi-people me-1"></i> Daftar Tersangka
@@ -114,50 +119,92 @@
                                                 <input type="hidden" :name="`tersangka[${index}][temp_id]`" :value="t.temp_id">
                                                 <input type="hidden" :name="`tersangka[${index}][id]`" :value="t.id">
                                                 
+                                                {{-- KOLOM FOTO --}}
                                                 <td class="text-center bg-white" data-label="Foto">
                                                     <div class="position-relative d-inline-block" 
                                                          @click="document.getElementById('file_'+t.temp_id).click()" 
                                                          style="cursor: pointer;" 
                                                          title="Klik untuk ganti foto">
+                                                        
                                                         <img :src="t.preview_url || '{{ asset('assets/images/user-placeholder.png') }}'" 
                                                              class="rounded-circle border object-fit-cover shadow-sm" 
                                                              width="60" height="60">
+                                                        
                                                         <div class="position-absolute bottom-0 end-0 bg-white rounded-circle border p-1" 
                                                              style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;">
                                                             <i class="bi bi-camera-fill text-secondary" style="font-size: 10px;"></i>
                                                         </div>
                                                     </div>
-                                                    <input type="file" :name="`tersangka[${index}][foto]`" 
-                                                           class="d-none" :id="'file_'+t.temp_id" accept="image/*" @change="handleFoto($event, index)">
+                                                    
+                                                    <input type="file" 
+                                                           :name="`tersangka[${index}][foto]`" 
+                                                           class="d-none" 
+                                                           :id="'file_'+t.temp_id" 
+                                                           accept="image/*" 
+                                                           @change="handleFoto($event, index)">
+                                                    
+                                                    <div class="text-danger small mt-1" 
+                                                         x-show="hasError('tersangka', index, 'foto')" 
+                                                         x-text="getErrorMessage('tersangka', index, 'foto')">
+                                                    </div>
                                                 </td>
 
+                                                {{-- DATA TERSANGKA --}}
                                                 <td class="bg-white" data-label="Detail Tersangka">
                                                     <div class="row g-2">
                                                         <div class="col-md-6">
                                                             <label class="form-label small text-muted mb-1">Nama Lengkap</label>
-                                                            <input type="text" :name="`tersangka[${index}][nama]`" x-model="t.nama" 
+                                                            <input type="text" 
+                                                                   :name="`tersangka[${index}][nama]`" 
+                                                                   x-model="t.nama" 
                                                                    @input.debounce.300ms="updateAllTomSelects()" 
-                                                                   class="form-control form-control-sm" :class="{'is-invalid': hasError('tersangka', index, 'nama')}">
+                                                                   class="form-control form-control-sm" 
+                                                                   :class="{'is-invalid': hasError('tersangka', index, 'nama')}"
+                                                                   placeholder="Nama Tersangka">
+                                                            <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'nama')"></div>
                                                         </div>
+                                                        
                                                         <div class="col-md-6">
                                                             <label class="form-label small text-muted mb-1">Jenis Kelamin</label>
-                                                            <select :name="`tersangka[${index}][jk]`" x-model="t.jk" class="form-select form-select-sm">
+                                                            <select :name="`tersangka[${index}][jk]`" 
+                                                                    x-model="t.jk" 
+                                                                    class="form-select form-select-sm"
+                                                                    :class="{'is-invalid': hasError('tersangka', index, 'jk')}">
                                                                 <option value="Laki-Laki">Laki-Laki</option>
                                                                 <option value="Perempuan">Perempuan</option>
                                                             </select>
+                                                            <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'jk')"></div>
                                                         </div>
+                                                        
                                                         <div class="col-md-6">
                                                             <label class="form-label small text-muted mb-1">Pekerjaan</label>
-                                                            <input type="text" :name="`tersangka[${index}][pekerjaan]`" x-model="t.pekerjaan" class="form-control form-control-sm">
+                                                            <input type="text" 
+                                                                   :name="`tersangka[${index}][pekerjaan]`" 
+                                                                   x-model="t.pekerjaan" 
+                                                                   class="form-control form-control-sm" 
+                                                                   :class="{'is-invalid': hasError('tersangka', index, 'pekerjaan')}"
+                                                                   placeholder="Pekerjaan">
+                                                            <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'pekerjaan')"></div>
                                                         </div>
+                                                        
                                                         <div class="col-md-6">
                                                             <label class="form-label small text-muted mb-1">Status / Tahap</label>
-                                                            <input type="text" :name="`tersangka[${index}][tahap]`" x-model="t.tahap" class="form-control form-control-sm" placeholder="Contoh: Tahap II">
+                                                            <input type="text" 
+                                                                   :name="`tersangka[${index}][tahap]`" 
+                                                                   x-model="t.tahap" 
+                                                                   class="form-control form-control-sm" 
+                                                                   :class="{'is-invalid': hasError('tersangka', index, 'tahap')}"
+                                                                   placeholder="Status / Tahap">
+                                                            <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'tahap')"></div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td class="text-center bg-white">
-                                                    <button type="button" class="btn btn-outline-danger btn-sm" @click="removeTersangka(index)">
+                                                
+                                                <td class="text-center bg-white" data-label="Aksi">
+                                                    <button type="button" 
+                                                            class="btn btn-outline-danger btn-sm btn-mobile-block" 
+                                                            @click="removeTersangka(index)"
+                                                            title="Hapus Tersangka">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
                                                 </td>
@@ -165,14 +212,28 @@
                                         </template>
                                     </tbody>
                                 </table>
+                                
+                                <button type="button" 
+                                        class="btn btn-light border btn-sm mt-2 w-100 d-md-none" 
+                                        @click="addTersangka">
+                                    <i class="bi bi-plus-lg"></i> Tambah Tersangka Lain
+                                </button>
+                                
+                                @error('tersangka') 
+                                    <div class="alert alert-danger py-2 small">
+                                        <i class="bi bi-exclamation-circle me-1"></i> {{ $message }}
+                                    </div> 
+                                @enderror
                             </div>
 
-                            {{-- SECTION 3: BARANG BUKTI --}}
+                            {{-- ================= SECTION 3: BARANG BUKTI ================= --}}
                             <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-2">
                                 <h6 class="text-uppercase text-secondary fw-bold small m-0">
                                     <i class="bi bi-box-seam me-1"></i> Daftar Barang Bukti
                                 </h6>
-                                <button type="button" class="btn btn-primary btn-sm shadow-sm" @click="addBB">
+                                <button type="button" 
+                                        class="btn btn-primary btn-sm shadow-sm d-none d-md-block" 
+                                        @click="addBB">
                                     <i class="bi bi-plus-lg me-1"></i> Tambah Barang Bukti
                                 </button>
                             </div>
@@ -192,43 +253,122 @@
                                     <tbody class="border-top-0">
                                         <template x-for="(bb, i) in bbList" :key="bb.temp_id">
                                             <tr>
+                                                {{-- ID Barang Bukti (Hanya row pertama dari grup yang pegang ID untuk referensi update) --}}
                                                 <input type="hidden" :name="`barang_bukti[${i}][id]`" :value="bb.id">
-                                                <td class="bg-white">
-                                                    <div wire:ignore>
-                                                        <select :name="`barang_bukti[${i}][pemilik_id][]`" multiple x-init="initTomSelectOwner($el, bb)"></select>
+                                                
+                                                {{-- PEMILIK (MULTIPLE) --}}
+                                                <td class="bg-white" data-label="Pemilik">
+                                                    <div wire:ignore 
+                                                         :class="{'border border-danger rounded': hasError('barang_bukti', i, 'pemilik_id')}">
+                                                        <select :name="`barang_bukti[${i}][pemilik_id][]`" 
+                                                                multiple 
+                                                                placeholder="Pilih Pemilik..." 
+                                                                autocomplete="off" 
+                                                                x-init="initTomSelectOwner($el, bb)">
+                                                        </select>
+                                                    </div>
+                                                    <div class="text-danger small mt-1" 
+                                                         x-show="hasError('barang_bukti', i, 'pemilik_id')" 
+                                                         x-text="getErrorMessage('barang_bukti', i, 'pemilik_id')">
                                                     </div>
                                                 </td>
-                                                <td class="bg-white">
-                                                    <select :name="`barang_bukti[${i}][kategori]`" x-model="bb.kategori" class="form-select form-select-sm" @change="resetSatuan(bb)">
+                                                
+                                                {{-- KATEGORI --}}
+                                                <td class="bg-white" data-label="Kategori">
+                                                    <select :name="`barang_bukti[${i}][kategori]`" 
+                                                            x-model="bb.kategori" 
+                                                            class="form-select form-select-sm" 
+                                                            @change="resetSatuan(bb)"
+                                                            :class="{'is-invalid': hasError('barang_bukti', i, 'kategori')}">
                                                         <option value="Narkotika">Narkotika</option>
                                                         <option value="Non-Narkotika">Non-Narkotika</option>
                                                     </select>
                                                 </td>
-                                                <td class="bg-white">
-                                                    <div x-show="bb.kategori === 'Narkotika'">
-                                                        <select :name="`barang_bukti[${i}][narkotika_id]`" x-init="initTomSelectNarkotika($el, bb)"></select>
+                                                
+                                                {{-- NAMA BARANG (MULTIPLE) --}}
+                                                <td class="bg-white" data-label="Nama Barang">
+                                                    {{-- OPSI A: Narkotika (Multiple Select) --}}
+                                                    <div x-show="bb.kategori === 'Narkotika'" class="w-100">
+                                                        <div wire:ignore 
+                                                             :class="{'border border-danger rounded': hasError('barang_bukti', i, 'narkotika_id')}">
+                                                            <select :name="`barang_bukti[${i}][narkotika_id][]`" 
+                                                                    multiple
+                                                                    placeholder="Cari Narkotika..." 
+                                                                    autocomplete="off" 
+                                                                    x-init="initTomSelectNarkotika($el, bb)">
+                                                            </select>
+                                                        </div>
+                                                        <div class="text-danger small mt-1" 
+                                                             x-show="hasError('barang_bukti', i, 'narkotika_id')" 
+                                                             x-text="getErrorMessage('barang_bukti', i, 'narkotika_id')">
+                                                        </div>
                                                     </div>
-                                                    <div x-show="bb.kategori === 'Non-Narkotika'">
-                                                        <input type="text" :name="`barang_bukti[${i}][nama_barang_bukti]`" x-model="bb.nama_barang_bukti" class="form-control form-control-sm">
+                                                    
+                                                    {{-- OPSI B: Non-Narkotika (Multiple Tags) --}}
+                                                    <div x-show="bb.kategori === 'Non-Narkotika'" class="w-100">
+                                                        <div wire:ignore 
+                                                             :class="{'border border-danger rounded': hasError('barang_bukti', i, 'nama_barang_bukti')}">
+                                                            <select :name="`barang_bukti[${i}][nama_barang_bukti][]`" 
+                                                                    multiple
+                                                                    placeholder="Ketik nama barang lalu Enter..." 
+                                                                    autocomplete="off" 
+                                                                    x-init="initTomSelectNonNarkotika($el, bb)">
+                                                            </select>
+                                                        </div>
+                                                        <div class="text-danger small mt-1" 
+                                                             x-show="hasError('barang_bukti', i, 'nama_barang_bukti')" 
+                                                             x-text="getErrorMessage('barang_bukti', i, 'nama_barang_bukti')">
+                                                        </div>
                                                     </div>
                                                 </td>
-                                                <td class="bg-white">
-                                                    <input type="number" step="0.0001" :name="`barang_bukti[${i}][jumlah]`" x-model="bb.jumlah" class="form-control form-control-sm">
+                                                
+                                                {{-- JUMLAH / BERAT --}}
+                                                <td class="bg-white" :data-label="getQuantityLabel()">
+                                                    <input type="number" 
+                                                           step="0.0001" 
+                                                           :name="`barang_bukti[${i}][jumlah]`" 
+                                                           x-model="bb.jumlah" 
+                                                           class="form-control form-control-sm" 
+                                                           :class="{'is-invalid': hasError('barang_bukti', i, 'jumlah')}"
+                                                           :placeholder="bb.kategori === 'Narkotika' ? 'Berat' : 'Berat / Jumlah'">
+                                                    <div class="invalid-feedback" 
+                                                         x-text="getErrorMessage('barang_bukti', i, 'jumlah')">
+                                                    </div>
                                                 </td>
-                                                <td class="bg-white">
+                                                
+                                                {{-- SATUAN --}}
+                                                <td class="bg-white" data-label="Satuan">
+                                                    {{-- Narkotika: Dropdown Baku --}}
                                                     <div x-show="bb.kategori === 'Narkotika'">
-                                                        <select :name="`barang_bukti[${i}][satuan]`" x-model="bb.satuan" class="form-select form-select-sm">
+                                                        <select :name="`barang_bukti[${i}][satuan]`" 
+                                                                x-model="bb.satuan" 
+                                                                class="form-select form-select-sm"
+                                                                :class="{'is-invalid': hasError('barang_bukti', i, 'satuan')}">
                                                             <option value="Gram">Gram</option>
                                                             <option value="Kg">Kg</option>
                                                             <option value="Ton">Ton</option>
                                                         </select>
                                                     </div>
+                                                    
+                                                    {{-- Non-Narkotika: Input Manual --}}
                                                     <div x-show="bb.kategori === 'Non-Narkotika'">
-                                                        <input type="text" :name="`barang_bukti[${i}][satuan]`" x-model="bb.satuan" class="form-control form-control-sm">
+                                                        <input type="text" 
+                                                               :name="`barang_bukti[${i}][satuan]`" 
+                                                               x-model="bb.satuan" 
+                                                               class="form-control form-control-sm"
+                                                               placeholder="Masukkan Satuan"
+                                                               :class="{'is-invalid': hasError('barang_bukti', i, 'satuan')}">
+                                                    </div>
+                                                    <div class="invalid-feedback" 
+                                                         x-text="getErrorMessage('barang_bukti', i, 'satuan')">
                                                     </div>
                                                 </td>
-                                                <td class="text-center">
-                                                    <button type="button" class="btn btn-outline-danger btn-sm" @click="removeBB(i)">
+                                                
+                                                <td class="text-center" data-label="Aksi">
+                                                    <button type="button" 
+                                                            class="btn btn-outline-danger btn-sm" 
+                                                            @click="removeBB(i)"
+                                                            title="Hapus Barang Bukti">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
                                                 </td>
@@ -236,9 +376,21 @@
                                         </template>
                                     </tbody>
                                 </table>
+                                
+                                <button type="button" 
+                                        class="btn btn-light border btn-sm mt-2 w-100 d-md-none" 
+                                        @click="addBB">
+                                    <i class="bi bi-plus-lg"></i> Tambah Barang Bukti Lain
+                                </button>
+                                
+                                @error('barang_bukti') 
+                                    <div class="alert alert-danger py-2 small">
+                                        <i class="bi bi-exclamation-circle me-1"></i> {{ $message }}
+                                    </div> 
+                                @enderror
                             </div>
 
-                            {{-- SECTION 4: LAMPIRAN --}}
+                            {{-- ================= SECTION 4: LAMPIRAN ================= --}}
                             <h6 class="text-uppercase text-secondary fw-bold small mb-4 border-bottom pb-2">
                                 <i class="bi bi-paperclip me-1"></i> Lampiran
                             </h6>
@@ -273,20 +425,34 @@
                                     </div>
                                     <div id="delete-inputs-container">
                                         @if(old('delete_files'))
-                                            @foreach(old('delete_files') as $deletedId)
-                                                <input type="hidden" name="delete_files[]" value="{{ $deletedId }}" id="input-delete-{{ $deletedId }}">
+                                            @foreach(old('delete_files') as $deletedId) 
+                                                <input type="hidden" name="delete_files[]" value="{{ $deletedId }}" id="input-delete-{{ $deletedId }}"> 
                                             @endforeach
                                         @endif
                                     </div>
                                 @endif
-
-                                <label class="form-label fw-bold h6 mb-1 text-dark"><i class="bi bi-cloud-arrow-up me-2"></i>Upload File Baru</label>
-                                <input type="file" class="filepond" name="dokumentasi[]" multiple>
+                                <label class="form-label fw-bold h6 mb-1 text-dark">
+                                    <i class="bi bi-cloud-arrow-up me-2"></i>Upload File Baru
+                                </label>
+                                <input type="file" 
+                                       class="filepond" 
+                                       name="dokumentasi[]" 
+                                       multiple 
+                                       data-allow-reorder="true" 
+                                       data-max-file-size="10MB" 
+                                       data-max-files="10">
                             </div>
 
                             <div class="d-flex flex-column-reverse flex-lg-row justify-content-end gap-2 pt-4 border-top mt-5">
-                                <button type="button" onclick="window.location.reload()" class="btn btn-light border text-secondary px-4">Reset</button>
-                                <button type="submit" class="btn btn-primary px-5 shadow-sm" :disabled="isUploading">
+                                <button type="button" 
+                                        onclick="window.location.reload()" 
+                                        class="btn btn-light border text-secondary px-4">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                                </button>
+                                <button type="submit" 
+                                        id="btn-submit" 
+                                        class="btn btn-primary px-5 shadow-sm" 
+                                        :disabled="isUploading">
                                     <span x-show="isUploading" class="spinner-border spinner-border-sm me-2"></span>
                                     <span x-text="isUploading ? 'Mengupload...' : 'Simpan Perubahan'"></span>
                                 </button>
@@ -303,9 +469,22 @@
 @push('styles')
     @vite(['resources/css/filepond.css', 'resources/js/filepond.js'])
     <style>
-        .ts-control { border: 1px solid #dee2e6; padding: 0.4rem 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; }
+        .ts-control { border: 1px solid #dee2e6; padding: 0.4rem 0.75rem; border-radius: 0.375rem; box-shadow: none; font-size: 0.875rem; }
+        .ts-control.focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+        .ts-dropdown { z-index: 9999 !important; }
+        .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; }
         .border-dashed { border-style: dashed !important; border-width: 2px !important; }
-        .file-card-inner { transition: all 0.3s ease; }
+        .border-danger-subtle-thick { border-color: #dc3545 !important; border-width: 2px !important; }
+
+        /* --- CSS RESPONSIVE STACKED TABLE --- */
+        @media (max-width: 768px) {
+            .table-mobile-responsive thead { display: none; }
+            .table-mobile-responsive tbody tr { display: block; margin-bottom: 1.5rem; border: 1px solid #dee2e6; border-radius: 0.5rem; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding: 1rem; }
+            .table-mobile-responsive tbody td { display: block; text-align: left !important; border: none; padding: 0.5rem 0; }
+            .table-mobile-responsive tbody td::before { content: attr(data-label); display: block; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #6c757d; margin-bottom: 0.25rem; }
+            .btn-mobile-block { width: 100%; margin-top: 0.5rem; }
+            .table-mobile-responsive .form-control, .table-mobile-responsive .form-select { width: 100%; }
+        }
     </style>
 @endpush
 
@@ -316,23 +495,16 @@
         const overlay = cardInner.querySelector('.delete-overlay');
         const btnDelete = event.target;
         const containerInputs = document.getElementById('delete-inputs-container');
-        
         if (!overlay.classList.contains('d-none')) {
-            overlay.classList.add('d-none'); overlay.classList.remove('d-flex');
-            cardInner.classList.remove('border-danger', 'border-2');
-            btnDelete.classList.remove('btn-secondary');
-            btnDelete.classList.add('btn-outline-danger');
-            btnDelete.innerHTML = 'Hapus';
-            const input = document.getElementById('input-delete-' + id);
-            if(input) input.remove();
+            overlay.classList.add('d-none'); overlay.classList.remove('d-flex'); 
+            cardInner.classList.remove('border-danger', 'border-2'); 
+            btnDelete.classList.remove('btn-secondary'); btnDelete.classList.add('btn-outline-danger'); btnDelete.innerHTML = 'Hapus';
+            const input = document.getElementById('input-delete-' + id); if(input) input.remove();
         } else {
-            overlay.classList.remove('d-none'); overlay.classList.add('d-flex');
-            cardInner.classList.add('border-danger', 'border-2');
-            btnDelete.classList.remove('btn-outline-danger');
-            btnDelete.classList.add('btn-secondary');
-            btnDelete.innerHTML = 'Batal';
-            const input = document.createElement('input');
-            input.type = 'hidden'; input.name = 'delete_files[]'; input.value = id; input.id = 'input-delete-' + id;
+            overlay.classList.remove('d-none'); overlay.classList.add('d-flex'); 
+            cardInner.classList.add('border-danger', 'border-2'); 
+            btnDelete.classList.remove('btn-outline-danger'); btnDelete.classList.add('btn-secondary'); btnDelete.innerHTML = 'Batal';
+            const input = document.createElement('input'); input.type = 'hidden'; input.name = 'delete_files[]'; input.value = id; input.id = 'input-delete-' + id; 
             containerInputs.appendChild(input);
         }
     };
@@ -341,14 +513,17 @@
 <script type="module">
     document.addEventListener('alpine:init', () => {
         Alpine.data('kasusForm', () => ({
+            // --- STATE ---
             tersangkaList: [],
             bbList: [],
             isUploading: false,
             tomSelectOwners: {}, 
             tomSelectNarkotika: {},
+            tomSelectNonNarkotika: {},
             errors: @json($errors->toArray()),
             masterNarkotika: @json($masterNarkotika),
 
+            // --- INIT ---
             init() {
                 const dbTersangka = {!! json_encode($kasus->tersangka) !!};
                 const dbBB = {!! json_encode($kasus->barangBukti) !!};
@@ -371,7 +546,7 @@
                 } else {
                     dbTersangka.forEach(t => {
                         this.tersangkaList.push({ 
-                            temp_id: 't_' + t.id, 
+                            temp_id: 't_' + t.id, // Prefix ID lama
                             id: t.id, 
                             nama: t.nama_tersangka, 
                             jk: t.jenis_kelamin, 
@@ -382,142 +557,251 @@
                     });
                 }
 
-                // 2. Inisialisasi Barang Bukti (Dengan parseFloat untuk hilangkan ,0000)
+                // 2. Inisialisasi Barang Bukti (DENGAN LOGIC GROUPING UNTUK MERGE ROW)
                 if (oldBB.length > 0) {
                     oldBB.forEach(b => {
                         this.bbList.push({ 
                             temp_id: 'bb_' + Math.random().toString(36).substr(2, 9), 
                             id: b.id || null, 
                             kategori: b.kategori, 
-                            narkotika_id: b.narkotika_id, 
-                            nama_barang_bukti: b.nama_barang_bukti, 
+                            narkotika_id: b.narkotika_id || [], 
+                            nama_barang_bukti: b.nama_barang_bukti || [], 
                             jumlah: b.jumlah ? parseFloat(b.jumlah) : '', 
                             satuan: b.satuan, 
                             initial_pemilik: b.pemilik_id || [] 
                         });
                     });
                 } else {
+                    // === ALGORITMA GROUPING DATABASE ROWS MENJADI UI ROWS ===
+                    const grouped = {};
+                    
                     dbBB.forEach(b => {
-                        this.bbList.push({ 
-                            temp_id: 'bb_' + b.id, 
-                            id: b.id, 
-                            kategori: b.kategori, 
-                            narkotika_id: b.narkotika_id, 
-                            nama_barang_bukti: b.nama_barang_non_narkotika, 
-                            jumlah: parseFloat(b.kuantitas), // Menggunakan parseFloat
-                            satuan: b.kategori === 'Narkotika' ? b.satuan_narkotika : b.satuan_non_narkotika, 
-                            initial_pemilik: b.tersangka.map(tsk => 't_' + tsk.id)
-                        });
+                        // Kunci Grouping: Gabungan Kategori + Jumlah + Satuan + Daftar Pemilik
+                        // Kita urutkan pemilik ID agar "A,B" sama dengan "B,A"
+                        const ownerIds = b.tersangka.map(t => 't_' + t.id).sort().join(',');
+                        
+                        // Signature unik untuk grouping
+                        const signature = `${b.kategori}|${parseFloat(b.kuantitas)}|${b.satuan_narkotika || b.satuan_non_narkotika}|${ownerIds}`;
+                        
+                        if (!grouped[signature]) {
+                            // Jika grup belum ada, buat entry baru
+                            grouped[signature] = {
+                                temp_id: 'bb_' + b.id, // Gunakan ID row pertama sebagai key referensi
+                                id: b.id, // ID row pertama (untuk update)
+                                kategori: b.kategori,
+                                narkotika_id: [],
+                                nama_barang_bukti: [],
+                                jumlah: parseFloat(b.kuantitas),
+                                satuan: b.kategori === 'Narkotika' ? b.satuan_narkotika : b.satuan_non_narkotika,
+                                initial_pemilik: b.tersangka.map(t => 't_' + t.id)
+                            };
+                        }
+
+                        // Push item (Narkotika ID atau Nama Barang) ke dalam array group yang sudah ada
+                        if (b.kategori === 'Narkotika') {
+                            if(b.narkotika_id) grouped[signature].narkotika_id.push(b.narkotika_id);
+                        } else {
+                            if(b.nama_barang_non_narkotika) grouped[signature].nama_barang_bukti.push(b.nama_barang_non_narkotika);
+                        }
                     });
+
+                    // Hasil grouping dikonversi kembali menjadi array list untuk x-for
+                    this.bbList = Object.values(grouped);
                 }
 
                 // 3. FilePond
                 if(window.FilePond) {
-                    FilePond.create(document.querySelector('input.filepond'), {
+                    const el = document.querySelector('input.filepond');
+                    FilePond.create(el, {
                         server: { 
-                            process: { url: '{{ route('upload.temp') }}', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } }, 
+                            process: { url: '{{ route('upload.temp') }}', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, onerror: () => { this.isUploading = false; } }, 
                             revert: { url: '{{ route('revert.temp') }}', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } } 
                         },
                         onprocessstart: () => { this.isUploading = true }, 
-                        onprocessfiles: () => { this.isUploading = false }
+                        onprocessfiles: () => { this.isUploading = false },
+                        onremovefile: () => { const pond = FilePond.find(el); if (pond) { const files = pond.getFiles(); if(!files.some(f => f.status === 3 || f.status === 9)) this.isUploading = false; } }
                     });
                 }
             },
 
-            addTersangka() {
-                this.tersangkaList.push({ 
-                    temp_id: 't_' + Date.now(), id: null, nama: '', jk: 'Laki-Laki', pekerjaan: '', tahap: '', preview_url: null 
-                });
-                this.$nextTick(() => this.updateAllTomSelects());
-            },
-
-            removeTersangka(index) {
-                if (this.tersangkaList.length === 1) return;
-                this.tersangkaList.splice(index, 1);
-                this.$nextTick(() => this.updateAllTomSelects());
-            },
-
-            handleFoto(e, index) {
-                const file = e.target.files[0];
-                if(file) this.tersangkaList[index].preview_url = URL.createObjectURL(file);
-            },
-
-            addBB() {
-                this.bbList.push({ 
-                    temp_id: 'bb_' + Date.now(), id: null, kategori: 'Narkotika', narkotika_id: '', nama_barang_bukti: '', jumlah: '', satuan: 'Gram', initial_pemilik: [] 
-                });
-            },
-
-            removeBB(index) {
-                this.bbList.splice(index, 1);
-            },
-
-            getQuantityLabel() {
-                return this.bbList.every(bb => bb.kategori === 'Narkotika') ? 'Berat' : 'Berat / Jumlah';
-            },
-
-            resetSatuan(bb) {
-                bb.satuan = bb.kategori === 'Narkotika' ? 'Gram' : '';
-            },
-
+            // --- TOMSELECT OWNERS ---
             initTomSelectOwner(el, bbData) {
                 const ts = new TomSelect(el, { 
-                    plugins: ['remove_button'], 
+                    plugins: ['remove_button', 'dropdown_input'], 
                     valueField: 'value', 
                     labelField: 'text', 
-                    searchField: 'text',
-                    dropdownParent: 'body'
+                    searchField: 'text', 
+                    placeholder: "Pilih pemilik...", 
+                    dropdownParent: 'body' 
                 });
                 this.tomSelectOwners[bbData.temp_id] = ts;
+                
                 this.refreshOptionsForInstance(ts);
-                if (bbData.initial_pemilik.length > 0) {
-                    ts.setValue(bbData.initial_pemilik);
-                    bbData.pemilik_id = bbData.initial_pemilik;
+                
+                // Set Selected Values (Array)
+                if (bbData.initial_pemilik && bbData.initial_pemilik.length > 0) { 
+                    ts.setValue(bbData.initial_pemilik); 
+                    bbData.pemilik_id = bbData.initial_pemilik; 
                 }
-                ts.on('change', (val) => bbData.pemilik_id = val);
+                
+                ts.on('change', (val) => { bbData.pemilik_id = val; });
             },
 
             updateAllTomSelects() {
-                Object.values(this.tomSelectOwners).forEach(ts => this.refreshOptionsForInstance(ts));
+                Object.values(this.tomSelectOwners).forEach(ts => {
+                    this.refreshOptionsForInstance(ts);
+                });
             },
 
             refreshOptionsForInstance(ts) {
-                const validIds = this.tersangkaList.map(t => {
-                    const label = t.nama.trim() || '(Tanpa Nama)';
+                // Add/Update Options from Tersangka List
+                this.tersangkaList.forEach(t => {
+                    const label = t.nama.trim() === '' ? '(Tanpa Nama)' : t.nama;
                     if (ts.options[t.temp_id]) {
                         ts.updateOption(t.temp_id, { value: t.temp_id, text: label });
                     } else {
                         ts.addOption({ value: t.temp_id, text: label });
                     }
-                    return t.temp_id;
                 });
-                Object.keys(ts.options).forEach(opt => {
-                    if (!validIds.includes(opt)) ts.removeOption(opt);
+                
+                // Remove Deleted Tersangka from Options
+                const validIds = this.tersangkaList.map(t => t.temp_id);
+                Object.keys(ts.options).forEach(optVal => {
+                    if (!validIds.includes(optVal)) ts.removeOption(optVal);
                 });
-                ts.refreshOptions(false);
+                
+                ts.refreshOptions(false); 
             },
 
+            // --- TOMSELECT NARKOTIKA (MULTIPLE) ---
             initTomSelectNarkotika(el, bbData) {
                 const options = this.masterNarkotika.map(m => ({ id: m.id, text: m.nama_narkotika }));
-                const ts = new TomSelect(el, {
-                    valueField: 'id', labelField: 'text', searchField: ['text'],
-                    options: options, dropdownParent: 'body'
+                const ts = new TomSelect(el, { 
+                    plugins: ['remove_button', 'dropdown_input'], 
+                    valueField: 'id', labelField: 'text', searchField: ['text'], 
+                    options: options, dropdownParent: 'body', create: false,
+                    placeholder: "Cari Narkotika..."
                 });
-                if (bbData.narkotika_id) ts.setValue(bbData.narkotika_id);
-                ts.on('change', (val) => bbData.narkotika_id = val);
+                this.tomSelectNarkotika[bbData.temp_id] = ts;
+                
+                // Set Values (Array)
+                if (bbData.narkotika_id && bbData.narkotika_id.length > 0) { 
+                    ts.setValue(bbData.narkotika_id); 
+                }
+                
+                ts.on('change', (val) => { bbData.narkotika_id = val; });
             },
 
-            hasError(field, index, key) {
-                return this.errors[`${field}.${index}.${key}`];
+            // --- TOMSELECT NON-NARKOTIKA (TAGS MULTIPLE) ---
+            initTomSelectNonNarkotika(el, bbData) {
+                const ts = new TomSelect(el, {
+                    plugins: ['remove_button', 'dropdown_input'], 
+                    create: true, createOnBlur: true, persist: false,
+                    placeholder: "Ketik nama barang lalu Enter...", dropdownParent: 'body'
+                });
+                this.tomSelectNonNarkotika[bbData.temp_id] = ts;
+                
+                // Set Values (Array of Strings)
+                if (bbData.nama_barang_bukti && bbData.nama_barang_bukti.length > 0) { 
+                    const initial = Array.isArray(bbData.nama_barang_bukti) ? bbData.nama_barang_bukti : [bbData.nama_barang_bukti];
+                    initial.forEach(opt => ts.addOption({value: opt, text: opt}));
+                    ts.setValue(initial);
+                }
+                
+                ts.on('change', (val) => { bbData.nama_barang_bukti = val; });
             },
 
-            getErrorMessage(field, index, key) {
-                return this.errors[`${field}.${index}.${key}`]?.[0] || '';
+            // --- HELPER & ACTIONS ---
+            getQuantityLabel() {
+                if (this.bbList.length === 0) return 'Berat / Jumlah';
+                const allNarkotika = this.bbList.every(bb => bb.kategori === 'Narkotika');
+                return allNarkotika ? 'Berat' : 'Berat / Jumlah';
+            },
+
+            resetSatuan(bb) {
+                if (bb.kategori === 'Narkotika') {
+                    bb.satuan = 'Gram'; 
+                } else {
+                    bb.satuan = ''; 
+                }
+            },
+
+            hasError(field, index, key) { const errorKey = `${field}.${index}.${key}`; return this.errors && this.errors[errorKey]; },
+            getErrorMessage(field, index, key) { const errorKey = `${field}.${index}.${key}`; return this.errors[errorKey] ? this.errors[errorKey][0] : ''; },
+
+            addTersangka() { 
+                this.tersangkaList.push({ temp_id: 't_' + Date.now() + Math.random(), nama: '', jk: 'Laki-Laki', pekerjaan: '', tahap: '', preview_url: null }); 
+                this.$nextTick(() => { this.updateAllTomSelects(); }); 
+            },
+            
+            removeTersangka(index) {
+                const suspectId = this.tersangkaList[index].temp_id;
+                let isUsed = false;
+                Object.values(this.tomSelectOwners).forEach(ts => { if (ts.getValue().includes(suspectId)) isUsed = true; });
+                
+                if (isUsed) { 
+                    Swal.fire({icon: 'error', title: 'Gagal Hapus', text: `Tersangka ini dipilih sebagai pemilik Barang Bukti.`}); 
+                    return; 
+                }
+                
+                if (this.tersangkaList.length === 1) return;
+                this.tersangkaList.splice(index, 1);
+                this.$nextTick(() => { this.updateAllTomSelects(); });
+            },
+            
+            handleFoto(e, index) { 
+                const file = e.target.files[0]; 
+                if(file) this.tersangkaList[index].preview_url = URL.createObjectURL(file); 
+            },
+
+            addBB() { 
+                this.bbList.push({ 
+                    temp_id: 'bb_' + Date.now() + Math.random(), 
+                    kategori: 'Narkotika', 
+                    narkotika_id: [], // Array
+                    nama_barang_bukti: [], // Array 
+                    jumlah: '', 
+                    satuan: 'Gram', 
+                    initial_pemilik: [] // Array
+                }); 
+            },
+            
+            removeBB(index) {
+                if (this.bbList.length === 1) return;
+                
+                // Cleanup TomSelect instances
+                const bbTempId = this.bbList[index].temp_id;
+                if(this.tomSelectOwners[bbTempId]) { this.tomSelectOwners[bbTempId].destroy(); delete this.tomSelectOwners[bbTempId]; }
+                if(this.tomSelectNarkotika[bbTempId]) { this.tomSelectNarkotika[bbTempId].destroy(); delete this.tomSelectNarkotika[bbTempId]; }
+                if(this.tomSelectNonNarkotika[bbTempId]) { this.tomSelectNonNarkotika[bbTempId].destroy(); delete this.tomSelectNonNarkotika[bbTempId]; }
+                
+                this.bbList.splice(index, 1);
             },
 
             submitData(e) {
-                if (this.isUploading) {
-                    return Swal.fire('Tunggu', 'Upload file belum selesai', 'warning');
+                if (this.isUploading) { Swal.fire({icon: 'warning', title: 'Upload Belum Selesai', text: 'Mohon tunggu hingga semua file selesai diupload.'}); return; }
+                
+                if (this.tersangkaList.length === 0 || this.bbList.length === 0) { 
+                    Swal.fire('Data Belum Lengkap', 'Mohon isi minimal 1 Tersangka dan 1 Barang Bukti.', 'warning'); 
+                    return; 
+                }
+                
+                let valid = true;
+                this.bbList.forEach(bb => {
+                    // Validasi Array Length
+                    if (bb.kategori === 'Narkotika' && (!bb.narkotika_id || bb.narkotika_id.length === 0)) valid = false;
+                    if (bb.kategori === 'Non-Narkotika' && (!bb.nama_barang_bukti || bb.nama_barang_bukti.length === 0)) valid = false;
+                });
+                
+                if(!valid) { Swal.fire('Data Belum Lengkap', 'Mohon lengkapi jenis narkotika atau nama barang bukti.', 'warning'); return; }
+                
+                const selectedOwners = this.bbList.flatMap(bb => bb.pemilik_id || []);
+                const orphanSuspects = this.tersangkaList.filter(t => !selectedOwners.includes(t.temp_id));
+                
+                if (orphanSuspects.length > 0) {
+                    const names = orphanSuspects.map(t => t.nama || 'Tanpa Nama').join(', ');
+                    Swal.fire({icon: 'error', title: 'Validasi Gagal', html: `Tersangka berikut belum dikaitkan dengan Barang Bukti:<br><b>${names}</b><br><br>Mohon pilih tersangka tersebut di kolom "Pemilik".`, confirmButtonText: 'Perbaiki', confirmButtonColor: '#d33'});
+                    return;
                 }
                 e.target.submit();
             }

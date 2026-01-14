@@ -18,26 +18,18 @@ use App\Exports\UngkapKasusExport;
 
 class UngkapKasusController extends Controller
 {
-    /**
-     * Helper: Filter Item Barang Bukti (Logic OR + Multiple Keywords)
-     * PERBAIKAN UTAMA ADA DI SINI (Menangani Array Input)
-     */
     private function applyCaseFilter($query, Request $request)
     {
         $kategori = $request->input('kategori_bb', []);
         
-        // Jika filter kategori kosong, jangan filter apa-apa (tampilkan semua)
         if (empty($kategori)) return $query;
 
-        // Bungkus dalam satu grup kondisi ( ... )
         return $query->where(function($q) use ($kategori, $request) {
             
             // 1. Logika Blok Narkotika
             if (in_array('Narkotika', $kategori)) {
                 $q->orWhere(function($sub) use ($request) {
                     $sub->where('kategori', 'Narkotika');
-                    
-                    // Filter spesifik ID Narkotika
                     if ($request->filled('narkotika_ids')) {
                         $sub->whereIn('narkotika_id', (array)$request->narkotika_ids);
                     }
@@ -49,17 +41,11 @@ class UngkapKasusController extends Controller
                 $q->orWhere(function($sub) use ($request) {
                     $sub->where('kategori', 'Non-Narkotika');
                     
-                    // [FIX] PERBAIKAN ARRAY TO STRING CONVERSION
-                    // Karena input berupa array (multiple select), kita harus looping
+                    // FIX: Looping array kata kunci pencarian
                     if ($request->filled('search_non_narkotika')) {
-                        
-                        // Pastikan jadi array
                         $keywords = (array)$request->search_non_narkotika;
-                        
-                        // Buat grup kondisi AND (...)
                         $sub->where(function($kQ) use ($keywords) {
                             foreach ($keywords as $key) {
-                                // Gunakan orWhere: Cocok jika SALAH SATU kata kunci ditemukan
                                 $kQ->orWhere('nama_barang_non_narkotika', 'LIKE', "%{$key}%");
                             }
                         });
@@ -75,13 +61,11 @@ class UngkapKasusController extends Controller
         $user = Auth::user();
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
-        // 1. Siapkan Query Dasar & Eager Loading
         $query = BerantasUngkapKasus::with([
             'satuanKerja', 
             'tersangka' => function($q) { $q->orderBy('urutan', 'asc'); }, 
-            
-            // Filter Eager Load: Menentukan ITEM mana yang muncul di tabel
             'barangBukti' => function($q) use ($request) {
+                // Terapkan filter pada Eager Loading agar tampilan item sinkron
                 $this->applyCaseFilter($q, $request);
                 $q->orderBy('urutan', 'asc');
             },
@@ -90,15 +74,12 @@ class UngkapKasusController extends Controller
             'dokumentasi'
         ]);
 
-        // 2. Filter WhereHas: Menentukan KASUS mana yang muncul
-        // Jika user memfilter BB, pastikan hanya kasus yang punya BB tersebut yang muncul
         if ($request->filled('kategori_bb')) {
             $query->whereHas('barangBukti', function($q) use ($request) {
                 $this->applyCaseFilter($q, $request);
             });
         }
 
-        // 3. Filter Satuan Kerja
         if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('berantas_ungkap_kasus.satuan_kerja_id', $request->satuan_kerja_id);
@@ -107,13 +88,11 @@ class UngkapKasusController extends Controller
             $query->where('berantas_ungkap_kasus.satuan_kerja_id', $user->getSatkerId());
         }
 
-        // 4. Filter Waktu
         if ($request->filled('bulan')) {
             $query->whereIn(DB::raw('MONTH(tanggal_kejadian)'), $request->bulan);
         }
         $query->whereIn(DB::raw('YEAR(tanggal_kejadian)'), $activeYears);
 
-        // 5. Filter Pencarian Umum (Global Search)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -125,16 +104,9 @@ class UngkapKasusController extends Controller
             });
         }
 
-        // 6. Sorting
         $sortBy = $request->input('sort_by', 'created_at'); 
         $sortOrder = $request->input('sort_order', 'desc'); 
-        
-        $allowedSorts = ['nomor_lkn', 'satuan_kerja_id', 'created_at', 'tanggal_kejadian'];
-        if (in_array($sortBy, $allowedSorts)) {
-            $query->orderBy($sortBy, $sortOrder);
-        } else {
-            $query->orderBy('created_at', 'desc');
-        }
+        $query->orderBy($sortBy, $sortOrder);
 
         return $query; 
     }
@@ -144,7 +116,6 @@ class UngkapKasusController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $satuanKerjas = $user->hasRole('admin') ? SatuanKerja::orderBy('satuan_kerja')->get() : [];
-        
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika', 'asc')->get();
 
         $yearQuery = BerantasUngkapKasus::selectRaw('YEAR(tanggal_kejadian) as year');
@@ -184,7 +155,8 @@ class UngkapKasusController extends Controller
             'barang_bukti'            => 'required|array|min:1',
             'barang_bukti.*.kategori' => 'required|in:Narkotika,Non-Narkotika',
             'barang_bukti.*.jumlah'   => 'required|numeric|min:0',
-            'barang_bukti.*.pemilik_id' => 'required|array|min:1',
+            // Wajib Array karena Multiple
+            'barang_bukti.*.pemilik_id' => 'required|array|min:1', 
             'dokumentasi'             => 'nullable|array',
         ];
 
@@ -195,8 +167,10 @@ class UngkapKasusController extends Controller
         $validator->after(function ($validator) use ($request) {
             $inputTersangka = collect($request->tersangka);
             $inputBB = collect($request->barang_bukti);
+            
             $allSuspectIds = $inputTersangka->pluck('temp_id')->filter();
-            $linkedOwnerIds = $inputBB->pluck('pemilik_id')->flatten()->filter();
+            // Flatten karena multiple select menghasilkan array of arrays
+            $linkedOwnerIds = $inputBB->pluck('pemilik_id')->flatten()->filter(); 
             $orphans = $allSuspectIds->diff($linkedOwnerIds);
 
             if ($orphans->isNotEmpty()) {
@@ -206,6 +180,7 @@ class UngkapKasusController extends Controller
 
             foreach ($request->barang_bukti as $index => $bb) {
                 if ($bb['kategori'] === 'Narkotika') {
+                    // Validasi Array
                     if (empty($bb['narkotika_id'])) {
                         $validator->errors()->add("barang_bukti.$index.narkotika_id", "Jenis Narkotika wajib dipilih.");
                     }
@@ -213,6 +188,7 @@ class UngkapKasusController extends Controller
                         $validator->errors()->add("barang_bukti.$index.satuan", "Satuan Narkotika harus Gram, Kg, atau Ton.");
                     }
                 } else {
+                    // Validasi Array
                     if (empty($bb['nama_barang_bukti'])) {
                         $validator->errors()->add("barang_bukti.$index.nama_barang_bukti", "Nama Barang Bukti wajib diisi.");
                     }
@@ -258,23 +234,34 @@ class UngkapKasusController extends Controller
 
             $urutanBB = 1;
             foreach ($request->barang_bukti as $bbData) {
-                $isNarkotika = $bbData['kategori'] === 'Narkotika';
+                
+                // --- LOGIC MULTIPLE INSERT ---
+                $items = ($bbData['kategori'] === 'Narkotika') 
+                    ? ($bbData['narkotika_id'] ?? []) 
+                    : ($bbData['nama_barang_bukti'] ?? []);
+                
+                if (!is_array($items)) $items = [$items];
 
-                $bb = $kasus->barangBukti()->create([
-                    'kategori'                  => $bbData['kategori'],
-                    'narkotika_id'              => $isNarkotika ? $bbData['narkotika_id'] : null,
-                    'nama_barang_non_narkotika' => !$isNarkotika ? $bbData['nama_barang_bukti'] : null,
-                    'kuantitas'                 => $bbData['jumlah'],
-                    'satuan_narkotika'          => $isNarkotika ? $bbData['satuan'] : null,
-                    'satuan_non_narkotika'      => !$isNarkotika ? $bbData['satuan'] : null,
-                    'urutan'                    => $urutanBB++,
-                ]);
+                foreach ($items as $itemValue) {
+                    $isNarkotika = $bbData['kategori'] === 'Narkotika';
 
-                $realOwnerIds = [];
-                foreach ($bbData['pemilik_id'] as $tempId) {
-                    if (isset($mapId[$tempId])) $realOwnerIds[] = $mapId[$tempId];
+                    $bb = $kasus->barangBukti()->create([
+                        'kategori'                  => $bbData['kategori'],
+                        'narkotika_id'              => $isNarkotika ? $itemValue : null,
+                        'nama_barang_non_narkotika' => !$isNarkotika ? $itemValue : null,
+                        'kuantitas'                 => $bbData['jumlah'],
+                        'satuan_narkotika'          => $isNarkotika ? $bbData['satuan'] : null,
+                        'satuan_non_narkotika'      => !$isNarkotika ? $bbData['satuan'] : null,
+                        'urutan'                    => $urutanBB++,
+                    ]);
+
+                    // Sync Many-to-Many
+                    $realOwnerIds = [];
+                    foreach ($bbData['pemilik_id'] as $tempId) {
+                        if (isset($mapId[$tempId])) $realOwnerIds[] = $mapId[$tempId];
+                    }
+                    if (!empty($realOwnerIds)) $bb->tersangka()->attach($realOwnerIds);
                 }
-                if (!empty($realOwnerIds)) $bb->tersangka()->attach($realOwnerIds);
             }
 
             if ($request->filled('dokumentasi')) {
@@ -352,6 +339,7 @@ class UngkapKasusController extends Controller
         $validator->after(function ($validator) use ($request) {
             $inputTersangka = collect($request->tersangka);
             $inputBB = collect($request->barang_bukti);
+            
             $allSuspectIds = $inputTersangka->pluck('temp_id')->filter();
             $linkedOwnerIds = $inputBB->pluck('pemilik_id')->flatten()->filter();
             $orphans = $allSuspectIds->diff($linkedOwnerIds);
@@ -374,6 +362,7 @@ class UngkapKasusController extends Controller
             if ($user->isAdmin()) $dataUpdate['satuan_kerja_id'] = $request->satuan_kerja_id;
             $kasus->update($dataUpdate);
 
+            // Handle Tersangka
             $inputTersangka = $request->tersangka ?? [];
             $existingIds = collect($inputTersangka)->pluck('id')->filter()->toArray();
             
@@ -413,41 +402,65 @@ class UngkapKasusController extends Controller
 
                 if ($model) {
                     if (isset($tData['temp_id'])) $mapId[$tData['temp_id']] = $model->id;
-                    if (isset($tData['id'])) $mapId[$tData['id']] = $model->id;
+                    $mapId['t_' . $model->id] = $model->id; 
                 }
             }
 
+            // Handle Barang Bukti
             $inputBB = $request->barang_bukti ?? [];
             $existingBBIds = collect($inputBB)->pluck('id')->filter()->toArray();
+            
+            // Delete unused rows. Note: karena logic multiple, 1 input bisa jadi banyak row.
+            // Hapus yang tidak ada di list ID yang disubmit.
             $kasus->barangBukti()->whereNotIn('id', $existingBBIds)->delete();
 
             $urutanBB = 1;
             foreach ($inputBB as $bbData) {
-                $isNarkotika = $bbData['kategori'] === 'Narkotika';
+                
+                // --- LOGIC MULTIPLE UPDATE ---
+                $items = ($bbData['kategori'] === 'Narkotika') 
+                    ? ($bbData['narkotika_id'] ?? []) 
+                    : ($bbData['nama_barang_bukti'] ?? []);
+                
+                if (!is_array($items)) $items = [$items];
 
-                $payloadBB = [
-                    'kategori'                  => $bbData['kategori'],
-                    'narkotika_id'              => $isNarkotika ? $bbData['narkotika_id'] : null,
-                    'nama_barang_non_narkotika' => !$isNarkotika ? $bbData['nama_barang_bukti'] : null,
-                    'kuantitas'                 => $bbData['jumlah'],
-                    'satuan_narkotika'          => $isNarkotika ? $bbData['satuan'] : null,
-                    'satuan_non_narkotika'      => !$isNarkotika ? $bbData['satuan'] : null,
-                    'urutan'                    => $urutanBB++,
-                ];
+                foreach ($items as $itemValue) {
+                    $isNarkotika = $bbData['kategori'] === 'Narkotika';
 
-                if (isset($bbData['id']) && $bbData['id']) {
-                    $bb = $kasus->barangBukti()->find($bbData['id']);
-                    $bb->update($payloadBB);
-                } else {
-                    $bb = $kasus->barangBukti()->create($payloadBB);
+                    $payloadBB = [
+                        'kategori'                  => $bbData['kategori'],
+                        'narkotika_id'              => $isNarkotika ? $itemValue : null,
+                        'nama_barang_non_narkotika' => !$isNarkotika ? $itemValue : null,
+                        'kuantitas'                 => $bbData['jumlah'],
+                        'satuan_narkotika'          => $isNarkotika ? $bbData['satuan'] : null,
+                        'satuan_non_narkotika'      => !$isNarkotika ? $bbData['satuan'] : null,
+                        'urutan'                    => $urutanBB++,
+                    ];
+
+                    // Logic: Update row pertama, Create sisanya
+                    if (isset($bbData['id']) && $bbData['id'] && $itemValue === reset($items)) {
+                        $bb = $kasus->barangBukti()->find($bbData['id']);
+                        if($bb) {
+                             $bb->update($payloadBB);
+                        } else {
+                             $bb = $kasus->barangBukti()->create($payloadBB);
+                        }
+                    } else {
+                        $bb = $kasus->barangBukti()->create($payloadBB);
+                    }
+
+                    // Sync Owners
+                    $realOwnerIds = [];
+                    foreach ($bbData['pemilik_id'] as $val) {
+                        if (isset($mapId[$val])) {
+                            $realOwnerIds[] = $mapId[$val];
+                        } else {
+                            $cleanId = str_replace('t_', '', $val);
+                            if (is_numeric($cleanId)) $realOwnerIds[] = $cleanId;
+                        }
+                    }
+                    $bb->tersangka()->sync(array_unique($realOwnerIds));
                 }
-
-                $realOwnerIds = [];
-                foreach ($bbData['pemilik_id'] as $tempId) {
-                    if (isset($mapId[$tempId])) $realOwnerIds[] = $mapId[$tempId];
-                    elseif (is_numeric($tempId)) $realOwnerIds[] = $tempId;
-                }
-                $bb->tersangka()->sync($realOwnerIds);
             }
 
             if ($request->has('delete_files')) {

@@ -18,35 +18,71 @@ use App\Exports\UngkapKasusExport;
 
 class UngkapKasusController extends Controller
 {
+    /**
+     * Helper: Filter Item Barang Bukti (Logic OR + Multiple Keywords)
+     * PERBAIKAN UTAMA ADA DI SINI (Menangani Array Input)
+     */
+    private function applyCaseFilter($query, Request $request)
+    {
+        $kategori = $request->input('kategori_bb', []);
+        
+        // Jika filter kategori kosong, jangan filter apa-apa (tampilkan semua)
+        if (empty($kategori)) return $query;
+
+        // Bungkus dalam satu grup kondisi ( ... )
+        return $query->where(function($q) use ($kategori, $request) {
+            
+            // 1. Logika Blok Narkotika
+            if (in_array('Narkotika', $kategori)) {
+                $q->orWhere(function($sub) use ($request) {
+                    $sub->where('kategori', 'Narkotika');
+                    
+                    // Filter spesifik ID Narkotika
+                    if ($request->filled('narkotika_ids')) {
+                        $sub->whereIn('narkotika_id', (array)$request->narkotika_ids);
+                    }
+                });
+            }
+
+            // 2. Logika Blok Non-Narkotika
+            if (in_array('Non-Narkotika', $kategori)) {
+                $q->orWhere(function($sub) use ($request) {
+                    $sub->where('kategori', 'Non-Narkotika');
+                    
+                    // [FIX] PERBAIKAN ARRAY TO STRING CONVERSION
+                    // Karena input berupa array (multiple select), kita harus looping
+                    if ($request->filled('search_non_narkotika')) {
+                        
+                        // Pastikan jadi array
+                        $keywords = (array)$request->search_non_narkotika;
+                        
+                        // Buat grup kondisi AND (...)
+                        $sub->where(function($kQ) use ($keywords) {
+                            foreach ($keywords as $key) {
+                                // Gunakan orWhere: Cocok jika SALAH SATU kata kunci ditemukan
+                                $kQ->orWhere('nama_barang_non_narkotika', 'LIKE', "%{$key}%");
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
     private function getFilteredQuery(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
-        // PERBAIKAN: Default null agar semua kategori tampil jika tidak dipilih
-        $filterKategori = $request->input('kategori_bb'); 
-
+        // 1. Siapkan Query Dasar & Eager Loading
         $query = BerantasUngkapKasus::with([
             'satuanKerja', 
             'tersangka' => function($q) { $q->orderBy('urutan', 'asc'); }, 
-            'barangBukti' => function($q) use ($filterKategori, $request) {
-                
-                // Hanya filter jika kategori_bb dipilih
-                if (!empty($filterKategori)) {
-                    $q->whereIn('kategori', $filterKategori);
-                }
-                
-                // Filter jenis narkotika spesifik
-                if ($request->filled('narkotika_ids')) {
-                    $q->whereIn('narkotika_id', $request->narkotika_ids);
-                }
-                
-                // Filter nama barang non-narkotika spesifik
-                if ($request->filled('search_non_narkotika')) {
-                    $q->where('nama_barang_non_narkotika', 'LIKE', "%{$request->search_non_narkotika}%");
-                }
-                
+            
+            // Filter Eager Load: Menentukan ITEM mana yang muncul di tabel
+            'barangBukti' => function($q) use ($request) {
+                $this->applyCaseFilter($q, $request);
                 $q->orderBy('urutan', 'asc');
             },
             'barangBukti.tersangka',
@@ -54,22 +90,15 @@ class UngkapKasusController extends Controller
             'dokumentasi'
         ]);
 
-        // Filter WhereHas: Memastikan baris LKN yang muncul memiliki BB sesuai kriteria
-        if (!empty($filterKategori)) {
-            $query->whereHas('barangBukti', function($q) use ($filterKategori, $request) {
-                $q->whereIn('kategori', $filterKategori);
-                
-                if ($request->filled('narkotika_ids')) {
-                    $q->whereIn('narkotika_id', $request->narkotika_ids);
-                }
-                
-                if ($request->filled('search_non_narkotika')) {
-                    $q->where('nama_barang_non_narkotika', 'LIKE', "%{$request->search_non_narkotika}%");
-                }
+        // 2. Filter WhereHas: Menentukan KASUS mana yang muncul
+        // Jika user memfilter BB, pastikan hanya kasus yang punya BB tersebut yang muncul
+        if ($request->filled('kategori_bb')) {
+            $query->whereHas('barangBukti', function($q) use ($request) {
+                $this->applyCaseFilter($q, $request);
             });
         }
 
-        // Filter Satuan Kerja
+        // 3. Filter Satuan Kerja
         if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('berantas_ungkap_kasus.satuan_kerja_id', $request->satuan_kerja_id);
@@ -78,13 +107,13 @@ class UngkapKasusController extends Controller
             $query->where('berantas_ungkap_kasus.satuan_kerja_id', $user->getSatkerId());
         }
 
-        // Filter Waktu
+        // 4. Filter Waktu
         if ($request->filled('bulan')) {
             $query->whereIn(DB::raw('MONTH(tanggal_kejadian)'), $request->bulan);
         }
         $query->whereIn(DB::raw('YEAR(tanggal_kejadian)'), $activeYears);
 
-        // Filter Pencarian Umum
+        // 5. Filter Pencarian Umum (Global Search)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -96,9 +125,16 @@ class UngkapKasusController extends Controller
             });
         }
 
+        // 6. Sorting
         $sortBy = $request->input('sort_by', 'created_at'); 
         $sortOrder = $request->input('sort_order', 'desc'); 
-        $query->orderBy($sortBy, $sortOrder);
+        
+        $allowedSorts = ['nomor_lkn', 'satuan_kerja_id', 'created_at', 'tanggal_kejadian'];
+        if (in_array($sortBy, $allowedSorts)) {
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
 
         return $query; 
     }
@@ -109,7 +145,6 @@ class UngkapKasusController extends Controller
         $user = Auth::user();
         $satuanKerjas = $user->hasRole('admin') ? SatuanKerja::orderBy('satuan_kerja')->get() : [];
         
-        // Ambil data Master Narkotika untuk dropdown filter
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika', 'asc')->get();
 
         $yearQuery = BerantasUngkapKasus::selectRaw('YEAR(tanggal_kejadian) as year');
@@ -305,7 +340,7 @@ class UngkapKasusController extends Controller
             'tersangka.*.jk'   => 'required|in:Laki-Laki,Perempuan',
             'tersangka.*.tahap'=> 'required|string',
             'tersangka.*.pekerjaan' => 'required|string',
-            'barang_bukti'     => 'required|array|min:1',
+            'barang_bukti'      => 'required|array|min:1',
             'barang_bukti.*.kategori' => 'required|in:Narkotika,Non-Narkotika',
             'barang_bukti.*.jumlah' => 'required|numeric',
             'barang_bukti.*.pemilik_id' => 'required|array|min:1',

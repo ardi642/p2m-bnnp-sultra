@@ -27,7 +27,7 @@
         @endif
 
         {{-- 2. ALERT ERROR / GAGAL HAPUS (MERAH) --}}
-        {{-- Ini akan muncul jika Try-Catch di controller menangkap Foreign Key error --}}
+        {{-- Pesan dari controller (Foreign Key Restrict) akan muncul di sini --}}
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
                 <div class="d-flex align-items-center">
@@ -319,6 +319,7 @@
         const editForm = document.getElementById('editForm');
         const editNama = document.getElementById('edit_nama');
         const editGolongan = document.getElementById('edit_golongan');
+        // Route dummy untuk di-replace nanti
         const baseUrl = "{{ route('berantas.narkotika.update', 0) }}";
 
         editButtons.forEach(btn => {
@@ -329,6 +330,7 @@
 
                 editNama.value = nama;
                 editGolongan.value = golongan;
+                // Ganti 0 dengan ID asli di action form
                 editForm.action = baseUrl.replace('/0', '/' + id);
             });
         });

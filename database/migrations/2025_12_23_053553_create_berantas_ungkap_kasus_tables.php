@@ -57,7 +57,7 @@ return new class extends Migration
             $table->foreignId('narkotika_id')
                   ->nullable()
                   ->constrained('berantas_narkotika')
-                  ->nullOnDelete(); 
+                  ->onDelete('restrict');
 
             // B. Field Non-Narkotika (Manual)
             $table->string('nama_barang_non_narkotika')->nullable(); 

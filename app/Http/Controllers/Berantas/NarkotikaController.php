@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Berantas;
 use App\Http\Controllers\Controller;
 use App\Models\BerantasNarkotika;
 use Illuminate\Http\Request;
-use Illuminate\Database\QueryException; // Penting untuk menangkap error database
+use Illuminate\Database\QueryException; // WAJIB ADA: Untuk menangkap error RESTRICT
 
 class NarkotikaController extends Controller
 {
@@ -14,13 +14,13 @@ class NarkotikaController extends Controller
         // 1. Whitelist Kolom yang boleh di-sort
         $allowedSorts = ['nama_narkotika', 'golongan', 'created_at'];
 
-        // 2. Default Sort: 'created_at' jika user belum klik apa-apa
+        // 2. Default Sort
         $sortBy = $request->input('sort_by');
         if (!in_array($sortBy, $allowedSorts)) {
             $sortBy = 'created_at'; 
         }
 
-        // 3. Default Direction: 'desc' (Terbaru ke Lama)
+        // 3. Default Direction
         $sortDirection = $request->input('sort_direction');
         if (!in_array($sortDirection, ['asc', 'desc'])) {
             $sortDirection = 'desc';
@@ -44,7 +44,7 @@ class NarkotikaController extends Controller
         $data = $query->orderBy($sortBy, $sortDirection)
                       ->paginate($perPage);
 
-        // 5. Appends (Agar filter search/sort tidak hilang saat klik halaman 2)
+        // 5. Appends (Agar filter search/sort tidak hilang saat klik halaman berikutnya)
         $data->appends([
             'sort_by' => $sortBy, 
             'sort_direction' => $sortDirection, 
@@ -77,7 +77,7 @@ class NarkotikaController extends Controller
         return back()->with('success', 'Data berhasil diperbarui.');
     }
 
-    // --- BAGIAN PENTING: TRY-CATCH DELETE ---
+    // --- BAGIAN PENTING: TRY-CATCH DELETE UNTUK RESTRICT ---
     public function destroy($id)
     {
         try {
@@ -87,9 +87,11 @@ class NarkotikaController extends Controller
             return back()->with('success', 'Data berhasil dihapus.');
 
         } catch (QueryException $e) {
-            // Error Code 23000 = Integrity Constraint Violation (Foreign Key Error)
+            // Error Code 23000 = Integrity Constraint Violation (Foreign Key Restrict Error)
+            // Ini terjadi karena kita pasang onDelete('restrict') di migration
             if ($e->getCode() == '23000') {
-                return back()->with('error', 'Gagal menghapus! Data ini sedang digunakan sebagai referensi di modul lain (seperti Ungkap Kasus). Hapus data terkait terlebih dahulu.');
+                return back()->with('error', 'GAGAL MENGHAPUS! Data Narkotika ini sedang digunakan sebagai referensi di 
+                data lain (seperti Ungkap Kasus, TAT, atau Barang Bukti). Mohon hapus data terkait terlebih dahulu.');
             }
             
             // Error database lain

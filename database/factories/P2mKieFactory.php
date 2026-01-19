@@ -28,6 +28,8 @@ class P2mKieFactory extends Factory
         return [
             // Ambil ID Satuan Kerja yang sudah ada secara acak
             'satuan_kerja_id' => SatuanKerja::inRandomOrder()->first()->id ?? SatuanKerja::factory(),
+
+            'anggaran_pelaksanaan' => $this->faker->randomElement(['DIPA', 'NON DIPA']),
             
             // Tanggal Pelaksanaan (1 tahun terakhir)
             'tanggal_pelaksanaan' => $this->faker->dateTimeBetween('-1 year', 'now'), 

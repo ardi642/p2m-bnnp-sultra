@@ -30,6 +30,7 @@ class KieExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize,
     {
         return [
             'Satuan Kerja',
+            'Anggaran',
             'Tempat kegiatan',
             'Tanggal Pelaksanaan',
             'Pegawai',
@@ -46,6 +47,7 @@ class KieExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize,
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
+            $row->anggaran_pelaksanaan,
             $row->tempat_kegiatan,
             $row->tanggal_pelaksanaan->translatedFormat('d F Y'), // Format tanggal Indo
             $pegawaiNames, // List pegawai

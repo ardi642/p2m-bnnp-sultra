@@ -17,6 +17,8 @@ return new class extends Migration
                   ->references('id')->on('satuan_kerja')
                   ->onUpdate('cascade')->onDelete('cascade');
             
+            $table->enum('anggaran_pelaksanaan', ['DIPA', 'NON DIPA']);
+            
             // Field Khusus KIE
             $table->date('tanggal_pelaksanaan');
             $table->text('tempat_kegiatan'); // Menggunakan Text agar bisa menampung banyak karakter (Rows 3)

@@ -55,6 +55,11 @@ class KieController extends Controller
             }
         });
 
+        // Filter Anggaran
+        if ($request->filled('anggaran_pelaksanaan')) {
+            $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
+        }
+
         // Filter Pegawai
         if ($request->filled('pegawai_nips')) {
             $nips = $request->pegawai_nips;
@@ -83,7 +88,8 @@ class KieController extends Controller
                   })
                   ->orWhereHas('pegawai', function($subQ) use ($search) {
                         $subQ->where('nama', 'LIKE', "%{$search}%");
-                  });
+                  })
+                  ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%");
 
                 // Search Date
                 $q->orWhereRaw("LOWER(DATE_FORMAT(tanggal_pelaksanaan, '%W, %d %M %Y')) LIKE ?", ["%{$searchDate}%"]);
@@ -166,6 +172,7 @@ class KieController extends Controller
 
         $rules = [
             'tempat_kegiatan'        => 'required',
+            'anggaran_pelaksanaan' => 'required|in:DIPA,NON DIPA',
             'tanggal_pelaksanaan'    => 'required|date',
             'pegawai_nips'           => 'required|array',
             'pegawai_nips.*'         => 'exists:pegawai,nip',
@@ -253,6 +260,7 @@ class KieController extends Controller
 
         $rules = [
             'tempat_kegiatan'        => 'required',
+            'anggaran_pelaksanaan' => 'required|in:DIPA,NON DIPA',
             'tanggal_pelaksanaan'    => 'required|date',
             'pegawai_nips'           => 'required|array',
             'pegawai_nips.*'         => 'exists:pegawai,nip',

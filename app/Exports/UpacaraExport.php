@@ -30,6 +30,7 @@ class UpacaraExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoS
     {
         return [
             'Satuan Kerja',
+            'Anggaran',
             'Nama Sekolah',
             'Tanggal Pelaksanaan',
             'Pegawai',
@@ -47,6 +48,7 @@ class UpacaraExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoS
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
+            $row->anggaran_pelaksanaan,
             $row->nama_sekolah,
             $row->tanggal_pelaksanaan->translatedFormat('d F Y'), // Format tanggal Indo
             $pegawaiNames, // List pegawai

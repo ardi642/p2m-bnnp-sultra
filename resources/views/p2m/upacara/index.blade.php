@@ -37,15 +37,20 @@
 
             {{-- LOGIKA PHP FILTER & SORTING --}}
             @php
-                $allFilters = request()->only(['satuan_kerja_id', 'bulan', 'tahun', 'search', 'pegawai_nips']);
+                // TAMBAHKAN 'anggaran_pelaksanaan' KE ARRAY FILTER
+                $allFilters = request()->only(['satuan_kerja_id', 'bulan', 'tahun', 'search', 'pegawai_nips', 'anggaran_pelaksanaan']);
+                
                 if (empty($allFilters['tahun'])) { $allFilters['tahun'] = [date('Y')]; }
+                
                 $activeFilters = collect($allFilters)->filter(function($value) { return !empty($value); })->count(); 
                 
                 // Helper Sorting Link
                 $sortLink = function($col, $label) {
                     $currentCol = request('sort_by', 'created_at'); 
                     $currentOrder = request('sort_order', 'desc');
+                    
                     $newOrder = ($currentCol === $col && $currentOrder === 'desc') ? 'asc' : 'desc';
+                    
                     $icon = 'bi-arrow-down-up text-muted opacity-25';
                     
                     if ($currentCol === $col) {
@@ -89,6 +94,7 @@
                                     <div class="bg-body-tertiary p-4 rounded-3 border">
                                         <div class="row g-3 text-start">
                                             
+                                            {{-- Row 1: Keyword --}}
                                             <div class="{{ $user->isAdmin() ? 'col-lg-8' : 'col-12' }}">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase">Kata Kunci</label>
                                                 <div class="input-group shadow-sm">
@@ -97,6 +103,7 @@
                                                 </div>
                                             </div>
 
+                                            {{-- Row 2: Satker (Admin Only) --}}
                                             @if ($user->isAdmin())
                                                 <div class="col-lg-4">
                                                     <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Satuan Kerja</label>
@@ -110,7 +117,20 @@
                                                 </div>
                                             @endif
 
-                                            <div class="col-6 col-lg-3">
+                                            {{-- Row 3: Anggaran, Bulan, Tahun --}}
+                                            
+                                            {{-- TAMBAHAN: INPUT FILTER ANGGARAN --}}
+                                            <div class="col-12 col-lg-4">
+                                                <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Anggaran</label>
+                                                <div class="shadow-sm bg-white rounded">
+                                                    <select id="select-anggaran" name="anggaran_pelaksanaan[]" multiple placeholder="Pilih Anggaran..." autocomplete="off">
+                                                        <option value="DIPA" {{ in_array('DIPA', request('anggaran_pelaksanaan', [])) ? 'selected' : '' }}>DIPA</option>
+                                                        <option value="NON DIPA" {{ in_array('NON DIPA', request('anggaran_pelaksanaan', [])) ? 'selected' : '' }}>NON DIPA</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-6 col-lg-4">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Bulan</label>
                                                 <div class="shadow-sm bg-white rounded">
                                                     <select id="select-bulan" name="bulan[]" multiple placeholder="Pilih Bulan..." autocomplete="off">
@@ -121,7 +141,7 @@
                                                 </div>
                                             </div>
 
-                                            <div class="col-6 col-lg-3 text-start">
+                                            <div class="col-6 col-lg-4 text-start">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Tahun</label>
                                                 <div class="shadow-sm bg-white rounded">
                                                     <select id="select-tahun" name="tahun[]" multiple placeholder="Pilih Tahun..." autocomplete="off">
@@ -132,6 +152,7 @@
                                                 </div>
                                             </div>
 
+                                            {{-- Row 4: Pegawai --}}
                                             <div class="col-12 col-lg-6">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase mb-1 d-block">Pegawai</label>
                                                 <div class="d-flex align-items-stretch shadow-sm bg-white rounded border" x-data="{ logic: '{{ request('pegawai_logic', 'OR') }}' }">
@@ -140,7 +161,7 @@
                                                     </button>
                                                     <input type="hidden" name="pegawai_logic" :value="logic">
                                                     <div class="flex-grow-1" style="min-width: 0;">
-                                                        <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih Pegawai..." autocomplete="off" class="border-0">
+                                                        <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Cari Pegawai..." autocomplete="off" class="border-0">
                                                             @foreach($pegawais as $pgw)
                                                                 <option value="{{ $pgw->nip }}" {{ in_array($pgw->nip, request('pegawai_nips', [])) ? 'selected' : '' }}>{{ $pgw->nama }} ({{ $pgw->nip }})</option>
                                                             @endforeach
@@ -157,7 +178,6 @@
                                     </div>
                                 </div>
                                 
-                                {{-- EXPORT BUTTON & TOTAL DATA (Sama persis pola Sosialisasi) --}}
                                 <div class="d-flex justify-content-between align-items-center mb-3 px-3 px-lg-0">
                                     <button type="submit" formaction="{{ route('p2m.upacara.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 shadow-sm">
                                         <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-lg-inline">Export Excel</span>
@@ -176,12 +196,13 @@
                                         <tr class="text-center align-middle small text-uppercase text-secondary text-nowrap">
                                             <th class="py-3 bg-light ps-3">No</th>
                                             <th class="py-3 bg-light text-start">{!! $sortLink('satuan_kerja', 'Satuan Kerja') !!}</th>
+                                            
+                                            {{-- TAMBAHAN: KOLOM ANGGARAN --}}
+                                            <th class="py-3 bg-light">{!! $sortLink('anggaran_pelaksanaan', 'Anggaran') !!}</th>
+                                            
                                             <th class="py-3 bg-light text-start">{!! $sortLink('nama_sekolah', 'Nama Sekolah') !!}</th>
                                             <th class="py-3 bg-light">{!! $sortLink('tanggal_pelaksanaan', 'Tanggal') !!}</th>
-                                            
-                                            {{-- Kolom Pegawai --}}
                                             <th class="py-3 bg-light text-start" style="min-width: 250px;">Pegawai Bertugas</th>
-                                            
                                             <th class="py-3 bg-light">{!! $sortLink('jumlah_peserta_upacara', 'Peserta') !!}</th>
                                             <th class="py-3 bg-light">{!! $sortLink('created_at', 'Dibuat') !!}</th>
                                             <th class="py-3 bg-light pe-3">Aksi</th>
@@ -193,7 +214,13 @@
                                                 <td class="fw-bold text-secondary ps-3">{{ $upacaras->firstItem() + $loop->index }}</td>
                                                 <td class="text-start"><span class="fw-semibold text-dark">{{ $data->satuanKerja->satuan_kerja ?? '-' }}</span></td>
                                                 
-                                                {{-- NAMA SEKOLAH (HITAM & CLICKABLE) --}}
+                                                {{-- TAMBAHAN: DATA ANGGARAN --}}
+                                                <td>
+                                                    <span class="badge rounded-pill {{ $data->anggaran_pelaksanaan == 'DIPA' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' }}">
+                                                        {{ $data->anggaran_pelaksanaan }}
+                                                    </span>
+                                                </td>
+
                                                 <td class="text-start">
                                                     <a href="#" class="text-decoration-none fw-bold text-dark" 
                                                        @click.prevent="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">
@@ -203,7 +230,7 @@
 
                                                 <td class="small text-muted text-nowrap">{{ $data->tanggal_pelaksanaan->locale('id')->translatedFormat('d M Y') }}</td>
                                                 
-                                                {{-- PEGAWAI (SEMUA DITAMPILKAN TANPA TAKE/LIMIT) --}}
+                                                {{-- Kolom Pegawai --}}
                                                 <td class="text-start">
                                                     <div class="d-flex flex-wrap gap-1">
                                                         @foreach($data->pegawai->sortBy('nama') as $pegawai)
@@ -234,7 +261,7 @@
 
                                             {{-- TR DETAIL --}}
                                             <tr x-show="expanded.includes({{ $data->id }})" x-transition>
-                                                <td colspan="8" class="p-0 border-0">
+                                                <td colspan="9" class="p-0 border-0">
                                                     <div class="bg-body-tertiary p-4 border-bottom shadow-inner text-start">
                                                         <div class="card border-0 shadow-sm">
                                                             <div class="card-body">
@@ -246,10 +273,17 @@
                                                                         <dl class="row mb-0 small text-start">
                                                                             <dt class="col-sm-4 text-secondary mb-2">Nama Sekolah</dt>
                                                                             <dd class="col-sm-8 text-dark">{{ $data->nama_sekolah }}</dd>
+                                                                            
                                                                             <dt class="col-sm-4 text-secondary mb-2">Satuan Kerja</dt>
                                                                             <dd class="col-sm-8 text-dark">{{ $data->satuanKerja->satuan_kerja ?? '-' }}</dd>
+                                                                            
+                                                                            {{-- TAMBAHAN: DATA ANGGARAN DI DETAIL --}}
+                                                                            <dt class="col-sm-4 text-secondary mb-2">Anggaran</dt>
+                                                                            <dd class="col-sm-8 text-dark">{{ $data->anggaran_pelaksanaan }}</dd>
+
                                                                             <dt class="col-sm-4 text-secondary mb-2">Tanggal</dt>
                                                                             <dd class="col-sm-8 text-dark">{{ $data->tanggal_pelaksanaan->locale('id')->translatedFormat('l, d F Y') }}</dd>
+                                                                            
                                                                             <dt class="col-sm-4 text-secondary mb-2">Jumlah Peserta</dt>
                                                                             <dd class="col-sm-8 text-dark">{{ $data->jumlah_peserta_upacara }} Orang</dd>
                                                                         </dl>
@@ -286,12 +320,13 @@
                                                                         </div>
                                                                     </div>
                                                                     
-                                                                    {{-- DOKUMENTASI (Label & Lampiran) --}}
+                                                                    {{-- DOKUMENTASI (Dengan Preview) --}}
                                                                     <div class="col-12 mt-3 text-start">
                                                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                                                             <span class="fw-bold text-secondary small">Dokumentasi & Lampiran</span>
                                                                             <span class="badge bg-secondary rounded-pill">{{ $data->dokumentasi->count() }} File</span>
                                                                         </div>
+                                                                        
                                                                         @if($data->dokumentasi->count() > 0)
                                                                             <div class="row g-2 text-start">
                                                                                 @foreach($data->dokumentasi as $doc)
@@ -325,13 +360,13 @@
                                                 </td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="8" class="text-center py-5 text-muted fst-italic border-bottom">Belum ada data kegiatan.</td></tr>
+                                            <tr><td colspan="9" class="text-center py-5 text-muted fst-italic border-bottom">Belum ada data kegiatan.</td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>
                             </div>
 
-                            {{-- FOOTER --}}
+                            {{-- FOOTER (PAGINATION) --}}
                             <div class="card-footer bg-white py-3 border-top-0">
                                 <div class="d-flex flex-column flex-lg-row justify-content-between align-items-center gap-3">
                                     <div class="d-flex align-items-center gap-2">
@@ -374,7 +409,10 @@
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {
         const configTomSelect = { plugins: ['remove_button', 'clear_button'], persist: false, create: false, maxOptions: null };
-        const ids = ['select-satker', 'select-bulan', 'select-tahun', 'select-pegawai'];
+        
+        // TAMBAHAN: 'select-anggaran' di dalam array
+        const ids = ['select-satker', 'select-bulan', 'select-tahun', 'select-pegawai', 'select-anggaran'];
+        
         ids.forEach(id => { if(document.getElementById(id)) new TomSelect('#' + id, configTomSelect); });
     });
 

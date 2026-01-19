@@ -47,6 +47,11 @@ class UpacaraController extends Controller
             });
         }
 
+        // Filter Anggaran
+        if ($request->filled('anggaran_pelaksanaan')) {
+            $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
+        }
+
         // Filter Tahun
         $query->where(function($q) use ($activeYears) {
             foreach ($activeYears as $y) {
@@ -78,6 +83,7 @@ class UpacaraController extends Controller
             $query->where(function($q) use ($search, $searchDate) {
                 $q->where('nama_sekolah', 'LIKE', "%{$search}%")
                   ->orWhere('jumlah_peserta_upacara', 'LIKE', "%{$search}%")
+                  ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%")
                   ->orWhereHas('satuanKerja', function($subQ) use ($search) {
                         $subQ->where('satuan_kerja', 'LIKE', "%{$search}%");
                   })
@@ -173,6 +179,7 @@ class UpacaraController extends Controller
             'nama_sekolah'           => 'required',
             'tanggal_pelaksanaan'    => 'required|date',
             'jumlah_peserta_upacara' => 'required|numeric',
+            'anggaran_pelaksanaan' => 'required|in:DIPA,NON DIPA',
             'pegawai_nips'           => 'required|array',
             'pegawai_nips.*'         => 'exists:pegawai,nip',
             'dokumentasi'            => 'nullable|array',
@@ -261,6 +268,7 @@ class UpacaraController extends Controller
             'nama_sekolah'           => 'required',
             'tanggal_pelaksanaan'    => 'required|date',
             'jumlah_peserta_upacara' => 'required|numeric',
+            'anggaran_pelaksanaan' => 'required|in:DIPA,NON DIPA',
             'pegawai_nips'           => 'required|array',
             'pegawai_nips.*'         => 'exists:pegawai,nip',
             'delete_files'           => 'nullable|array',

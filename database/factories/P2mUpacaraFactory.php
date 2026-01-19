@@ -28,6 +28,8 @@ class P2mUpacaraFactory extends Factory
         return [
             // Ambil ID Satuan Kerja yang sudah ada secara acak
             'satuan_kerja_id' => SatuanKerja::inRandomOrder()->first()->id ?? SatuanKerja::factory(),
+
+            'anggaran_pelaksanaan' => $this->faker->randomElement(['DIPA', 'NON DIPA']),
             
             // Generate nama sekolah (contoh: SMAN 5 Jakarta)
             'nama_sekolah' => 'SMAN ' . $this->faker->numberBetween(1, 20) . ' ' . $this->faker->city(),

@@ -172,7 +172,7 @@
                                                 <td class="small text-muted text-nowrap">{{ $data->tanggal_pencanangan->locale('id')->translatedFormat('d M Y') }}</td>
                                                 <td class="text-start">
                                                     <div class="d-flex flex-wrap gap-1">
-                                                        @foreach($data->pegawai as $pegawai) 
+                                                        @foreach($data->pegawai->sortBy('nama') as $pegawai) 
                                                             <span class="badge bg-white border text-secondary fw-normal shadow-sm">{{ $pegawai->nama }}</span> 
                                                         @endforeach 
                                                         @if($data->pegawai->isEmpty())

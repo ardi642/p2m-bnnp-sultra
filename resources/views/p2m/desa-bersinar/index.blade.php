@@ -205,7 +205,7 @@
                                                 {{-- FIX: TAMPILKAN SEMUA PEGAWAI --}}
                                                 <td class="text-start">
                                                     <div class="d-flex flex-wrap gap-1">
-                                                        @foreach($data->pegawai as $pegawai)
+                                                        @foreach($data->pegawai->sortBy('nama') as $pegawai)
                                                             <span class="badge bg-white border text-secondary fw-normal shadow-sm">{{ $pegawai->nama }}</span>
                                                         @endforeach
                                                     </div>
@@ -242,7 +242,7 @@
                                                                             <dt class="col-sm-4 text-secondary mb-2">Penanggung Jawab (BNN)</dt>
                                                                             <dd class="col-sm-8">
                                                                                 <ul class="list-unstyled mb-0">
-                                                                                    @foreach($data->pegawai as $pegawai)
+                                                                                    @foreach($data->pegawai->sortBy('nama') as $pegawai)
                                                                                         @php $isPindah = $pegawai->satuan_kerja_id != $data->satuan_kerja_id; @endphp
                                                                                         <li class="mb-2">
                                                                                             <i class="bi bi-person-check-fill me-2 text-success"></i><span class="text-dark">{{ $pegawai->nama }}</span> <span class="text-muted">({{ $pegawai->nip }})</span>

@@ -195,7 +195,7 @@
                                                 {{-- PERBAIKAN: Menampilkan semua pegawai tanpa dibatasi --}}
                                                 <td class="text-start">
                                                     <div class="d-flex flex-wrap gap-1">
-                                                        @forelse($data->pegawai as $pegawai)
+                                                        @forelse($data->pegawai->sortBy('nama') as $pegawai)
                                                             <span class="badge bg-white border text-secondary fw-normal shadow-sm">{{ $pegawai->nama }}</span>
                                                         @empty
                                                             <span class="text-muted small">-</span>

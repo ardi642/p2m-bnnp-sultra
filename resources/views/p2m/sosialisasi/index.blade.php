@@ -225,7 +225,7 @@
                                             {{-- PERBAIKAN DI SINI: MENAMPILKAN SEMUA PEGAWAI --}}
                                             <td class="text-start">
                                                 <div class="d-flex flex-wrap gap-1" style="max-width: 300px;">
-                                                    @foreach($data->pegawai as $pegawai)
+                                                    @foreach($data->pegawai->sortBy('nama') as $pegawai)
                                                         <span class="badge bg-white border text-secondary fw-normal shadow-sm">{{ $pegawai->nama }}</span>
                                                     @endforeach
                                                 </div>

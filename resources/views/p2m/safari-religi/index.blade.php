@@ -261,7 +261,7 @@
                                             <td class="text-start">
                                                 {{-- TAMPILKAN SEMUA PEGAWAI TANPA LIMIT --}}
                                                 <div class="d-flex flex-wrap gap-1" style="max-width: 250px;">
-                                                    @foreach($data->pegawai as $pegawai)
+                                                    @foreach($data->pegawai->sortBy('nama') as $pegawai)
                                                         <span class="badge bg-white border text-secondary fw-normal shadow-sm">
                                                             {{ $pegawai->nama }}
                                                         </span>

@@ -227,7 +227,7 @@
                                                 <td class="text-start">
                                                     <div class="d-flex flex-wrap gap-1">
                                                         {{-- MENAMPILKAN SEMUA PEGAWAI SESUAI REQUEST --}}
-                                                        @foreach($data->pegawai as $pegawai)
+                                                        @foreach($data->pegawai->sortBy('nama') as $pegawai)
                                                             <span class="badge bg-white border text-secondary fw-normal shadow-sm">{{ $pegawai->nama }}</span>
                                                         @endforeach
                                                     </div>

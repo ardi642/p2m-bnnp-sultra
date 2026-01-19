@@ -34,6 +34,7 @@ class LingkunganBersinarExport implements FromQuery, WithHeadings, WithMapping, 
     {
         return [
             'Satuan Kerja',
+            'Anggaran',
             'Sasaran Kegiatan',
             'Nama Tempat/Wilayah',
             'Tanggal Pencanangan',
@@ -60,6 +61,7 @@ class LingkunganBersinarExport implements FromQuery, WithHeadings, WithMapping, 
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
+            $row->anggaran_pelaksanaan,
             $row->sasaran_kegiatan,
             $row->nama_tempat_wilayah,
             $row->tanggal_pencanangan->locale('id')->translatedFormat('d F Y'),

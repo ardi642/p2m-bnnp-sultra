@@ -33,7 +33,7 @@ class LingkunganBersinarController extends Controller
 
         // --- FILTER LOGIC ---
 
-        // 1. Filter Satuan Kerja (Role Based)
+        // Filter Satuan Kerja (Role Based)
         if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
@@ -45,7 +45,7 @@ class LingkunganBersinarController extends Controller
             $query->where('satuan_kerja_id', $satkerId);
         }
 
-        // 2. Filter Bulan Pelaksanaan
+        // Filter Bulan Pelaksanaan
         if ($request->filled('bulan')) {
             $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
@@ -54,19 +54,24 @@ class LingkunganBersinarController extends Controller
             });
         }
 
-        // 3. Filter Tahun Pelaksanaan
+        // Filter Tahun Pelaksanaan
         $query->where(function($q) use ($activeYears) {
             foreach ($activeYears as $y) {
                 $q->orWhereYear('tanggal_pencanangan', $y);
             }
         });
 
-        // 4. Filter Sasaran Kegiatan
+        // Filter Anggaran
+        if ($request->filled('anggaran_pelaksanaan')) {
+            $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
+        }
+
+        // Filter Sasaran Kegiatan
         if ($request->filled('sasaran_kegiatan')) {
             $query->whereIn('sasaran_kegiatan', $request->sasaran_kegiatan);
         }
         
-        // 5. Filter Pegawai / Penanggung Jawab
+        // Filter Pegawai / Penanggung Jawab
         if ($request->filled('pegawai_nips')) {
             $nips = $request->pegawai_nips;
             $logic = $request->input('pegawai_logic', 'OR');
@@ -84,7 +89,7 @@ class LingkunganBersinarController extends Controller
             }
         }
 
-        // 6. Search Global
+        // Search Global
         if ($request->filled('search')) {
             $search = $request->search;
             $searchDate = SearchHelper::translateDateInput($search);
@@ -92,6 +97,7 @@ class LingkunganBersinarController extends Controller
             $query->where(function($q) use ($search, $searchDate) {
                 // Pencarian Kolom Teks Utama
                 $q->where('nama_tempat_wilayah', 'LIKE', "%{$search}%")
+                  ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%")
                   ->orWhere('sasaran_kegiatan', 'LIKE', "%{$search}%")
                   ->orWhere('no_hp_penanggung_jawab', 'LIKE', "%{$search}%") // Cari No HP
                   
@@ -116,11 +122,12 @@ class LingkunganBersinarController extends Controller
             });
         }
 
-        // 7. Sorting
+        // Sorting
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
         
         $allowSort = [
+            'anggaran_pelaksanaan',
             'nama_tempat_wilayah', 
             'sasaran_kegiatan', 
             'tanggal_pencanangan', 
@@ -230,6 +237,7 @@ class LingkunganBersinarController extends Controller
         // SIAPKAN RULES VALIDASI
         $rules = [
             'sasaran_kegiatan'       => 'required',
+            'anggaran_pelaksanaan' => 'required|in:DIPA,NON DIPA',
             'nama_tempat_wilayah'    => 'required|string',
             'tanggal_pencanangan'    => 'required|date',
             'jumlah_penggiat_p4gn'   => 'required|numeric',
@@ -405,6 +413,7 @@ class LingkunganBersinarController extends Controller
         // 1. Validasi
         $rules = [
             'sasaran_kegiatan'       => 'required',
+            'anggaran_pelaksanaan' => 'required|in:DIPA,NON DIPA',
             'nama_tempat_wilayah'    => 'required|string',
             'tanggal_pencanangan'    => 'required|date',
             'jumlah_penggiat_p4gn'   => 'required|numeric',

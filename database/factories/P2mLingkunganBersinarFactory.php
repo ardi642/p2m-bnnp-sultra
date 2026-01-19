@@ -28,6 +28,8 @@ class P2mLingkunganBersinarFactory extends Factory
         return [
             // Ambil ID Satuan Kerja secara acak dari database, atau buat baru jika kosong
             'satuan_kerja_id' => SatuanKerja::inRandomOrder()->first()->id ?? SatuanKerja::factory(),
+
+            'anggaran_pelaksanaan' => $this->faker->randomElement(['DIPA', 'NON DIPA']),
             
             // Pilih acak dari Enum yang tersedia
             'sasaran_kegiatan' => $this->faker->randomElement([

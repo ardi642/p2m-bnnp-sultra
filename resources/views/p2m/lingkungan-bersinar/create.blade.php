@@ -29,9 +29,25 @@
                                 @csrf
                                 
                                 {{-- SECTION 1: DATA WILAYAH --}}
-                                <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">Data Wilayah & Sasaran</h6>
+                                <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">Data Wilayah, Anggaran & Sasaran</h6>
                                 
                                 <div class="row g-4 mb-5">
+
+                                    <div class="col-12 col-lg-{{ auth()->user()->isAdmin() ? '6' : '12' }}">
+                                        <label class="form-label fw-semibold text-secondary small">
+                                            Sumber Anggaran <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select @error('anggaran_pelaksanaan') is-invalid @enderror" 
+                                                name="anggaran_pelaksanaan">
+                                            <option value="" disabled selected>-- Pilih Sumber --</option>
+                                            <option value="DIPA" @selected(old('anggaran_pelaksanaan') == 'DIPA')>DIPA</option>
+                                            <option value="NON DIPA" @selected(old('anggaran_pelaksanaan') == 'NON DIPA')>NON DIPA</option>
+                                        </select>
+                                        @error('anggaran_pelaksanaan') 
+                                            <div class="invalid-feedback">{{ $message }}</div> 
+                                        @enderror
+                                    </div>
+
                                     {{-- Satuan Kerja (Admin Only) --}}
                                     @if (auth()->user()->isAdmin())    
                                     <div class="col-12 col-lg-6">

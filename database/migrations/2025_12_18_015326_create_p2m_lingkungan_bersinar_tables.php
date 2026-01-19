@@ -18,6 +18,8 @@ return new class extends Migration
                 ->references('id')->on('satuan_kerja')
                 ->onUpdate('cascade')->onDelete('cascade');
             
+            $table->enum('anggaran_pelaksanaan', ['DIPA', 'NON DIPA']);
+            
             // Field Khusus
             $table->enum('sasaran_kegiatan', [
                 'lingkungan pendidikan', 

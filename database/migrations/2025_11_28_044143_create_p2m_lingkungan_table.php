@@ -19,6 +19,7 @@ return new class extends Migration
                     ->on('satuan_kerja')
                     ->onUpdate('cascade')
                     ->onDelete('cascade');
+            $table->enum('anggaran_pelaksanaan', ['DIPA', 'NON DIPA']);
             $table->enum('sasaran', ['Sekolah/Kampus Bersinar', 'Pondok Pesantren Bersinar', 'Tempat Hiburan Bersinar', 'Tempat Wisata Bersinar', 'Industri Bersinar']);
             $table->text('nama_tempat');
             $table->date('tanggal_pelaksanaan');

@@ -38,7 +38,8 @@
 
             @php
                 // Logic Filter & Sorting
-                $activeFilters = collect(request()->only(['satuan_kerja_id', 'bulan', 'tahun', 'sasaran_kegiatan', 'search', 'pegawai_nips']))->filter()->count();
+                // TAMBAHAN: 'anggaran_pelaksanaan' dimasukkan ke dalam filter
+                $activeFilters = collect(request()->only(['satuan_kerja_id', 'bulan', 'tahun', 'sasaran_kegiatan', 'search', 'pegawai_nips', 'anggaran_pelaksanaan']))->filter()->count();
                 if(empty(request('tahun'))) $activeFilters++; 
                 
                 $sortLink = function($col, $label) {
@@ -78,6 +79,8 @@
                                 <div x-show="showFilter" x-transition class="mb-4 px-3 px-lg-0 pt-3 pt-lg-0">
                                     <div class="bg-body-tertiary p-4 rounded-3 border">
                                         <div class="row g-3 text-start">
+                                            
+                                            {{-- Kata Kunci --}}
                                             <div class="{{ $user->isAdmin() ? 'col-lg-8' : 'col-12' }}">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase">Kata Kunci</label>
                                                 <div class="input-group shadow-sm">
@@ -85,6 +88,8 @@
                                                     <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Cari Tempat, PJ, dll..." value="{{ request('search') }}">
                                                 </div>
                                             </div>
+
+                                            {{-- Satuan Kerja (Admin Only) --}}
                                             @if ($user->isAdmin())
                                                 <div class="col-lg-4">
                                                     <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Satuan Kerja</label>
@@ -97,6 +102,19 @@
                                                     </div>
                                                 </div>
                                             @endif
+
+                                            {{-- TAMBAHAN: FILTER ANGGARAN --}}
+                                            <div class="col-12 col-lg-3">
+                                                <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Anggaran</label>
+                                                <div class="shadow-sm bg-white rounded">
+                                                    <select id="select-anggaran" name="anggaran_pelaksanaan[]" multiple placeholder="Pilih Anggaran..." autocomplete="off">
+                                                        <option value="DIPA" {{ in_array('DIPA', request('anggaran_pelaksanaan', [])) ? 'selected' : '' }}>DIPA</option>
+                                                        <option value="NON DIPA" {{ in_array('NON DIPA', request('anggaran_pelaksanaan', [])) ? 'selected' : '' }}>NON DIPA</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            {{-- Sasaran --}}
                                             <div class="col-12 col-lg-3">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Sasaran</label>
                                                 <div class="shadow-sm bg-white rounded">
@@ -107,22 +125,47 @@
                                                     </select>
                                                 </div>
                                             </div>
+
+                                            {{-- Bulan --}}
                                             <div class="col-6 col-lg-3">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Bulan</label>
-                                                <div class="shadow-sm bg-white rounded"><select id="select-bulan" name="bulan[]" multiple placeholder="Bulan...">@foreach(range(1, 12) as $m) <option value="{{ $m }}" {{ in_array($m, request('bulan', [])) ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($m)->locale('id')->translatedFormat('F') }}</option> @endforeach</select></div>
+                                                <div class="shadow-sm bg-white rounded">
+                                                    <select id="select-bulan" name="bulan[]" multiple placeholder="Bulan...">
+                                                        @foreach(range(1, 12) as $m) 
+                                                            <option value="{{ $m }}" {{ in_array($m, request('bulan', [])) ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($m)->locale('id')->translatedFormat('F') }}</option> 
+                                                        @endforeach
+                                                    </select>
+                                                </div>
                                             </div>
+
+                                            {{-- Tahun --}}
                                             <div class="col-6 col-lg-3 text-start">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Tahun</label>
-                                                <div class="shadow-sm bg-white rounded"><select id="select-tahun" name="tahun[]" multiple placeholder="Tahun...">@foreach($years as $year) <option value="{{ $year }}" {{ in_array($year, request('tahun', [date('Y')])) ? 'selected' : '' }}>{{ $year }}</option> @endforeach</select></div>
+                                                <div class="shadow-sm bg-white rounded">
+                                                    <select id="select-tahun" name="tahun[]" multiple placeholder="Tahun...">
+                                                        @foreach($years as $year) 
+                                                            <option value="{{ $year }}" {{ in_array($year, request('tahun', [date('Y')])) ? 'selected' : '' }}>{{ $year }}</option> 
+                                                        @endforeach
+                                                    </select>
+                                                </div>
                                             </div>
-                                            <div class="col-12 col-lg-3">
+
+                                            {{-- Pegawai --}}
+                                            <div class="col-12 col-lg-6">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase mb-1 d-block">Penanggung Jawab</label>
                                                 <div class="d-flex align-items-stretch shadow-sm bg-white rounded border" x-data="{ logic: '{{ request('pegawai_logic', 'OR') }}' }">
                                                     <button type="button" class="btn rounded-0 rounded-start border-end d-flex align-items-center justify-content-center fw-bold px-3" style="width: 70px;" :class="logic === 'AND' ? 'btn-danger text-white' : 'btn-light text-secondary'" @click="logic = logic === 'OR' ? 'AND' : 'OR'"><span x-text="logic"></span></button>
                                                     <input type="hidden" name="pegawai_logic" :value="logic">
-                                                    <div class="flex-grow-1"><select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Cari Pegawai..." class="border-0">@foreach($pegawais as $pgw) <option value="{{ $pgw->nip }}" {{ in_array($pgw->nip, request('pegawai_nips', [])) ? 'selected' : '' }}>{{ $pgw->nama }} ({{ $pgw->nip }})</option> @endforeach</select></div>
+                                                    <div class="flex-grow-1">
+                                                        <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Cari Pegawai..." class="border-0">
+                                                            @foreach($pegawais as $pgw) 
+                                                                <option value="{{ $pgw->nip }}" {{ in_array($pgw->nip, request('pegawai_nips', [])) ? 'selected' : '' }}>{{ $pgw->nama }} ({{ $pgw->nip }})</option> 
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             </div>
+
                                             <div class="col-12 text-end pt-3 border-top mt-4 text-start">
                                                 <a href="{{ route('p2m.lingkungan-bersinar.index') }}" class="btn btn-link text-decoration-none text-muted btn-sm me-2">Reset</a>
                                                 <button type="submit" class="btn btn-primary px-4 shadow-sm"><i class="bi bi-funnel-fill me-1"></i> Terapkan</button>
@@ -146,12 +189,15 @@
                                         <tr class="text-center align-middle small text-uppercase text-secondary text-nowrap">
                                             <th class="py-3 bg-light ps-3">No</th>
                                             <th class="py-3 bg-light text-start">{!! $sortLink('satuan_kerja', 'Satuan Kerja') !!}</th>
+                                            
+                                            {{-- TAMBAHAN: KOLOM ANGGARAN --}}
+                                            <th class="py-3 bg-light">{!! $sortLink('anggaran_pelaksanaan', 'Anggaran') !!}</th>
+                                            
                                             <th class="py-3 bg-light text-start">{!! $sortLink('nama_tempat_wilayah', 'Nama Tempat/Wilayah') !!}</th>
                                             <th class="py-3 bg-light">{!! $sortLink('sasaran_kegiatan', 'Sasaran') !!}</th>
                                             <th class="py-3 bg-light">{!! $sortLink('tanggal_pencanangan', 'Tgl Pencanangan') !!}</th>
                                             <th class="py-3 bg-light text-start">Penanggung Jawab</th>
                                             <th class="py-3 bg-light">{!! $sortLink('jumlah_penggiat_p4gn', 'Jml Penggiat') !!}</th>
-                                            {{-- Kolom Dibuat (BARU) --}}
                                             <th class="py-3 bg-light">{!! $sortLink('created_at', 'Dibuat') !!}</th>
                                             <th class="py-3 bg-light pe-3">Aksi</th>
                                         </tr>
@@ -161,7 +207,14 @@
                                             <tr class="text-center align-middle" :class="expanded.includes({{ $data->id }}) ? 'bg-light' : ''">
                                                 <td class="fw-bold text-secondary ps-3">{{ $datas->firstItem() + $loop->index }}</td>
                                                 <td class="text-start"><span class="fw-semibold text-dark">{{ $data->satuanKerja->satuan_kerja ?? '-' }}</span></td>
-                                                {{-- PERBAIKAN: Menghapus Str::limit agar teks tidak dipotong --}}
+                                                
+                                                {{-- TAMBAHAN: BADGE ANGGARAN --}}
+                                                <td>
+                                                    <span class="badge rounded-pill {{ $data->anggaran_pelaksanaan == 'DIPA' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' }}">
+                                                        {{ $data->anggaran_pelaksanaan }}
+                                                    </span>
+                                                </td>
+
                                                 <td class="text-start"><a href="#" class="text-decoration-none fw-bold text-dark" @click.prevent="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">{{ $data->nama_tempat_wilayah }}</a></td>
                                                 <td>
                                                     @php 
@@ -181,7 +234,6 @@
                                                     </div>
                                                 </td>
                                                 <td><span class="fw-bold">{{ $data->jumlah_penggiat_p4gn }}</span></td>
-                                                {{-- Kolom Dibuat (BARU) --}}
                                                 <td class="small text-muted text-nowrap text-center">{{ $data->created_at->locale('id')->translatedFormat('d M Y') }}</td>
                                                 <td class="pe-3">
                                                     <div class="btn-group btn-group-sm shadow-sm">
@@ -209,6 +261,11 @@
                                                                         <dl class="row mb-0 small text-start">
                                                                             <dt class="col-sm-4 text-secondary mb-2">Nama Tempat</dt>
                                                                             <dd class="col-sm-8 text-dark">{{ $data->nama_tempat_wilayah }}</dd>
+
+                                                                            {{-- TAMBAHAN: DATA ANGGARAN DI DETAIL --}}
+                                                                            <dt class="col-sm-4 text-secondary mb-2">Anggaran</dt>
+                                                                            <dd class="col-sm-8 text-dark">{{ $data->anggaran_pelaksanaan }}</dd>
+
                                                                             <dt class="col-sm-4 text-secondary mb-2">Tgl Pencanangan</dt>
                                                                             <dd class="col-sm-8 text-dark">{{ $data->tanggal_pencanangan->translatedFormat('l, d F Y') }}</dd>
                                                                             <dt class="col-sm-4 text-secondary mb-2">Jml Penggiat</dt>
@@ -220,7 +277,6 @@
 
                                                                     {{-- Kolom Kanan: Timestamps & Pegawai --}}
                                                                     <div class="col-lg-6">
-                                                                        {{-- UPDATE: Menambahkan Info Dibuat & Diubah --}}
                                                                         <div class="row small mb-3 text-start">
                                                                             <div class="col-md-6 mb-2 text-start">
                                                                                 <span class="text-secondary d-block">Dibuat Pada</span>
@@ -247,8 +303,8 @@
                                                                             </ul>
                                                                         </div>
                                                                     </div>
-
-                                                                    {{-- Dokumentasi & Lampiran (UPDATE: Fitur Preview) --}}
+                                                                    
+                                                                    {{-- DOKUMENTASI (Sama seperti modul lain) --}}
                                                                     <div class="col-12 mt-3 text-start">
                                                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                                                             <span class="fw-bold text-secondary small">Dokumentasi & Lampiran</span>
@@ -260,31 +316,18 @@
                                                                                     <div class="col-12 col-md-6 col-lg-4 text-start">
                                                                                         <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center h-100 shadow-sm">
                                                                                             <div class="small fw-bold text-dark text-wrap pe-2 d-flex align-items-center gap-2">
-                                                                                                @if(Str::contains($doc->tipe_file, 'image'))
-                                                                                                    <i class="bi bi-file-image text-primary fs-5"></i>
-                                                                                                @elseif(Str::contains($doc->tipe_file, 'pdf'))
-                                                                                                    <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
-                                                                                                @elseif(Str::contains($doc->tipe_file, 'video'))
-                                                                                                    <i class="bi bi-file-earmark-play text-dark fs-5"></i>
-                                                                                                @elseif(Str::contains($doc->tipe_file, ['word', 'officedocument']))
-                                                                                                    <i class="bi bi-file-earmark-word text-primary fs-5"></i>
-                                                                                                @else
-                                                                                                    <i class="bi bi-file-earmark-text text-secondary fs-5"></i>
-                                                                                                @endif
+                                                                                                @if(Str::contains($doc->tipe_file, 'image')) <i class="bi bi-file-image text-primary fs-5"></i>
+                                                                                                @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
+                                                                                                @elseif(Str::contains($doc->tipe_file, 'video')) <i class="bi bi-file-earmark-play text-dark fs-5"></i>
+                                                                                                @elseif(Str::contains($doc->tipe_file, ['word', 'officedocument'])) <i class="bi bi-file-earmark-word text-primary fs-5"></i>
+                                                                                                @else <i class="bi bi-file-earmark-text text-secondary fs-5"></i> @endif
                                                                                                 <span class="text-break">{{ $doc->nama_file_asli }}</span>
                                                                                             </div>
-                                                                                            
                                                                                             <div class="d-flex gap-1 flex-shrink-0">
-                                                                                                {{-- Tombol Lihat (Hanya untuk Image, PDF, Video) --}}
                                                                                                 @if(Str::contains($doc->tipe_file, ['image', 'pdf', 'video']))
-                                                                                                    <a href="{{ Storage::url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-info px-2 py-0" title="Lihat">
-                                                                                                        <i class="bi bi-eye"></i>
-                                                                                                    </a>
+                                                                                                    <a href="{{ Storage::url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-info px-2 py-0" title="Lihat"><i class="bi bi-eye"></i></a>
                                                                                                 @endif
-                                                                                                {{-- Tombol Download --}}
-                                                                                                <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-xs btn-outline-primary px-2 py-0" title="Download">
-                                                                                                    <i class="bi bi-download"></i>
-                                                                                                </a>
+                                                                                                <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-xs btn-outline-primary px-2 py-0" title="Download"><i class="bi bi-download"></i></a>
                                                                                             </div>
                                                                                         </div>
                                                                                     </div> 
@@ -306,7 +349,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                            
+
                             {{-- Footer Table --}}
                             <div class="card-footer bg-white py-3 border-top-0">
                                 <div class="d-flex flex-column flex-lg-row justify-content-between align-items-center gap-3">
@@ -330,7 +373,6 @@
 @endsection
 
 @push('styles')
-
 <style>
     .ts-dropdown, .ts-dropdown.single { z-index: 2000 !important; } 
     .ts-control { border: none !important; box-shadow: none !important; padding-top: 0.5rem; padding-bottom: 0.5rem; background-color: transparent !important; min-height: 40px; } 
@@ -347,7 +389,10 @@
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {
         const configTomSelect = { plugins: ['remove_button', 'clear_button'], persist: false, create: false, maxOptions: null };
-        const ids = ['select-satker', 'select-bulan', 'select-sasaran', 'select-tahun', 'select-pegawai'];
+        
+        // TAMBAHAN: 'select-anggaran' ke array ID
+        const ids = ['select-satker', 'select-bulan', 'select-sasaran', 'select-tahun', 'select-pegawai', 'select-anggaran'];
+        
         ids.forEach(id => { if(document.getElementById(id)) new TomSelect('#' + id, configTomSelect); });
     });
     

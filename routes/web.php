@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Berantas\NarkotikaController;
 use App\Http\Controllers\Berantas\TatController;
 use App\Http\Controllers\Berantas\UngkapKasusController;
+use App\Http\Controllers\Berantas\RegisterBarangBuktiController;
 use App\Http\Controllers\P2m\SosialisasiController;
 use App\Http\Controllers\P2m\UpacaraController;
 use App\Http\Controllers\P2m\KieController;
@@ -280,6 +281,12 @@ Route::middleware('auth')->group(function() {
 
                 // Master Narkotika
                 Route::get('/narkotika', [NarkotikaController::class, 'index'])->name('narkotika.index');
+
+                // Register Barang Bukti
+                Route::get('/register-barang-bukti/export', [RegisterBarangBuktiController::class, 'export'])
+                    ->name('register-barang-bukti.export');
+                Route::get('/register-barang-bukti', [RegisterBarangBuktiController::class, 'index'])
+                    ->name('register-barang-bukti.index');
             });
 
             Route::middleware(['role:operator'])->group(function() {
@@ -302,6 +309,18 @@ Route::middleware('auth')->group(function() {
                 Route::post('/narkotika', [NarkotikaController::class, 'store'])->name('narkotika.store');
                 Route::put('/narkotika/{id}', [NarkotikaController::class, 'update'])->name('narkotika.update');
                 Route::delete('/narkotika/{id}', [NarkotikaController::class, 'destroy'])->name('narkotika.destroy');
+
+                // Register Barang Bukti
+                Route::get('/register-barang-bukti/create', [RegisterBarangBuktiController::class, 'create'])
+                    ->name("register-barang-bukti.create");
+                Route::post('/register-barang-bukti', [RegisterBarangBuktiController::class, 'store'])
+                    ->name("register-barang-bukti.store");
+                Route::get('/register-barang-bukti/{id}/edit', [RegisterBarangBuktiController::class, 'edit'])
+                    ->name('register-barang-bukti.edit');
+                Route::put('/register-barang-bukti/{id}', [RegisterBarangBuktiController::class, 'update'])
+                    ->name('register-barang-bukti.update');
+                Route::delete('/register-barang-bukti/{id}', [RegisterBarangBuktiController::class, 'destroy'])
+                    ->name("register-barang-bukti.destroy");
             });
             
         });

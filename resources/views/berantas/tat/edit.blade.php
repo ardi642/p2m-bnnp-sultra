@@ -16,7 +16,7 @@
             <div class="alert alert-danger border-0 shadow-sm mb-4">
                 <div class="d-flex align-items-center">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <div><strong>Periksa Kembali Inputan!</strong> Terdapat kesalahan pengisian data.</div>
+                    <div><strong>Periksa Kembali Inputan!</strong> File yang diupload telah disimpan sementara.</div>
                 </div>
             </div>
         @endif
@@ -24,7 +24,7 @@
         <form action="{{ route('berantas.tat.update', $tat->id) }}" method="POST" enctype="multipart/form-data" id="form-tat" @submit.prevent="submitForm">
             @csrf @method('PUT')
             
-            {{-- DATA UTAMA --}}
+            {{-- CARD 1: DATA UTAMA --}}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <h5 class="card-title fw-bold mb-4 text-dark border-bottom pb-2">Informasi Umum</h5>
@@ -53,7 +53,7 @@
                 </div>
             </div>
 
-            {{-- TERSANGKA --}}
+            {{-- CARD 2: TERSANGKA --}}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -87,7 +87,7 @@
                                         <input type="text" :name="`tersangka[${index}][nik]`" x-model="t.nik" 
                                                class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'nik')}"
                                                placeholder="16 Digit NIK...">
-                                        <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'nik')"></div>
+                                       <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'nik')"></div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small fw-semibold text-secondary">Jenis Kelamin</label>
@@ -126,7 +126,7 @@
                 </div>
             </div>
 
-            {{-- BARANG BUKTI --}}
+            {{-- CARD 3: BARANG BUKTI --}}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -159,10 +159,11 @@
                                         </td>
                                         <td class="align-top">
                                             <div x-show="bb.kategori === 'Narkotika'" class="w-100">
-                                                <div wire:ignore :class="{'border border-danger rounded': hasError('barang_bukti', i, 'narkotika_ids')}">
-                                                    <select :id="'select_bb_' + bb.temp_id" :name="`barang_bukti[${i}][narkotika_ids][]`" multiple x-init="initTS($el, bb)"></select>
+                                                <div wire:ignore :class="{'border border-danger rounded': hasError('barang_bukti', i, 'narkotika_id')}">
+                                                    {{-- SINGLE SELECT NARKOTIKA --}}
+                                                    <select :id="'select_bb_' + bb.temp_id" :name="`barang_bukti[${i}][narkotika_id]`" x-init="initTS($el, bb)"></select>
                                                 </div>
-                                                <div class="text-danger small mt-1" x-show="hasError('barang_bukti', i, 'narkotika_ids')" x-text="getErrorMessage('barang_bukti', i, 'narkotika_ids')"></div>
+                                                <div class="text-danger small mt-1" x-show="hasError('barang_bukti', i, 'narkotika_id')" x-text="getErrorMessage('barang_bukti', i, 'narkotika_id')"></div>
                                             </div>
                                             <div x-show="bb.kategori === 'Non-Narkotika'" class="w-100">
                                                 <input type="text" :name="`barang_bukti[${i}][nama_barang_bukti]`" x-model="bb.nama_barang_bukti" 
@@ -189,7 +190,7 @@
                                             <template x-if="bb.kategori === 'Non-Narkotika'">
                                                 <div class="w-100">
                                                     <input type="text" :name="`barang_bukti[${i}][satuan]`" x-model="bb.satuan" 
-                                                           class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan')}" placeholder="Pcs/Unit">
+                                                           class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan')}" placeholder="Masukkan Satuan">
                                                     <div class="invalid-feedback d-block" x-show="hasError('barang_bukti', i, 'satuan')" x-text="getErrorMessage('barang_bukti', i, 'satuan')"></div>
                                                 </div>
                                             </template>
@@ -203,7 +204,7 @@
                 </div>
             </div>
 
-            {{-- DETAIL --}}
+            {{-- CARD 4: DETAIL --}}
             <div class="card shadow-sm border-0 mb-5">
                 <div class="card-body p-4">
                     <h5 class="card-title fw-bold mb-4 text-dark border-bottom pb-2">Detail Kasus & Asesmen</h5>
@@ -230,23 +231,113 @@
                             <label class="form-label fw-semibold small text-secondary">Proses Hukum Lanjut</label>
                             <textarea name="proses_hukum_lanjut" class="form-control py-2 auto-resize" x-on:input="autoResize($el)" rows="2" placeholder="Keterangan...">{{ old('proses_hukum_lanjut', $tat->proses_hukum_lanjut) }}</textarea>
                         </div>
-                        
-                        <div class="col-12 mt-4">
-                            <div class="bg-light p-3 rounded border">
-                                <label class="form-label fw-semibold small text-secondary mb-2 d-block">Lampiran Tersimpan</label>
+                    </div>
+                </div>
+            </div>
+
+            {{-- CARD 5: LAMPIRAN --}}
+            <div class="card shadow-sm border-0 mb-5">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="card-title mb-0 fw-bold text-primary">
+                        <i class="bi bi-paperclip me-2"></i>Lampiran
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    
+                    {{-- A. LIST FILE TERSIMPAN --}}
+                    @if($tat->dokumentasi->count() > 0)
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-secondary small mb-3 text-uppercase">File Tersimpan</h6>
+                            
+                            <div class="row g-3" id="existing-files-container">
                                 @foreach($tat->dokumentasi as $doc)
-                                    <div class="card d-inline-block me-2 mb-2 shadow-sm text-center align-top" id="file-{{ $doc->id }}" style="width: 120px; font-size: 12px;">
-                                        <div class="p-2 border-bottom text-truncate" title="{{ $doc->nama_file_asli }}">{{ Str::limit($doc->nama_file_asli, 12) }}</div>
-                                        <button type="button" class="btn btn-link text-danger text-decoration-none w-100 p-1" onclick="markDel({{ $doc->id }})" style="font-size: 11px;">Hapus</button>
+                                    @php 
+                                        $isMarkedDeleted = old('delete_files') && in_array($doc->id, old('delete_files')); 
+                                        $fileUrl = Storage::url($doc->path_file);
+                                    @endphp
+
+                                    <div class="col-6 col-md-4 col-lg-3 file-item" id="file-card-{{ $doc->id }}">
+                                        <div class="card h-100 shadow-sm border border-secondary-subtle position-relative overflow-hidden file-card-inner {{ $isMarkedDeleted ? 'border-danger-thick' : '' }}" style="transition: all 0.3s ease;">
+                                            
+                                            {{-- OVERLAY MERAH --}}
+                                            <div class="delete-overlay position-absolute top-0 start-0 w-100 h-100 {{ $isMarkedDeleted ? 'd-flex' : 'd-none' }} flex-column justify-content-center align-items-center text-center" 
+                                                 style="background-color: rgba(255, 255, 255, 0.85); z-index: 20;">
+                                                <div class="text-danger mb-2"><i class="bi bi-trash3-fill display-4"></i></div>
+                                                <span class="text-danger fw-bold small text-uppercase px-2 py-1 border border-danger rounded">AKAN DIHAPUS</span>
+                                            </div>
+
+                                            {{-- PREVIEW --}}
+                                            <div class="ratio ratio-16x9 bg-secondary bg-opacity-10 border-bottom d-flex align-items-center justify-content-center overflow-hidden">
+                                                @if(Str::contains($doc->tipe_file, 'image'))
+                                                    <img src="{{ $fileUrl }}" class="object-fit-cover w-100 h-100" alt="File Image">
+                                                @elseif(Str::contains($doc->tipe_file, 'pdf'))
+                                                    <div class="text-danger"><i class="bi bi-file-earmark-pdf-fill display-4"></i></div>
+                                                @elseif(Str::contains($doc->tipe_file, ['word', 'officedocument']))
+                                                    <div class="text-primary"><i class="bi bi-file-earmark-word-fill display-4"></i></div>
+                                                @else
+                                                    <div class="text-secondary"><i class="bi bi-file-earmark-text-fill display-4"></i></div>
+                                                @endif
+                                            </div>
+                                            
+                                            {{-- INFO & ACTION --}}
+                                            <div class="card-body p-2 text-center d-flex flex-column justify-content-between position-relative" style="z-index: 50;"> 
+                                                <div class="mb-2">
+                                                    <div class="small text-truncate fw-bold text-dark" title="{{ $doc->nama_file_asli }}">
+                                                        {{ $doc->nama_file_asli }}
+                                                    </div>
+                                                    <div class="text-muted" style="font-size: 0.7rem;">
+                                                        {{ $doc->ukuran_file >= 1048576 ? number_format($doc->ukuran_file / 1048576, 2) . ' MB' : number_format($doc->ukuran_file / 1024, 0) . ' KB' }}
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex gap-1">
+                                                    <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-outline-secondary btn-sm flex-grow-1 py-0 d-flex align-items-center justify-content-center" style="font-size: 0.75rem;" title="Download">
+                                                        <i class="bi bi-download"></i>
+                                                    </a>
+                                                    <button type="button" 
+                                                            id="btn-delete-{{ $doc->id }}"
+                                                            class="btn btn-sm flex-grow-1 py-0 {{ $isMarkedDeleted ? 'btn-secondary' : 'btn-outline-danger' }}" 
+                                                            onclick="markForDeletion({{ $doc->id }})"
+                                                            style="font-size: 0.75rem;">
+                                                        @if($isMarkedDeleted) Batal @else Hapus @endif
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 @endforeach
-                                <div id="del-container"></div>
-                                <div class="mt-3">
-                                    <label class="form-label fw-semibold small text-secondary">Upload File Baru</label>
-                                    <input type="file" class="filepond" name="dokumentasi[]" multiple>
-                                </div>
+                            </div>
+                            
+                            {{-- HIDDEN INPUT CONTAINER --}}
+                            <div id="delete-inputs-container">
+                                @if(old('delete_files'))
+                                    @foreach(old('delete_files') as $deletedId)
+                                        <input type="hidden" name="delete_files[]" value="{{ $deletedId }}" id="input-delete-{{ $deletedId }}">
+                                    @endforeach
+                                @endif
                             </div>
                         </div>
+                    @endif
+
+                    {{-- B. UPLOAD BARU --}}
+                    <div class="bg-body-tertiary p-4 rounded-3 border border-dashed">
+                        <label class="form-label fw-bold h6 mb-1 text-dark">
+                            <i class="bi bi-cloud-arrow-up me-2"></i>Upload File Baru
+                        </label>
+                        <p class="text-muted small mb-3">Format: .jpg, .png, .pdf, .docx. Maks 10MB/file.</p>
+                        
+                        <input type="file" 
+                               class="filepond" 
+                               name="dokumentasi[]" 
+                               multiple 
+                               data-allow-reorder="true"
+                               data-max-file-size="10MB"
+                               data-max-files="10">
+
+                        @error('dokumentasi')
+                            <div class="alert alert-danger py-2 mt-2 small border-0 shadow-sm">
+                                <i class="bi bi-exclamation-circle me-1"></i> {{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -268,24 +359,56 @@
         .ts-control { border: 1px solid #ced4da; border-radius: 0.375rem; padding: 0.5rem 0.75rem; background-color: #fff; }
         .ts-wrapper.focus .ts-control { border-color: #6c757d; box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.15); }
         .border-danger.rounded .ts-control { border-color: #dc3545; }
-        /* FIX DROPDOWN & TEXTAREA */
         .ts-dropdown { z-index: 9999 !important; }
         textarea.auto-resize { resize: none; overflow-y: hidden; min-height: 80px; }
+        .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; }
+        .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+        .border-danger-thick { border-color: #dc3545 !important; border-width: 2px !important; }
+        .delete-overlay { display: flex; flex-direction: column; justify-content: center; align-items: center; }
     </style>
 @endpush
 
 @push('scripts')
-<script type="module">
-    window.markDel = function(id) {
-        const input = document.createElement('input'); input.type = 'hidden'; input.name = 'delete_files[]'; input.value = id;
-        document.getElementById('del-container').appendChild(input);
-        const el = document.getElementById('file-'+id);
-        el.style.opacity = '0.3'; el.style.pointerEvents = 'none';
-    }
+<script>
+    // Logic Toggle Hapus File
+    window.markForDeletion = function(id) {
+        const cardInner = document.querySelector('#file-card-' + id + ' .file-card-inner');
+        const overlay = cardInner.querySelector('.delete-overlay');
+        const btnDelete = document.getElementById('btn-delete-' + id);
+        const containerInputs = document.getElementById('delete-inputs-container');
+        let input = document.getElementById('input-delete-' + id);
+        
+        if (input) { // Batal Hapus
+            input.remove();
+            overlay.classList.add('d-none');
+            overlay.classList.remove('d-flex');
+            cardInner.classList.remove('border-danger-thick');
+            btnDelete.classList.remove('btn-secondary');
+            btnDelete.classList.add('btn-outline-danger');
+            btnDelete.innerHTML = 'Hapus';
+        } else { // Tandai Hapus
+            input = document.createElement('input');
+            input.type = 'hidden'; 
+            input.name = 'delete_files[]'; 
+            input.value = id; 
+            input.id = 'input-delete-' + id;
+            containerInputs.appendChild(input);
+            
+            overlay.classList.remove('d-none');
+            overlay.classList.add('d-flex');
+            cardInner.classList.add('border-danger-thick');
+            btnDelete.classList.remove('btn-outline-danger');
+            btnDelete.classList.add('btn-secondary');
+            btnDelete.innerHTML = 'Batal';
+        }
+    };
+</script>
 
+<script type="module">
     document.addEventListener('alpine:init', () => {
         Alpine.data('tatForm', () => ({
             tersangkaList: [], bbList: [], tsInstances: {}, isUploading: false,
+            pond: null,
             errors: @json($errors->toArray()),
             masterNarkotika: @json($masterNarkotika),
 
@@ -316,10 +439,9 @@
                         this.bbList.push({
                             temp_id: 'bb_' + Math.random(),
                             kategori: b.kategori,
-                            narkotika_ids: b.narkotika_ids || [], 
+                            narkotika_id: b.narkotika_id || '', // Single
                             nama_barang_bukti: b.nama_barang_bukti,
                             jumlah: b.jumlah,
-                            // PERBAIKAN LOGIKA: Jika satuan kosong, cek kategori. 
                             satuan: b.satuan || (b.kategori === 'Narkotika' ? 'Gram' : '')
                         });
                     });
@@ -328,7 +450,7 @@
                         this.bbList.push({
                             temp_id: 'bb_' + b.id,
                             kategori: b.kategori,
-                            narkotika_ids: b.narkotika_id ? [b.narkotika_id] : [],
+                            narkotika_id: b.narkotika_id || '', // Single
                             nama_barang_bukti: b.nama_barang_non_narkotika,
                             jumlah: parseFloat(b.kuantitas),
                             satuan: b.satuan
@@ -338,7 +460,6 @@
 
                 this.initFilePond();
                 
-                // Initialize textarea auto-resize
                 this.$nextTick(() => {
                     document.querySelectorAll('textarea.auto-resize').forEach(el => {
                         this.autoResize(el);
@@ -362,14 +483,15 @@
 
             addTersangka() { this.tersangkaList.push({ temp_id: 't_'+Date.now(), nama: '', nik: '', jk: 'Laki-laki', usia: '', pendidikan: '', pekerjaan: '', no_telepon: '' }); },
             removeTersangka(i) { if(this.tersangkaList.length > 1) this.tersangkaList.splice(i, 1); },
-            addBB() { this.bbList.push({ temp_id: 'bb_'+Date.now(), kategori: 'Narkotika', narkotika_ids: [], nama_barang_bukti: '', jumlah: '', satuan: 'Gram' }); },
+            
+            addBB() { this.bbList.push({ temp_id: 'bb_'+Date.now(), kategori: 'Narkotika', narkotika_id: '', nama_barang_bukti: '', jumlah: '', satuan: 'Gram' }); },
             removeBB(i) { const id = this.bbList[i].temp_id; if(this.tsInstances[id]) this.tsInstances[id].destroy(); this.bbList.splice(i, 1); },
             
             resetBB(bb) {
                 if(this.tsInstances[bb.temp_id]) this.tsInstances[bb.temp_id].destroy();
-                bb.narkotika_ids = []; 
+                bb.narkotika_id = ''; 
                 bb.nama_barang_bukti = '';
-                bb.satuan = ''; // RESET SATUAN
+                bb.satuan = ''; 
                 this.$nextTick(() => this.initTS(document.getElementById('select_bb_'+bb.temp_id), bb));
             },
 
@@ -378,21 +500,65 @@
                 const ts = new TomSelect(el, {
                     plugins: ['remove_button'], create: false, valueField: 'id', labelField: 'text', searchField: 'text',
                     options: this.masterNarkotika.map(n => ({id: n.id, text: n.nama_narkotika})), placeholder: 'Pilih Narkotika...',
-                    dropdownParent: 'body' // FIX DROPDOWN
+                    dropdownParent: 'body',
+                    maxItems: 1 // Single Select
                 });
-                if (bb.narkotika_ids && bb.narkotika_ids.length > 0) ts.setValue(bb.narkotika_ids);
-                ts.on('change', (val) => { bb.narkotika_ids = val; });
+                if (bb.narkotika_id) ts.setValue(bb.narkotika_id);
+                ts.on('change', (val) => { bb.narkotika_id = val; });
                 this.tsInstances[bb.temp_id] = ts;
             },
+
             initFilePond() {
                 const submitBtn = document.getElementById('btn-submit');
-                const pond = FilePond.create(document.querySelector('input.filepond'), {
-                    server: { process: '{{ route("upload.temp") }}', revert: '{{ route("revert.temp") }}', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}},
-                    onprocessstart: () => { this.isUploading = true; submitBtn.innerHTML = 'Mengupload...'; },
-                    onprocessfiles: () => { this.isUploading = false; submitBtn.innerHTML = 'Simpan Perubahan'; }
+                const inputEl = document.querySelector('input.filepond');
+
+                this.pond = FilePond.create(inputEl, {
+                    server: { 
+                        process: '{{ route("upload.temp") }}', 
+                        revert: '{{ route("revert.temp") }}', 
+                        headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}
+                    },
+                    files: [
+                        @if(old('dokumentasi'))
+                            @foreach(old('dokumentasi') as $file)
+                                { source: '{{ $file }}', options: { type: 'local' } },
+                            @endforeach
+                        @endif
+                    ],
+                    onprocessstart: () => { 
+                        this.isUploading = true; 
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mengupload...'; 
+                    },
+                    onprocessfiles: () => { 
+                        this.isUploading = false; 
+                        submitBtn.innerHTML = 'Simpan Perubahan'; 
+                    },
+                     onremovefile: () => {
+                        const files = this.pond.getFiles();
+                        const isBusy = files.some(file => file.status === 3 || file.status === 9);
+                        if(!isBusy) {
+                           this.isUploading = false;
+                           submitBtn.innerHTML = 'Simpan Perubahan';
+                        }
+                    }
                 });
             },
-            submitForm(e) { if(this.isUploading) { alert('Tunggu upload selesai!'); return; } e.target.submit(); }
+            
+            submitForm(e) { 
+                const files = this.pond.getFiles();
+                const isBusy = files.some(file => file.status !== 2 && file.status !== 5);
+
+                if (this.isUploading || isBusy) { 
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Upload Belum Selesai',
+                        text: 'Silakan tunggu proses upload file selesai atau hapus file yang macet.',
+                        showConfirmButton: true
+                    });
+                    return; 
+                } 
+                e.target.submit(); 
+            }
         }));
     });
 </script>

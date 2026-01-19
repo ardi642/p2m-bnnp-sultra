@@ -16,7 +16,7 @@
             <div class="alert alert-danger border-0 shadow-sm mb-4">
                 <div class="d-flex align-items-center">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <div><strong>Periksa Kembali Inputan!</strong> Terdapat kesalahan pengisian data.</div>
+                    <div><strong>Periksa Kembali Inputan!</strong> File yang diupload telah disimpan sementara.</div>
                 </div>
             </div>
         @endif
@@ -24,7 +24,7 @@
         <form action="{{ route('berantas.tat.store') }}" method="POST" enctype="multipart/form-data" id="form-tat" @submit.prevent="submitForm">
             @csrf
             
-            {{-- DATA UTAMA --}}
+            {{-- CARD 1: DATA UTAMA --}}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <h5 class="card-title fw-bold mb-4 text-dark border-bottom pb-2">Informasi Umum</h5>
@@ -57,7 +57,7 @@
                 </div>
             </div>
 
-            {{-- TERSANGKA --}}
+            {{-- CARD 2: TERSANGKA --}}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -91,7 +91,7 @@
                                         <input type="text" :name="`tersangka[${index}][nik]`" x-model="t.nik" 
                                                class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'nik')}"
                                                placeholder="16 Digit NIK...">
-                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'nik')"></div>
+                                       <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'nik')"></div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label small fw-semibold text-secondary">Jenis Kelamin</label>
@@ -131,7 +131,7 @@
                 </div>
             </div>
 
-            {{-- BARANG BUKTI --}}
+            {{-- CARD 3: BARANG BUKTI --}}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -167,10 +167,11 @@
                                         </td>
                                         <td class="align-top">
                                             <div x-show="bb.kategori === 'Narkotika'" class="w-100">
-                                                <div wire:ignore :class="{'border border-danger rounded': hasError('barang_bukti', i, 'narkotika_ids')}">
-                                                    <select :id="'select_bb_' + bb.temp_id" :name="`barang_bukti[${i}][narkotika_ids][]`" multiple x-init="initTS($el, bb)"></select>
+                                                <div wire:ignore :class="{'border border-danger rounded': hasError('barang_bukti', i, 'narkotika_id')}">
+                                                    {{-- SINGLE SELECT NARKOTIKA --}}
+                                                    <select :id="'select_bb_' + bb.temp_id" :name="`barang_bukti[${i}][narkotika_id]`" x-init="initTS($el, bb)"></select>
                                                 </div>
-                                                <div class="text-danger small mt-1" x-show="hasError('barang_bukti', i, 'narkotika_ids')" x-text="getErrorMessage('barang_bukti', i, 'narkotika_ids')"></div>
+                                                <div class="text-danger small mt-1" x-show="hasError('barang_bukti', i, 'narkotika_id')" x-text="getErrorMessage('barang_bukti', i, 'narkotika_id')"></div>
                                             </div>
                                             <div x-show="bb.kategori === 'Non-Narkotika'" class="w-100">
                                                 <input type="text" :name="`barang_bukti[${i}][nama_barang_bukti]`" x-model="bb.nama_barang_bukti" 
@@ -199,7 +200,7 @@
                                             <template x-if="bb.kategori === 'Non-Narkotika'">
                                                 <div class="w-100">
                                                     <input type="text" :name="`barang_bukti[${i}][satuan]`" x-model="bb.satuan" 
-                                                           class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan')}" placeholder="Pcs/Unit">
+                                                           class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan')}" placeholder="Masukkan Satuan">
                                                     <div class="invalid-feedback d-block" x-show="hasError('barang_bukti', i, 'satuan')" x-text="getErrorMessage('barang_bukti', i, 'satuan')"></div>
                                                 </div>
                                             </template>
@@ -215,8 +216,8 @@
                 </div>
             </div>
 
-            {{-- DETAIL KASUS --}}
-            <div class="card shadow-sm border-0 mb-5">
+            {{-- CARD 4: DETAIL KASUS --}}
+            <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <h5 class="card-title fw-bold mb-4 text-dark border-bottom pb-2">Detail Kasus & Asesmen</h5>
                     
@@ -259,7 +260,37 @@
                                       x-init="resize()" @input="resize()"
                                       placeholder="Keterangan proses...">{{ old('proses_hukum_lanjut') }}</textarea>
                         </div>
-                        <div class="col-12 mt-4"><label class="form-label fw-semibold small text-secondary mb-2">Upload Dokumen</label><div class="p-1 border rounded bg-light"><input type="file" class="filepond" name="dokumentasi[]" multiple></div></div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- CARD 5: LAMPIRAN --}}
+            <div class="card shadow-sm border-0 mb-5">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="card-title mb-0 fw-bold text-primary">
+                        <i class="bi bi-paperclip me-2"></i>Lampiran
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="bg-body-tertiary p-4 rounded-3 border border-dashed">
+                        <label class="form-label fw-bold h6 mb-1 text-dark">
+                            <i class="bi bi-cloud-arrow-up me-2"></i>Upload File
+                        </label>
+                        <p class="text-muted small mb-3">Format: .jpg, .png, .pdf, .docx. Maks 10MB/file.</p>
+                        
+                        <input type="file" 
+                               class="filepond" 
+                               name="dokumentasi[]" 
+                               multiple 
+                               data-allow-reorder="true"
+                               data-max-file-size="10MB"
+                               data-max-files="10">
+
+                        @error('dokumentasi')
+                            <div class="alert alert-danger py-2 mt-2 small border-0 shadow-sm">
+                                <i class="bi bi-exclamation-circle me-1"></i> {{ $message }}
+                            </div>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -281,9 +312,10 @@
         .ts-control { border: 1px solid #ced4da; border-radius: 0.375rem; padding: 0.5rem 0.75rem; background-color: #fff; }
         .ts-wrapper.focus .ts-control { border-color: #6c757d; box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.15); }
         .border-danger.rounded .ts-control { border-color: #dc3545; }
-        /* FIX DROPDOWN TOMSELECT & TEXTAREA */
         .ts-dropdown { z-index: 9999 !important; }
         textarea.auto-resize { resize: none; overflow-y: hidden; min-height: 80px; }
+        .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; }
+        .border-dashed { border-style: dashed !important; border-width: 2px !important; }
     </style>
 @endpush
 
@@ -291,7 +323,9 @@
 <script type="module">
     document.addEventListener('alpine:init', () => {
         Alpine.data('tatForm', () => ({
-            tersangkaList: [], bbList: [], tsInstances: {}, isUploading: false,
+            tersangkaList: [], bbList: [], tsInstances: {}, 
+            isUploading: false,
+            pond: null, 
             errors: @json($errors->toArray()), 
             masterNarkotika: @json($masterNarkotika),
 
@@ -313,10 +347,9 @@
                         this.bbList.push({
                             temp_id: 'bb_' + Math.random(),
                             kategori: b.kategori || 'Narkotika',
-                            narkotika_ids: b.narkotika_ids || [], 
+                            narkotika_id: b.narkotika_id || '', // Single Value
                             nama_barang_bukti: b.nama_barang_bukti || '',
                             jumlah: b.jumlah || '',
-                            // LOGIKA: Jika Non-Narkotika, biarkan kosong.
                             satuan: b.satuan || (b.kategori === 'Narkotika' ? 'Gram' : '')
                         });
                     });
@@ -336,37 +369,84 @@
 
             addTersangka() { this.tersangkaList.push({ temp_id: 't_'+Date.now(), nama: '', nik: '', jk: 'Laki-laki', usia: '', pendidikan: '', pekerjaan: '', no_telepon: '' }); },
             removeTersangka(i) { if(this.tersangkaList.length > 1) this.tersangkaList.splice(i, 1); },
-            addBB() { this.bbList.push({ temp_id: 'bb_'+Date.now(), kategori: 'Narkotika', narkotika_ids: [], nama_barang_bukti: '', jumlah: '', satuan: 'Gram' }); },
+            
+            // Tambah Barang Bukti Single Narkotika
+            addBB() { this.bbList.push({ temp_id: 'bb_'+Date.now(), kategori: 'Narkotika', narkotika_id: '', nama_barang_bukti: '', jumlah: '', satuan: 'Gram' }); },
             removeBB(i) { const id = this.bbList[i].temp_id; if(this.tsInstances[id]) this.tsInstances[id].destroy(); this.bbList.splice(i, 1); },
             
             resetBB(bb) {
                 if(this.tsInstances[bb.temp_id]) this.tsInstances[bb.temp_id].destroy();
-                bb.narkotika_ids = []; 
+                bb.narkotika_id = ''; 
                 bb.nama_barang_bukti = '';
-                bb.satuan = ''; // RESET SATUAN
+                bb.satuan = ''; 
                 this.$nextTick(() => this.initTS(document.getElementById('select_bb_'+bb.temp_id), bb));
             },
 
             initTS(el, bb) {
                 if(!el || bb.kategori !== 'Narkotika') return; 
                 const ts = new TomSelect(el, {
-                    plugins: ['remove_button'], create: false, valueField: 'id', labelField: 'text', searchField: 'text',
+                    // plugins: ['remove_button'], // Tidak perlu remove button jika single
+                    create: false, valueField: 'id', labelField: 'text', searchField: 'text',
                     options: this.masterNarkotika.map(n => ({id: n.id, text: n.nama_narkotika})), placeholder: 'Pilih Narkotika...',
-                    dropdownParent: 'body'
+                    dropdownParent: 'body',
+                    maxItems: 1 // Single Select
                 });
-                if (bb.narkotika_ids && bb.narkotika_ids.length > 0) ts.setValue(bb.narkotika_ids);
-                ts.on('change', (val) => { bb.narkotika_ids = val; });
+                if (bb.narkotika_id) ts.setValue(bb.narkotika_id);
+                ts.on('change', (val) => { bb.narkotika_id = val; });
                 this.tsInstances[bb.temp_id] = ts;
             },
+
             initFilePond() {
                 const submitBtn = document.getElementById('btn-submit');
-                const pond = FilePond.create(document.querySelector('input.filepond'), {
-                    server: { process: '{{ route("upload.temp") }}', revert: '{{ route("revert.temp") }}', headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}},
-                    onprocessstart: () => { this.isUploading = true; submitBtn.innerHTML = 'Mengupload...'; },
-                    onprocessfiles: () => { this.isUploading = false; submitBtn.innerHTML = 'Simpan Data'; }
+                const inputEl = document.querySelector('input.filepond');
+
+                this.pond = FilePond.create(inputEl, {
+                    server: { 
+                        process: '{{ route("upload.temp") }}', 
+                        revert: '{{ route("revert.temp") }}', 
+                        headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}
+                    },
+                    files: [
+                        @if(old('dokumentasi'))
+                            @foreach(old('dokumentasi') as $file)
+                                { source: '{{ $file }}', options: { type: 'local' } },
+                            @endforeach
+                        @endif
+                    ],
+                    onprocessstart: () => { 
+                        this.isUploading = true; 
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mengupload...'; 
+                    },
+                    onprocessfiles: () => { 
+                        this.isUploading = false; 
+                        submitBtn.innerHTML = 'Simpan Data'; 
+                    },
+                    onremovefile: () => {
+                        const files = this.pond.getFiles();
+                        const isBusy = files.some(file => file.status === 3 || file.status === 9);
+                        if(!isBusy) {
+                           this.isUploading = false;
+                           submitBtn.innerHTML = 'Simpan Data';
+                        }
+                    }
                 });
             },
-            submitForm(e) { if(this.isUploading) { alert('Tunggu upload selesai!'); return; } e.target.submit(); }
+
+            submitForm(e) { 
+                const files = this.pond.getFiles();
+                const isBusy = files.some(file => file.status !== 2 && file.status !== 5);
+
+                if (this.isUploading || isBusy) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Upload Belum Selesai',
+                        text: 'Silakan tunggu proses upload file selesai atau hapus file yang macet.',
+                        showConfirmButton: true
+                    });
+                    return; 
+                } 
+                e.target.submit(); 
+            }
         }));
     });
 </script>

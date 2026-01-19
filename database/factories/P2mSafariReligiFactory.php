@@ -22,6 +22,8 @@ class P2mSafariReligiFactory extends Factory
             // Ambil ID Satker secara acak, atau buat baru jika kosong
             'satuan_kerja_id' => SatuanKerja::inRandomOrder()->first()->id ?? SatuanKerja::factory(),
             
+            'anggaran_pelaksanaan' => $this->faker->randomElement(['DIPA', 'NON DIPA']),
+
             // Tanggal dalam rentang 1 tahun terakhir sampai sekarang
             'tanggal_pelaksanaan' => $this->faker->dateTimeBetween('-1 year', 'now'),
             

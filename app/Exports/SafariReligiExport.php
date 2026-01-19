@@ -34,6 +34,7 @@ class SafariReligiExport implements FromQuery, WithHeadings, WithMapping, Should
     {
         return [
             'Satuan Kerja',
+            'Anggaran',
             'Tanggal Pelaksanaan',
             'Tempat Kegiatan',
             'Pegawai',
@@ -60,6 +61,7 @@ class SafariReligiExport implements FromQuery, WithHeadings, WithMapping, Should
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
+            $row->anggaran_pelaksanaan,
             $row->tanggal_pelaksanaan->locale('id')->translatedFormat('d F Y'),
             $row->tempat_kegiatan,
             $pegawaiString,

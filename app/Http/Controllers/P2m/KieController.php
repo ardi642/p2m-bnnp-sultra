@@ -101,7 +101,7 @@ class KieController extends Controller
         $rawSortOrder = $request->input('sort_order', 'desc');
         $sortOrder = in_array(strtolower($rawSortOrder), ['asc', 'desc']) ? strtolower($rawSortOrder) : 'desc';
         
-        $allowSort = ['tempat_kegiatan', 'tanggal_pelaksanaan', 'created_at', 'satuan_kerja'];
+        $allowSort = ['anggaran_pelaksanaan', 'tempat_kegiatan', 'tanggal_pelaksanaan', 'created_at', 'satuan_kerja'];
 
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {

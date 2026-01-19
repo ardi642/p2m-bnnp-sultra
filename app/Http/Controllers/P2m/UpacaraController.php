@@ -104,7 +104,7 @@ class UpacaraController extends Controller
         $sortOrder = in_array(strtolower($rawSortOrder), ['asc', 'desc']) ? strtolower($rawSortOrder) : 'desc';
         
         // Whitelist kolom yang boleh disort untuk mencegah SQL Injection via column name
-        $allowSort = ['nama_sekolah', 'tanggal_pelaksanaan', 'jumlah_peserta_upacara', 'created_at', 'satuan_kerja'];
+        $allowSort = ['anggaran_pelaksanaan', 'nama_sekolah', 'tanggal_pelaksanaan', 'jumlah_peserta_upacara', 'created_at', 'satuan_kerja'];
 
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {

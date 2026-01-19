@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreign('satuan_kerja_id')->references('id')->on('satuan_kerja')
                 ->onUpdate('cascade')->onDelete('cascade');
 
+            $table->enum('anggaran_pelaksanaan', ['DIPA', 'NON DIPA']);
+
             // Field Khusus CFD
             $table->string('nama_kegiatan'); // Tetap diadakan untuk judul laporan/pencarian
             $table->date('tanggal_pelaksanaan');

@@ -54,6 +54,11 @@ class CfdController extends Controller
                 $q->orWhereYear('tanggal_pelaksanaan', $y);
             }
         });
+
+        // Filter Anggaran
+        if ($request->filled('anggaran_pelaksanaan')) {
+            $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
+        }
         
         // Filter Pegawai
         if ($request->filled('pegawai_nips')) {
@@ -78,6 +83,7 @@ class CfdController extends Controller
             $searchDate = SearchHelper::translateDateInput($search);
             $query->where(function($q) use ($search, $searchDate) {
                 $q->where('nama_kegiatan', 'LIKE', "%{$search}%")
+                    ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%")
                     ->orWhere('tempat_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhere('jumlah_peserta', 'LIKE', "%{$search}%")
                     ->orWhereHas('satuanKerja', function($subQ) use ($search) {
@@ -95,7 +101,7 @@ class CfdController extends Controller
         // Sorting
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
-        $allowSort = ['nama_kegiatan', 'tanggal_pelaksanaan', 'tempat_kegiatan', 'jumlah_peserta', 'created_at', 'satuan_kerja'];
+        $allowSort = ['anggaran_pelaksanaan', 'nama_kegiatan', 'tanggal_pelaksanaan', 'tempat_kegiatan', 'jumlah_peserta', 'created_at', 'satuan_kerja'];
 
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {
@@ -172,6 +178,7 @@ class CfdController extends Controller
 
         $rules = [
             'nama_kegiatan'       => 'required',
+            'anggaran_pelaksanaan' => 'required|in:DIPA,NON DIPA',
             'tanggal_pelaksanaan' => 'required|date',
             'tempat_kegiatan'     => 'required',
             'jumlah_peserta'      => 'required|numeric',
@@ -293,6 +300,7 @@ class CfdController extends Controller
 
         $rules = [
             'nama_kegiatan'       => 'required',
+            'anggaran_pelaksanaan' => 'required|in:DIPA,NON DIPA',
             'tanggal_pelaksanaan' => 'required|date',
             'tempat_kegiatan'     => 'required',
             'jumlah_peserta'      => 'required|numeric',

@@ -28,6 +28,8 @@ class P2mCfdFactory extends Factory
         return [
             // Ambil ID Satker acak yang ada, atau buat baru jika kosong
             'satuan_kerja_id' => SatuanKerja::inRandomOrder()->first()->id ?? SatuanKerja::factory(),
+
+            'anggaran_pelaksanaan' => $this->faker->randomElement(['DIPA', 'NON DIPA']),
             
             // Nama kegiatan khas CFD
             'nama_kegiatan' => 'Sosialisasi P4GN pada Car Free Day ' . $this->faker->city(),

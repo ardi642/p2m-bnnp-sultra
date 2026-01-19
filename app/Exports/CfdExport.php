@@ -34,6 +34,7 @@ class CfdExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize,
     {
         return [
             'Satuan Kerja',
+            'Anggaran',
             'Nama Kegiatan',
             'Tanggal Pelaksanaan',
             'Tempat',
@@ -61,6 +62,7 @@ class CfdExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize,
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
+            $row->anggaran_pelaksanaan,
             $row->nama_kegiatan,
             $row->tanggal_pelaksanaan->locale('id')->translatedFormat('d F Y'),
             $row->tempat_kegiatan,

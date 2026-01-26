@@ -10,9 +10,11 @@
                 <h1 class="h3 mb-1 fw-bold text-dark">Data Register Barang Bukti</h1>
                 <p class="text-muted mb-0">Pencatatan barang bukti hasil tangkap dan temuan</p>
             </div>
+            @if (auth()->user()->hasRole(['operator_satker', 'operator_berantas']))
             <a href="{{ route('berantas.register-barang-bukti.create') }}" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm">
                 <i class="bi bi-plus-lg"></i> Tambah Data
             </a>
+            @endif
         </div>
 
         {{-- ALERT NOTIFIKASI --}}
@@ -282,11 +284,12 @@
                                                             title="Lihat Detail">
                                                         <i class="bi" :class="expanded.includes({{ $row->id }}) ? 'bi-chevron-up' : 'bi-eye'"></i>
                                                     </button>
-
-                                                    <a href="{{ route('berantas.register-barang-bukti.edit', $row->id) }}" class="btn btn-light border border-secondary-subtle text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
                                                     
-                                                    <button type="button" class="btn btn-light border border-secondary-subtle text-danger" onclick="confirmDelete({{ $row->id }})" title="Hapus"><i class="bi bi-trash"></i></button>
-                                                    <form id="delete-form-{{ $row->id }}" action="{{ route('berantas.register-barang-bukti.destroy', $row->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
+                                                    @if (auth()->user()->hasRole(['operator_satker', 'operator_berantas']))
+                                                        <a href="{{ route('berantas.register-barang-bukti.edit', $row->id) }}" class="btn btn-light border border-secondary-subtle text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                                        <button type="button" class="btn btn-light border border-secondary-subtle text-danger" onclick="confirmDelete({{ $row->id }})" title="Hapus"><i class="bi bi-trash"></i></button>
+                                                        <form id="delete-form-{{ $row->id }}" action="{{ route('berantas.register-barang-bukti.destroy', $row->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>

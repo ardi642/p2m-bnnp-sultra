@@ -102,10 +102,14 @@ class ElektronikController extends Controller
         }
 
         $yearQuery = P2mElektronik::selectRaw('YEAR(tanggal_pelaksanaan) as year');
-        if ($user->isOperator()) { $yearQuery->where('satuan_kerja_id', $user->getSatkerId()); }
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) { $yearQuery->where('satuan_kerja_id', $user->getSatkerId()); }
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
+        
+        $statsQuery = clone $query;
+        $totalKegiatan = $statsQuery->count();
+
         $query->with('dokumentasi');
 
         $perPage = $request->input('per_page', 10);
@@ -113,7 +117,7 @@ class ElektronikController extends Controller
         
         $datas = $query->paginate($perPage)->withQueryString(); 
         
-        return view('p2m.elektronik.index', compact('datas', 'satuanKerjas', 'years', 'user'));
+        return view('p2m.elektronik.index', compact('datas', 'satuanKerjas', 'years', 'user', 'totalKegiatan'));
     }
 
     public function export(Request $request) 
@@ -154,7 +158,7 @@ class ElektronikController extends Controller
         DB::beginTransaction();
         try {
             $dataInsert = collect($validasi)->except('dokumentasi')->toArray();
-            if ($user->isOperator()) { $dataInsert['satuan_kerja_id'] = $user->getSatkerId(); }
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) { $dataInsert['satuan_kerja_id'] = $user->getSatkerId(); }
 
             // Simpan Data Utama (Tanpa Attach Pegawai)
             $kegiatan = P2mElektronik::create($dataInsert);
@@ -199,7 +203,7 @@ class ElektronikController extends Controller
         $user = Auth::user();
         $kegiatan = P2mElektronik::findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
 
         if ($user->isAdmin()) {
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
@@ -215,7 +219,7 @@ class ElektronikController extends Controller
         $user = Auth::user();
         $kegiatan = P2mElektronik::findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
 
         $rules = [
             'anggaran_pelaksanaan' => 'required',
@@ -233,7 +237,7 @@ class ElektronikController extends Controller
         DB::beginTransaction();
         try {
             $dataUpdate = collect($validasi)->except(['dokumentasi', 'delete_files'])->toArray();
-            if ($user->isOperator()) { unset($dataUpdate['satuan_kerja_id']); }
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) { unset($dataUpdate['satuan_kerja_id']); }
             
             $kegiatan->update($dataUpdate);
 

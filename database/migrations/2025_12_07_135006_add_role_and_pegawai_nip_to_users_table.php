@@ -14,8 +14,18 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             // Tambah Kolom Role
             // Kita taruh 'after' password biar rapi di database
-            $table->enum('role', ['admin', 'operator'])
-                ->default('operator')
+            $table->enum('role', [
+                'admin',
+                'admin_satker',
+                'operator_satker',
+                'admin_p2m',
+                'admin_berantas',
+                'admin_rehab',
+                'operator_p2m',
+                'operator_berantas',
+                'operator_rehab',
+                ])
+                ->default('operator_satker')
                 ->after('password'); 
 
             // Tambah Kolom Pegawai NIP

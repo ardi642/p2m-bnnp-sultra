@@ -63,9 +63,11 @@
                                     <div class="col-12 col-lg-{{ auth()->user()->isAdmin() ? '6' : '12' }}">
                                         <label class="form-label fw-semibold text-secondary small">Target Sasaran <span class="text-danger">*</span></label>
                                         <select class="form-select" name="sasaran_kegiatan">
-                                            <option value="lingkungan pendidikan" @selected(old('sasaran_kegiatan', $data->sasaran_kegiatan) == 'lingkungan pendidikan')>Lingkungan Pendidikan</option>
-                                            <option value="lingkungan kerja" @selected(old('sasaran_kegiatan', $data->sasaran_kegiatan) == 'lingkungan kerja')>Lingkungan Kerja</option>
-                                            <option value="lingkungan masyarakat" @selected(old('sasaran_kegiatan', $data->sasaran_kegiatan) == 'lingkungan masyarakat')>Lingkungan Masyarakat</option>
+                                            <option value="sekolah/kampus bersinar" @selected(old('sasaran_kegiatan', $data->sasaran_kegiatan) == 'sekolah/kampus bersinar')>Lingkungan Kerja</option>
+                                            <option value="pondok pesantren bersinar" @selected(old('sasaran_kegiatan', $data->sasaran_kegiatan) == 'pondok pesantren bersinar')>Pondok Pesantren Bersinar</option>
+                                            <option value="tempat hiburan bersinar" @selected(old('sasaran_kegiatan', $data->sasaran_kegiatan) == 'tempat hiburan bersinar')>Tempat Hiburan Bersinar</option>
+                                            <option value="tempat wisata bersinar" @selected(old('sasaran_kegiatan', $data->sasaran_kegiatan) == 'tempat wisata bersinar')>Tempat Wisata Bersinar</option>
+                                            <option value="industri bersinar" @selected(old('sasaran_kegiatan', $data->sasaran_kegiatan) == 'industri bersinar')>Industri Bersinar</option>
                                         </select>
                                     </div>
                                     

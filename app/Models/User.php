@@ -72,16 +72,6 @@ class User extends Authenticatable
         return $this->role === self::ROLE_ADMIN;
     }
 
-    public function isAdminSatker(): bool
-    {
-        return $this->role === 'admin_satker';
-    }
-
-    public function isOperator(): bool
-    {
-        return $this->role === self::ROLE_OPERATOR;
-    }
-
     public function hasRole(string|array $roles): bool
     {
         if (is_array($roles)) {

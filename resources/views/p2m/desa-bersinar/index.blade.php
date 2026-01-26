@@ -157,11 +157,23 @@
                                     </div>
                                 </div>
                                 
-                                <div class="d-flex justify-content-between align-items-center mb-3 px-3 px-lg-0">
-                                    <button type="submit" formaction="{{ route('p2m.desa-bersinar.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 shadow-sm">
-                                        <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-lg-inline">Export Excel</span>
-                                    </button>
-                                    <div class="text-muted small fst-italic">Total Data: <strong>{{ $desas->total() }}</strong></div>
+                                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-end align-items-lg-center mb-3 px-3 px-lg-0">
+                                    
+                                    <div class="mb-2 mb-lg-0">
+                                        <button type="submit" formaction="{{ route('p2m.desa-bersinar.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 px-3 shadow-none">
+                                            <i class="bi bi-file-earmark-excel"></i> <span>Export Excel</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                            <i class="bi bi-info-circle text-muted me-2" style="font-size: 0.85rem;"></i>
+                                            <span class="text-muted" style="font-size: 0.9rem;">Total Desa Bersinar : </span>
+                                            <span class="text-dark ms-1" style="font-size: 0.9rem;">
+                                                {{ number_format($totalKegiatan, 0, ',', '.') }}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                             
@@ -217,7 +229,7 @@
                                                 <td class="pe-3">
                                                     <div class="btn-group btn-group-sm shadow-sm">
                                                         <button type="button" class="btn btn-light border text-secondary" @click="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})"><i class="bi" :class="expanded.includes({{ $data->id }}) ? 'bi-chevron-up text-primary' : 'bi-eye text-secondary'"></i></button>
-                                                        @if (auth()->user()->hasRole('operator'))
+                                                        @if (auth()->user()->hasRole(['operator_satker', 'operator_p2m']))
                                                             <a href="{{ route('p2m.desa-bersinar.edit', $data->id) }}" class="btn btn-light border text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
                                                             <button type="button" class="btn btn-light border text-danger" onclick="confirmDelete({{ $data->id }})" title="Hapus"><i class="bi bi-trash"></i></button>
                                                             <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.desa-bersinar.destroy', $data->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
@@ -303,7 +315,7 @@
                                                 </td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="12" class="text-center py-5 text-muted fst-italic border-bottom">Belum ada data desa bersinar.</td></tr>
+                                            <tr><td colspan="12" class="text-center py-5 text-muted fst-italic border-bottom">Tidak ada data desa bersinar.</td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>

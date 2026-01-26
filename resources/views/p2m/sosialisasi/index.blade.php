@@ -128,9 +128,10 @@
                                             <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Sasaran</label>
                                             <div class="shadow-sm bg-white rounded">
                                                 <select id="select-sasaran" name="sasaran_kegiatan[]" multiple placeholder="Pilih Sasaran..." autocomplete="off">
-                                                    <option value="lingkungan pendidikan" {{ in_array('lingkungan pendidikan', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Pendidikan</option>
                                                     <option value="lingkungan kerja" {{ in_array('lingkungan kerja', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Kerja</option>
+                                                    <option value="lingkungan pendidikan" {{ in_array('lingkungan pendidikan', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Pendidikan</option>
                                                     <option value="lingkungan masyarakat" {{ in_array('lingkungan masyarakat', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Masyarakat</option>
+                                                    <option value="lingkungan swasta" {{ in_array('lingkungan swasta', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Swasta</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -181,16 +182,36 @@
                                     </div>
                                 </div>
                             </div>
+
                             
-                            <div class="d-flex justify-content-between align-items-center mb-3 px-3 px-lg-0">
-                                <button type="submit" formaction="{{ route('p2m.sosialisasi.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 shadow-sm">
-                                    <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-lg-inline">Export Excel</span>
-                                </button>
-                                <div class="text-muted small fst-italic">
-                                    Total Data: <strong>{{ $sosialisasis->total() }}</strong>
+                            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-end align-items-lg-center mb-3 px-3 px-lg-0">
+                                
+                                <div class="mb-2 mb-lg-0">
+                                    <button type="submit" formaction="{{ route('p2m.sosialisasi.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 px-3 shadow-none">
+                                        <i class="bi bi-file-earmark-excel"></i> <span>Export Excel</span>
+                                    </button>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-info-circle text-muted me-2" style="font-size: 0.85rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.9rem;">Total kegiatan : </span>
+                                        <span class="text-dark ms-1" style="font-size: 0.9rem;">
+                                            {{ number_format($totalKegiatan, 0, ',', '.') }}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-people text-muted me-2" style="font-size: 0.85rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.9rem;">Total peserta : </span>
+                                        <span class="text-dark ms-1" style="font-size: 0.9rem;">
+                                            {{ number_format($totalPeserta, 0, ',', '.') }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </form>
+
                         
                         {{-- TABEL DATA --}}
                         <div class="custom-table-scroll mb-3" id="data-table">
@@ -217,7 +238,7 @@
                                             <td><span class="badge rounded-pill {{ $data->anggaran_pelaksanaan == 'DIPA' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' }}">{{ $data->anggaran_pelaksanaan }}</span></td>
                                             <td class="text-start"><a href="#" class="text-decoration-none fw-bold text-dark" @click.prevent="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})">{{ $data->nama_kegiatan }}</a></td>
                                             <td>
-                                                @php $sasaranClass = match($data->sasaran_kegiatan) { 'lingkungan pendidikan' => 'bg-warning', 'lingkungan kerja' => 'bg-primary', default => 'bg-secondary' }; @endphp
+                                                @php $sasaranClass = match($data->sasaran_kegiatan) { 'lingkungan pendidikan' => 'bg-warning', 'lingkungan kerja' => 'bg-primary', 'lingkungan masyarakat' => 'bg-success', 'lingkungan swasta' => 'bg-info' }; @endphp
                                                 <span class="badge rounded-pill {{ $sasaranClass }} bg-opacity-10 {{ str_replace('bg-', 'text-', $sasaranClass) }} border {{ str_replace('bg-', 'border-', $sasaranClass) }} border-opacity-25 text-capitalize text-nowrap">{{ $data->sasaran_kegiatan }}</span>
                                             </td>
                                             <td class="small text-muted text-nowrap">{{ $data->tanggal_pelaksanaan->locale('id')->translatedFormat('d M Y') }}</td>
@@ -236,7 +257,7 @@
                                             <td class="pe-3">
                                                 <div class="btn-group btn-group-sm shadow-sm">
                                                     <button type="button" class="btn btn-light border text-secondary" @click="expanded.includes({{ $data->id }}) ? expanded = expanded.filter(id => id !== {{ $data->id }}) : expanded.push({{ $data->id }})"><i class="bi" :class="expanded.includes({{ $data->id }}) ? 'bi-chevron-up text-primary' : 'bi-eye text-secondary'"></i></button>
-                                                    @if (auth()->user()->hasRole('operator'))
+                                                    @if (auth()->user()->hasRole(['operator_satker', 'operator_p2m']))
                                                         <a href="{{ route('p2m.sosialisasi.edit', $data->id) }}" class="btn btn-light border text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
                                                         <button type="button" class="btn btn-light border text-danger" onclick="confirmDelete({{ $data->id }})" title="Hapus"><i class="bi bi-trash"></i></button>
                                                         <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.sosialisasi.destroy', $data->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
@@ -337,7 +358,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="11" class="text-center py-5 text-muted fst-italic border-bottom">Belum ada data kegiatan.</td></tr>
+                                        <tr><td colspan="11" class="text-center py-5 text-muted fst-italic border-bottom">Tidak ada data kegiatan.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

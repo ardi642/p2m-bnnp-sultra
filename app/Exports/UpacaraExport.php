@@ -9,6 +9,7 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class UpacaraExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
@@ -35,32 +36,62 @@ class UpacaraExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoS
             'Tanggal Pelaksanaan',
             'Pegawai',
             'Jumlah Peserta',
-            'Link Dokumentasi',
             'Dibuat Pada'
         ];
+    }
+
+    public function chunkSize(): int
+    {
+        return 1000;
     }
 
     // Mapping Data per Baris
     public function map($row): array
     {
-        // Ambil nama pegawai dan gabungkan dengan koma
-        $pegawaiNames = $row->pegawai->pluck('nama')->implode(', ');
+        // --- LOGIKA PEGAWAI (Menampilkan Status Pindah) ---
+        $listPegawai = [];
+        
+        foreach ($row->pegawai as $pegawai) {
+            $info = $pegawai->nama;
+            
+            // Tambahkan NIP jika ada
+            if ($pegawai->nip) {
+                $info .= " ({$pegawai->nip})";
+            }
+
+            // CEK STATUS PINDAH (Sesuai Logika di View)
+            // Jika Satker Pegawai Saat Ini != Satker Pemilik Kegiatan
+            if ($pegawai->satuan_kerja_id != $row->satuan_kerja_id) {
+                $satkerBaru = $pegawai->satuanKerja->satuan_kerja ?? 'Luar Satker';
+                // Tambahkan keterangan pindah
+                $info .= " [Pindah ke: $satkerBaru]";
+            }
+
+            $listPegawai[] = $info;
+        }
+
+        // Gabungkan semua nama pegawai dengan Enter (New Line)
+        $pegawaiString = implode("\n", $listPegawai);
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
             $row->anggaran_pelaksanaan,
             $row->nama_sekolah,
-            $row->tanggal_pelaksanaan->translatedFormat('d F Y'), // Format tanggal Indo
-            $pegawaiNames, // List pegawai
-            $row->jumlah_peserta,
-            $row->link_kelengkapan_dokumentasi,
-            $row->created_at->translatedFormat('d F Y H:i'),
+            $row->tanggal_pelaksanaan->locale('id')->translatedFormat('d F Y'), // Format tanggal Indo
+            $pegawaiString,
+            $row->jumlah_peserta_upacara,
+            $row->created_at->locale('id')->translatedFormat('d F Y H:i'),
         ];
     }
 
     // Styling Header (Bold)
     public function styles(Worksheet $sheet)
     {
+        // Format agar kolom Pegawai bisa Multi-line (Enter terbaca)
+        $sheet->getStyle('E')->getAlignment()->setWrapText(true);
+
+        // Format agar semua teks rata atas (rapi)
+        $sheet->getStyle('A:H')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
         return [
             1 => ['font' => ['bold' => true]],
         ];

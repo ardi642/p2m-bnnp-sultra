@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\P2m;
 
+use App\Exports\UpacaraExport;
 use App\Http\Controllers\Controller;
 use App\Models\P2mUpacara;
 use App\Models\SatuanKerja;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 
 class UpacaraController extends Controller
 {
@@ -138,19 +140,24 @@ class UpacaraController extends Controller
         $yearQuery = P2mUpacara::selectRaw('YEAR(tanggal_pelaksanaan) as year');
 
         // Jika Operator, hanya ambil tahun dari data milik satkernya sendiri
-        if ($user->isOperator()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
 
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
+
+        $statsQuery = clone $query;
+        $totalKegiatan = $statsQuery->count();
+        $totalPeserta = $statsQuery->sum('jumlah_peserta_upacara');
+
         $query->with('dokumentasi');
 
         $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : 10;
         $upacaras = $query->paginate($perPage)->withQueryString();
 
-        return view('p2m.upacara.index', compact('upacaras', 'satuanKerjas', 'years', 'pegawais', 'user'));
+        return view('p2m.upacara.index', compact('upacaras', 'satuanKerjas', 'years', 'pegawais', 'user', 'totalKegiatan', 'totalPeserta'));
     }
 
     public function create(): View 
@@ -198,7 +205,7 @@ class UpacaraController extends Controller
         try {
             $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
             
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
             }
 
@@ -236,7 +243,7 @@ class UpacaraController extends Controller
         $user = Auth::user();
         $kegiatan = P2mUpacara::with('pegawai')->findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403, 'Akses Ditolak');
         }
 
@@ -262,7 +269,7 @@ class UpacaraController extends Controller
         $user = Auth::user();
         $kegiatan = P2mUpacara::findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) abort(403);
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) abort(403);
 
         $rules = [
             'nama_sekolah'           => 'required',
@@ -285,7 +292,7 @@ class UpacaraController extends Controller
 
         try {
             $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
-            if ($user->isOperator()) unset($dataUpdate['satuan_kerja_id']);
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) unset($dataUpdate['satuan_kerja_id']);
 
             $kegiatan->update($dataUpdate);
 
@@ -362,9 +369,8 @@ class UpacaraController extends Controller
     public function export(Request $request) 
     {
         // Fitur Export bisa ditambahkan nanti, untuk sementara redirect back atau kosong
-        return redirect()->back()->with('error', 'Fitur export belum tersedia.');
-        // $query = $this->getFilteredQuery($request);
-        // return Excel::download(new UpacaraExport($query), 'Laporan_P2M_Upacara.xlsx');
+        $query = $this->getFilteredQuery($request);
+        return Excel::download(new UpacaraExport($query), 'Laporan_P2M_Upacara.xlsx');
     }
 
     private function processFiles($tempFolders, $kegiatan, &$movedFilesLog) {

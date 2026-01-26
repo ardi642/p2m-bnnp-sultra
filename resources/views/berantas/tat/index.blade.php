@@ -10,9 +10,11 @@
                 <h1 class="h3 mb-1 fw-bold text-dark">Data TAT</h1>
                 <p class="text-muted mb-0">Kelola Data Tim Asesmen Terpadu</p>
             </div>
+            @if (auth()->user()->hasRole(['operator_satker', 'operator_berantas']))
             <a href="{{ route('berantas.tat.create') }}" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm">
                 <i class="bi bi-plus-lg"></i> Tambah Data
             </a>
+            @endif
         </div>
 
         {{-- ALERT NOTIFIKASI --}}
@@ -186,14 +188,48 @@
                                 </div>
                             </div>
                             
-                            <div class="d-flex justify-content-between align-items-center mb-3 px-3 px-lg-0">
-                                <button type="submit" formaction="{{ route('berantas.tat.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 shadow-sm">
-                                    <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-lg-inline">Export Excel</span>
-                                </button>
-                                <div class="text-muted small fst-italic">
-                                    Total Data: <strong>{{ $data->total() }}</strong>
+                            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-end align-items-lg-center mb-3 px-3 px-lg-0">
+                                                    
+                                <div class="mb-2 mb-lg-0">
+                                    <button type="submit" formaction="{{ route('berantas.tat.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 px-3 shadow-none">
+                                        <i class="bi bi-file-earmark-excel"></i> <span>Export Excel</span>
+                                    </button>
+                                </div>
+
+                                <div class="d-flex flex-wrap justify-content-end gap-2">
+                                    
+                                    {{-- Total Kasus --}}
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-briefcase text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total kasus : </span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalKasus, 0, ',', '.') }}</span>
+                                    </div>
+                                    
+                                    {{-- Total Tersangka --}}
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-people text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total tersangka : </span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalTersangka, 0, ',', '.') }}</span>
+                                    </div>
+
+                                    {{-- Total Jenis BB --}}
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-boxes text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total barang bukti narkotika : </span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalBBNarkotika, 0, ',', '.') }}</span>
+                                    </div>
+
+                                    {{-- Total Berat (Gram) --}}
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-speedometer2 text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total berat narkotika : </span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">
+                                            {{ number_format($totalBeratGram, 2, ',', '.') }} Gram
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
+
                         </form>
                         
                         {{-- TABEL DATA --}}
@@ -285,11 +321,13 @@
                                                             title="Lihat Detail">
                                                         <i class="bi" :class="expanded.includes({{ $row->id }}) ? 'bi-chevron-up' : 'bi-eye'"></i>
                                                     </button>
-
-                                                    <a href="{{ route('berantas.tat.edit', $row->id) }}" class="btn btn-light border border-secondary-subtle text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
                                                     
-                                                    <button type="button" class="btn btn-light border border-secondary-subtle text-danger" onclick="confirmDelete({{ $row->id }})" title="Hapus"><i class="bi bi-trash"></i></button>
-                                                    <form id="delete-form-{{ $row->id }}" action="{{ route('berantas.tat.destroy', $row->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
+                                                    @if (auth()->user()->hasRole(['operator_satker', 'operator_berantas']))
+                                                        <a href="{{ route('berantas.tat.edit', $row->id) }}" class="btn btn-light border border-secondary-subtle text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                                        <button type="button" class="btn btn-light border border-secondary-subtle text-danger" onclick="confirmDelete({{ $row->id }})" title="Hapus"><i class="bi bi-trash"></i></button>
+                                                        <form id="delete-form-{{ $row->id }}" action="{{ route('berantas.tat.destroy', $row->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
+                                                    @endif
+
                                                 </div>
                                             </td>
                                         </tr>

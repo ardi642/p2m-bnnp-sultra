@@ -74,8 +74,8 @@ class LingkunganBersinarExport implements FromQuery, WithHeadings, WithMapping, 
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('F')->getAlignment()->setWrapText(true); // Kolom PJ Wrap Text
-        $sheet->getStyle('A:H')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+        $sheet->getStyle('G')->getAlignment()->setWrapText(true); // Kolom PJ Wrap Text
+        $sheet->getStyle('A:I')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
 
         return [
             1 => ['font' => ['bold' => true]],

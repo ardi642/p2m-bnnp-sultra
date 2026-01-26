@@ -172,7 +172,7 @@ class LingkunganBersinarController extends Controller
         // Logic Filter Tahun di Dropdown
         $yearQuery = P2mLingkunganBersinar::selectRaw('YEAR(tanggal_pencanangan) as year');
 
-        if ($user->isOperator()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
 
@@ -180,6 +180,8 @@ class LingkunganBersinarController extends Controller
 
         // Panggil Query Utama
         $query = $this->getFilteredQuery($request);
+        $statsQuery = clone $query;
+        $totalKegiatan = $statsQuery->count();
 
         // Tambahkan relasi dokumentasi untuk view index (agar bisa dihitung/preview)
         $query->with('dokumentasi');
@@ -196,7 +198,7 @@ class LingkunganBersinarController extends Controller
         // Optimasi Lookup Satker
         $satkerLookup = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
 
-        return view('p2m.lingkungan-bersinar.index', compact('datas', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup'));
+        return view('p2m.lingkungan-bersinar.index', compact('datas', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup', 'totalKegiatan'));
     }
 
     // 3. METHOD EXPORT (DOWNLOAD EXCEL)
@@ -217,7 +219,7 @@ class LingkunganBersinarController extends Controller
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
             $pegawais = Pegawai::with('satuanKerja')->orderBy('nama', 'asc')->get();
         } 
-        else if ($user->isOperator()){
+        else if ($user->hasRole(['operator_satker', 'operator_p2m'])){
             $satuanKerjas = [];
             $satkerId = $user->getSatkerId();
             $pegawais = Pegawai::with('satuanKerja')
@@ -270,7 +272,7 @@ class LingkunganBersinarController extends Controller
             $pegawaiNips = $validasi['pegawai_nips'];
 
             // Jika Operator, set Satker ID otomatis
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 $dataInput['satuan_kerja_id'] = $user->getSatkerId();
             }
 
@@ -374,7 +376,7 @@ class LingkunganBersinarController extends Controller
         $data = P2mLingkunganBersinar::with('pegawai')->findOrFail($id);
 
         // Proteksi Hak Akses
-        if ($user->isOperator() && $data->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $data->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403, 'Anda tidak berhak mengubah data Satuan Kerja lain.');
         }
 
@@ -406,7 +408,7 @@ class LingkunganBersinarController extends Controller
         $kegiatan = P2mLingkunganBersinar::findOrFail($id);
 
         // Proteksi Update
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403);
         }
 
@@ -442,7 +444,7 @@ class LingkunganBersinarController extends Controller
             $pegawaiNips = $validasi['pegawai_nips'];
             $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
 
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 unset($dataUpdate['satuan_kerja_id']);
             }
 

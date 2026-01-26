@@ -152,16 +152,21 @@ class DesaBersinarController extends Controller
         }
 
         $yearQuery = P2mDesaBersinar::selectRaw('YEAR(tanggal_pencanangan) as year');
-        if ($user->isOperator()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
-        $query = $this->getFilteredQuery($request)->with('dokumentasi');
+        $query = $this->getFilteredQuery($request);
+
+        $statsQuery = clone $query;
+        $totalKegiatan = $statsQuery->count();
+        
+        $query->with('dokumentasi');
         $perPage = in_array($request->per_page, [10, 25, 50, 100]) ? $request->per_page : 10;
         $desas = $query->paginate($perPage)->withQueryString();
 
-        return view('p2m.desa-bersinar.index', compact('desas', 'satuanKerjas', 'years', 'pegawais', 'user', 'kabupatens'));
+        return view('p2m.desa-bersinar.index', compact('desas', 'satuanKerjas', 'years', 'pegawais', 'user', 'kabupatens', 'totalKegiatan'));
     }
 
     // --- EXPORT ---
@@ -224,7 +229,7 @@ class DesaBersinarController extends Controller
             $dataInput = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
             $pegawaiNips = $validasi['pegawai_nips'];
 
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 $dataInput['satuan_kerja_id'] = $user->getSatkerId();
             }
 
@@ -262,7 +267,7 @@ class DesaBersinarController extends Controller
         $desa = P2mDesaBersinar::with('pegawai')->findOrFail($id);
         $kabupatens = KabupatenKota::orderBy('nama', 'asc')->get();
 
-        if ($user->isOperator() && $desa->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $desa->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403);
         }
 
@@ -289,7 +294,7 @@ class DesaBersinarController extends Controller
         $user = Auth::user();
         $desa = P2mDesaBersinar::findOrFail($id);
 
-        if ($user->isOperator() && $desa->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $desa->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
 
         $rules = [
             'anggaran_pembentukan' => 'required',
@@ -317,7 +322,7 @@ class DesaBersinarController extends Controller
             $pegawaiNips = $validasi['pegawai_nips'];
             $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
 
-            if ($user->isOperator()) { unset($dataUpdate['satuan_kerja_id']); }
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) { unset($dataUpdate['satuan_kerja_id']); }
 
             $desa->update($dataUpdate);
 

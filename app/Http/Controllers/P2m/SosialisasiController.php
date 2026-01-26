@@ -159,13 +159,17 @@ class SosialisasiController extends Controller
 
         $yearQuery = P2mSosialisasi::selectRaw('YEAR(tanggal_pelaksanaan) as year');
 
-        if ($user->isOperator()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
 
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
+
+        $statsQuery = clone $query;
+        $totalKegiatan = $statsQuery->count();
+        $totalPeserta = $statsQuery->sum('jumlah_peserta');
 
         // Kita tambahkan 'dokumentasi' manual disini.
         // Jadi saat Export Excel (yang tidak lewat fungsi index ini), dokumentasi TIDAK dimuat.
@@ -186,7 +190,7 @@ class SosialisasiController extends Controller
         // Contoh: [1 => 'BNN Jakarta', 2 => 'BNN Bali']
         $satkerLookup = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
                         
-        return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup'));
+        return view('p2m.sosialisasi.index', compact('sosialisasis', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup', 'totalKegiatan', 'totalPeserta'));
     }
 
     // 3. METHOD EXPORT (DOWNLOAD EXCEL)
@@ -208,7 +212,7 @@ class SosialisasiController extends Controller
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
             $pegawais = Pegawai::with('satuanKerja')->orderBy('nama', 'asc')->get();
         }
-        else if ($user->isOperator()){
+        else if ($user->hasRole(['operator_satker', 'operator_p2m'])){
             $satuanKerjas = [];
             $satkerId = $user->getSatkerId();
             $pegawais = Pegawai::with('satuanKerja')
@@ -261,7 +265,7 @@ class SosialisasiController extends Controller
             $pegawaiNips  = $validasi['pegawai_nips'];
 
             // Jika Operator, set Satker ID otomatis sesuai user login
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
             }
 
@@ -381,7 +385,7 @@ class SosialisasiController extends Controller
 
         // Proteksi Hak Akses
         // Jika Operator mencoba edit data milik Satker lain -> 403 Forbidden
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403, 'Anda tidak berhak mengubah data Satuan Kerja lain.');
         }
 
@@ -419,7 +423,7 @@ class SosialisasiController extends Controller
         $kegiatan = P2mSosialisasi::findOrFail($id);
 
         // Proteksi Update
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403);
         }
 
@@ -458,7 +462,7 @@ class SosialisasiController extends Controller
             $pegawaiNips = $validasi['pegawai_nips'];
             $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
 
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 unset($dataUpdate['satuan_kerja_id']); 
             }
 

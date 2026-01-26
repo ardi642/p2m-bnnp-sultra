@@ -22,9 +22,11 @@ return new class extends Migration
             
             // Field Khusus
             $table->enum('sasaran_kegiatan', [
-                'lingkungan pendidikan', 
-                'lingkungan kerja', 
-                'lingkungan masyarakat'
+                'sekolah/kampus bersinar', 
+                'pondok pesantren bersinar', 
+                'tempat hiburan bersinar',
+                'tempat wisata bersinar',
+                'industri bersinar'
             ]);
             $table->text('nama_tempat_wilayah'); 
             $table->date('tanggal_pencanangan');

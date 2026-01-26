@@ -131,13 +131,18 @@ class SafariReligiController extends Controller
 
         // Dropdown Tahun
         $yearQuery = P2mSafariReligi::selectRaw('YEAR(tanggal_pelaksanaan) as year');
-        if ($user->isOperator()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         // Main Query
         $query = $this->getFilteredQuery($request);
+
+        $statsQuery = clone $query;
+        $totalKegiatan = $statsQuery->count();
+        $totalPeserta = $statsQuery->sum('jumlah_masyarakat');
+
         $query->with('dokumentasi');
 
         $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : 10;
@@ -145,7 +150,8 @@ class SafariReligiController extends Controller
 
         $satkerLookup = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
                         
-        return view('p2m.safari-religi.index', compact('safariReligis', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup'));
+        return view('p2m.safari-religi.index', compact('safariReligis', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup',
+                    'totalKegiatan', 'totalPeserta'));
     }
 
     public function export(Request $request) 
@@ -199,7 +205,7 @@ class SafariReligiController extends Controller
             $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
             $pegawaiNips  = $validasi['pegawai_nips'];
 
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
             }
 
@@ -268,7 +274,7 @@ class SafariReligiController extends Controller
         $user = Auth::user();
         $kegiatan = P2mSafariReligi::with('pegawai')->findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403, 'Anda tidak berhak mengubah data Satuan Kerja lain.');
         }
 
@@ -294,7 +300,7 @@ class SafariReligiController extends Controller
         $user = Auth::user();
         $kegiatan = P2mSafariReligi::findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403);
         }
 
@@ -324,7 +330,7 @@ class SafariReligiController extends Controller
             $pegawaiNips = $validasi['pegawai_nips'];
             $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
 
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 unset($dataUpdate['satuan_kerja_id']); 
             }
 

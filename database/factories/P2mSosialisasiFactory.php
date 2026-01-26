@@ -38,7 +38,8 @@ class P2mSosialisasiFactory extends Factory
             'sasaran_kegiatan' => $this->faker->randomElement([
                 'lingkungan pendidikan', 
                 'lingkungan kerja', 
-                'lingkungan masyarakat'
+                'lingkungan masyarakat',
+                'lingkungan swasta'
             ]),
             
             'tanggal_pelaksanaan' => $this->faker->dateTimeBetween('-1 year', 'now'), // Tanggal setahun terakhir

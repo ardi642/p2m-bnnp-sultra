@@ -102,10 +102,15 @@ class OnlineController extends Controller
         }
 
         $yearQuery = P2mOnline::selectRaw('YEAR(tanggal_mulai_pelaksanaan) as year');
-        if ($user->isOperator()) { $yearQuery->where('satuan_kerja_id', $user->getSatkerId()); }
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) { $yearQuery->where('satuan_kerja_id', $user->getSatkerId()); }
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
+
+        $statsQuery = clone $query;
+        $totalKegiatan = $statsQuery->count();
+        $totalDurasi = $statsQuery->sum('durasi_pelaksanaan');
+
         $query->with('dokumentasi');
 
         $perPage = $request->input('per_page', 10);
@@ -114,7 +119,7 @@ class OnlineController extends Controller
         $datas = $query->paginate($perPage)->withQueryString(); 
         $mediaOptions = P2mOnline::getJenisMediaOptions();
 
-        return view('p2m.online.index', compact('datas', 'satuanKerjas', 'years', 'user', 'mediaOptions'));
+        return view('p2m.online.index', compact('datas', 'satuanKerjas', 'years', 'user', 'mediaOptions', 'totalKegiatan', 'totalDurasi'));
     }
 
     public function export(Request $request) 
@@ -156,7 +161,7 @@ class OnlineController extends Controller
         DB::beginTransaction();
         try {
             $dataInsert = collect($validasi)->except('dokumentasi')->toArray();
-            if ($user->isOperator()) { $dataInsert['satuan_kerja_id'] = $user->getSatkerId(); }
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) { $dataInsert['satuan_kerja_id'] = $user->getSatkerId(); }
 
             $kegiatan = P2mOnline::create($dataInsert);
 
@@ -200,7 +205,7 @@ class OnlineController extends Controller
         $user = Auth::user();
         $kegiatan = P2mOnline::findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
 
         if ($user->isAdmin()) {
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
@@ -217,7 +222,7 @@ class OnlineController extends Controller
         $user = Auth::user();
         $kegiatan = P2mOnline::findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
 
         $rules = [
             'anggaran_pelaksanaan'      => 'required',
@@ -235,7 +240,7 @@ class OnlineController extends Controller
         DB::beginTransaction();
         try {
             $dataUpdate = collect($validasi)->except(['dokumentasi', 'delete_files'])->toArray();
-            if ($user->isOperator()) { unset($dataUpdate['satuan_kerja_id']); }
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) { unset($dataUpdate['satuan_kerja_id']); }
             
             $kegiatan->update($dataUpdate);
 

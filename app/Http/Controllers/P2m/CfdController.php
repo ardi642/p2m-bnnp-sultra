@@ -132,12 +132,17 @@ class CfdController extends Controller
         }
 
         $yearQuery = P2mCfd::selectRaw('YEAR(tanggal_pelaksanaan) as year');
-        if ($user->isOperator()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
+
+        $statsQuery = clone $query;
+        $totalKegiatan = $statsQuery->count();
+        $totalPeserta = $statsQuery->sum('jumlah_peserta');
+
         $query->with('dokumentasi');
 
         $perPage = $request->input('per_page', 10);
@@ -147,7 +152,7 @@ class CfdController extends Controller
 
         $satkerLookup = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
                         
-        return view('p2m.cfd.index', compact('cfds', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup'));
+        return view('p2m.cfd.index', compact('cfds', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup', 'totalKegiatan', 'totalPeserta'));
     }
 
     public function export(Request $request) 
@@ -163,7 +168,7 @@ class CfdController extends Controller
         if ($user->isAdmin()) {
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
             $pegawais = Pegawai::with('satuanKerja')->orderBy('nama', 'asc')->get();
-        } else if ($user->isOperator()){
+        } else if ($user->hasRole(['operator_satker', 'operator_p2m'])){
             $satuanKerjas = [];
             $satkerId = $user->getSatkerId();
             $pegawais = Pegawai::with('satuanKerja')->where('satuan_kerja_id', $satkerId)->orderBy('nama', 'asc')->get();
@@ -201,7 +206,7 @@ class CfdController extends Controller
             $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
             $pegawaiNips  = $validasi['pegawai_nips'];
 
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
             }
 
@@ -268,7 +273,7 @@ class CfdController extends Controller
         $user = Auth::user();
         $kegiatan = P2mCfd::with('pegawai')->findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403, 'Anda tidak berhak mengubah data Satuan Kerja lain.');
         }
 
@@ -294,7 +299,7 @@ class CfdController extends Controller
         $user = Auth::user();
         $kegiatan = P2mCfd::findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403);
         }
 
@@ -325,7 +330,7 @@ class CfdController extends Controller
             $pegawaiNips = $validasi['pegawai_nips'];
             $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
 
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 unset($dataUpdate['satuan_kerja_id']); 
             }
 

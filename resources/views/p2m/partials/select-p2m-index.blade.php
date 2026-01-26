@@ -29,7 +29,7 @@
 
             {{-- Bagian Kanan: Tombol Tambah --}}
             <div class="d-flex justify-content-end">
-                @if (! Route::is('p2m.index') and auth()->user()->hasRole('operator'))
+                @if (! Route::is('p2m.index') and auth()->user()->hasRole(['operator_satker', 'operator_p2m']))
                     @php
                         $baseRoute = Str::beforeLast(Route::currentRouteName(), '.');
                     @endphp

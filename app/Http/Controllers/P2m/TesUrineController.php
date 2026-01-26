@@ -137,13 +137,19 @@ class TesUrineController extends Controller
 
         // Filter Tahun Dropdown
         $yearQuery = P2mTesUrine::selectRaw('YEAR(tanggal_pelaksanaan) as year');
-        if ($user->isOperator()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         // Main Query
         $query = $this->getFilteredQuery($request);
+
+        $statsQuery = clone $query;
+        $totalKegiatan = $statsQuery->count();
+        $totalPeserta = $statsQuery->sum('jumlah_peserta');
+        $totalPositif = $statsQuery->sum('jumlah_positif');
+
         $query->with('dokumentasi'); // Eager load docs for index view
 
         $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : 10;
@@ -151,7 +157,8 @@ class TesUrineController extends Controller
 
         $satkerLookup = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
                         
-        return view('p2m.tes-urine.index', compact('kegiatans', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup'));
+        return view('p2m.tes-urine.index', compact('kegiatans', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup',
+                    'totalKegiatan', 'totalPeserta', 'totalPositif'));
     }
 
     public function export(Request $request) 
@@ -210,7 +217,7 @@ class TesUrineController extends Controller
             $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
             $pegawaiNips  = $validasi['pegawai_nips'];
 
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
             }
 
@@ -271,7 +278,7 @@ class TesUrineController extends Controller
         $user = Auth::user();
         $kegiatan = P2mTesUrine::with('pegawai')->findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403, 'Akses Ditolak');
         }
 
@@ -295,7 +302,7 @@ class TesUrineController extends Controller
         $user = Auth::user();
         $kegiatan = P2mTesUrine::findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) abort(403);
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) abort(403);
 
         $rules = [
             'anggaran_pelaksanaan' => 'required',
@@ -330,7 +337,7 @@ class TesUrineController extends Controller
             $pegawaiNips = $validasi['pegawai_nips'];
             $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
 
-            if ($user->isOperator()) unset($dataUpdate['satuan_kerja_id']); 
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) unset($dataUpdate['satuan_kerja_id']); 
 
             // UPDATE DATA UTAMA
             $kegiatan->update($dataUpdate);

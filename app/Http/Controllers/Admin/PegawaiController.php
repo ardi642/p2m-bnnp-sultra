@@ -8,60 +8,76 @@ use App\Models\SatuanKerja;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
+use App\Models\User;
 
 class PegawaiController extends Controller
 {
+    /**
+     * Helper: Mendapatkan ID Satker dari user yang sedang login
+     * Berlaku untuk Admin Satker dan Admin Bidang
+     */
     private function getMySatkerId()
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
-        if ($user->role === 'admin_satker' && $user->pegawai) {
+        
+        // Daftar role yang terikat dengan Satker tertentu
+        $rolesBoundToSatker = [
+            'admin_satker', 'admin_p2m', 'admin_berantas', 'admin_rehab'
+        ];
+
+        if ($user->hasRole($rolesBoundToSatker) && $user->pegawai) {
             return $user->pegawai->satuan_kerja_id;
         }
+        
         return null;
+    }
+
+    /**
+     * Helper: Cek apakah user punya hak untuk Mengelola (Create/Edit/Delete) Pegawai?
+     * Hanya Admin Pusat dan Admin Satker yang boleh.
+     */
+    private function canManagePegawai()
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user(); 
+        return $user->hasRole(['admin', 'admin_satker']);
     }
 
     public function index(Request $request)
     {
         $user = Auth::user();
-        // 1. Mulai Query
         $query = Pegawai::with('satuanKerja');
 
-        // 2. CEK ROLE USER YANG LOGIN
+        // --- 1. LOGIKA FILTERING ---
         if ($user->role === 'admin') {
-            
-            // --- LOGIC SUPER ADMIN ---
-            // Boleh melihat semua, tapi kalau dia pilih filter, kita turuti.
+            // SUPER ADMIN: Bisa lihat semua, bisa filter by request
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
             }
-
         } else {
-            
-            // --- LOGIC ADMIN SATKER ---
-            // KITA PAKSA QUERY-NYA. Tidak peduli input filter apa yang dikirim.
-            // Ambil ID Satker dari Pegawai yang terhubung dengan User ini.
-            $mySatkerId = $user->pegawai->satuan_kerja_id ?? null;
+            // ADMIN LOKAL (Satker/P2M/Berantas/Rehab): Terkunci di Satkernya
+            $mySatkerId = $this->getMySatkerId();
 
-            // Jika user punya satker, filter query berdasarkan ID tersebut
             if ($mySatkerId) {
                 $query->where('satuan_kerja_id', $mySatkerId);
             } else {
-                // (Opsional) Jika user tidak punya satker (error data), jangan tampilkan apa-apa
-                $query->where('id', 0); 
+                $query->where('id', 0); // Safety
             }
         }
 
-        // 3. Logic Pencarian (Search Global) - Berlaku untuk kedua role
+        // --- 2. PENCARIAN ---
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('nama', 'like', "%$search%")
-                ->orWhere('nip', 'like', "%$search%")
-                ->orWhere('email', 'like', "%$search%");
+                  ->orWhere('nip', 'like', "%$search%")
+                  ->orWhere('email', 'like', "%$search%");
             });
         }
 
-        // 4. Logic Sorting
+        // --- 3. SORTING ---
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
         $allowSort = ['nama', 'email', 'created_at', 'nip'];
@@ -72,26 +88,30 @@ class PegawaiController extends Controller
             $query->latest();
         }
 
-        // 5. Pagination
+        // --- 4. PAGINATION ---
         $perPage = $request->input('per_page', 10);
-        $pegawais = $query->paginate($perPage)->appends($request->all());
+        $pegawais = $query->paginate($perPage)->withQueryString();
 
-        // Data dropdown hanya dikirim jika admin (untuk efisiensi)
-        $satuanKerjas = $user->role === 'admin' ? SatuanKerja::all() : collect([]);
+        $satuanKerjas = ($user->role === 'admin') ? SatuanKerja::orderBy('satuan_kerja')->get() : collect([]);
 
         return view('admin.pegawai.index', compact('pegawais', 'satuanKerjas'));
     }
 
     public function create()
     {
+        // PROTEKSI: Admin Bidang DITOLAK
+        if (!$this->canManagePegawai()) {
+            abort(403, 'Hanya Admin Satker yang boleh menambah pegawai.');
+        }
+
         $user = Auth::user();
         $satuanKerjas = [];
         $mySatker = null;
 
         if ($user->role === 'admin') {
-            $satuanKerjas = SatuanKerja::all();
+            $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
         } else {
-            // Ambil data satker milik admin tersebut
+            // Admin Satker otomatis dapat satkernya sendiri
             $mySatker = $user->pegawai->satuanKerja; 
         }
 
@@ -100,24 +120,29 @@ class PegawaiController extends Controller
 
     public function store(Request $request)
     {
+        // PROTEKSI: Admin Bidang DITOLAK
+        if (!$this->canManagePegawai()) {
+            abort(403);
+        }
+
         $user = Auth::user();
 
-        // 1. Validasi Input
+        // Validasi Dasar
         $rules = [
-            'nip' => 'required|string|unique:pegawai,nip', // NIP harus unik
+            'nip' => 'required|string|unique:pegawai,nip',
             'nama' => 'required|string|max:255',
-            'email' => 'required|email|unique:pegawai,email', // Email harus unik
+            'email' => 'required|email|unique:pegawai,email',
             'nomor_hp' => 'nullable|string|max:20',
         ];
 
-        // Validasi Satker (Khusus Admin Pusat)
+        // Validasi Satker: Wajib dipilih jika Super Admin
         if ($user->role === 'admin') {
             $rules['satuan_kerja_id'] = 'required|exists:satuan_kerja,id';
         }
 
         $validated = $request->validate($rules);
 
-        // 2. Override Satker ID jika Admin Satker
+        // Jika Admin Satker, paksa satker_id sesuai akun login
         if ($user->role === 'admin_satker') {
             $validated['satuan_kerja_id'] = $this->getMySatkerId();
         }
@@ -129,40 +154,43 @@ class PegawaiController extends Controller
 
     public function edit($nip) 
     {
-        $user = Auth::user();
-
-        // 2. Cari manual menggunakan primary key (nip)
-        // Gunakan findOrFail agar jika NIP salah/tidak ketemu, langsung 404
-        $pegawai = Pegawai::where('nip', $nip)->firstOrFail();
-
-        // PROTEKSI: Cek Satker
-        if ($user->role === 'admin_satker' && $pegawai->satuan_kerja_id !== $this->getMySatkerId()) {
-            abort(403, 'Anda tidak berhak mengakses data pegawai dari satker lain.');
+        // PROTEKSI: Admin Bidang DITOLAK
+        if (!$this->canManagePegawai()) {
+            abort(403, 'Hanya Admin Satker yang boleh mengedit pegawai.');
         }
 
-        $satuanKerjas = ($user->role === 'admin') ? SatuanKerja::all() : [];
-        // Kirim ke view
+        $user = Auth::user();
+        $pegawai = Pegawai::where('nip', $nip)->firstOrFail();
+
+        // PROTEKSI: Admin Satker tidak boleh edit pegawai satker lain
+        if ($user->role === 'admin_satker' && $pegawai->satuan_kerja_id !== $this->getMySatkerId()) {
+            abort(403, 'Anda tidak berhak mengakses data pegawai ini.');
+        }
+
+        $satuanKerjas = ($user->role === 'admin') ? SatuanKerja::orderBy('satuan_kerja')->get() : [];
+        
         return view('admin.pegawai.edit', compact('pegawai', 'satuanKerjas'));
     }
 
     public function update(Request $request, $nip)
     {
+        // 1. PROTEKSI HAK AKSES (Sama seperti sebelumnya)
+        if (!$this->canManagePegawai()) {
+            abort(403);
+        }
+
         $user = Auth::user();
-        
-        // Cari manual juga disini
         $pegawai = Pegawai::where('nip', $nip)->firstOrFail();
 
-        // PROTEKSI
         if ($user->role === 'admin_satker' && $pegawai->satuan_kerja_id !== $this->getMySatkerId()) {
             abort(403);
         }
 
-        // VALIDASI
+        // 2. VALIDASI DATA
         $rules = [
-            // Ignore validasi unique untuk NIP milik pegawai ini sendiri
-            'nip' => ['required', 'string', \Illuminate\Validation\Rule::unique('pegawai', 'nip')->ignore($pegawai->nip, 'nip')],
+            'nip' => ['required', 'string', Rule::unique('pegawai', 'nip')->ignore($pegawai->nip, 'nip')],
             'nama' => 'required|string|max:255',
-            'email' => ['required', 'email', \Illuminate\Validation\Rule::unique('pegawai', 'email')->ignore($pegawai->nip, 'nip')],
+            'email' => ['required', 'email', Rule::unique('pegawai', 'email')->ignore($pegawai->nip, 'nip')],
             'nomor_hp' => 'nullable|string|max:20',
         ];
 
@@ -176,16 +204,44 @@ class PegawaiController extends Controller
             unset($validated['satuan_kerja_id']);
         }
 
-        // Update data
-        // Perhatikan: Jika NIP diubah, primary key di DB berubah. 
-        // Laravel biasanya menangani ini, tapi hati-hati jika ada relasi foreign key.
-        $pegawai->update($validated);
+        // 3. EKSEKUSI UPDATE DENGAN TRANSACTION
+        try {
+            DB::transaction(function () use ($pegawai, $validated) {
+                
+                // A. Update Data Pegawai
+                // Jika NIP berubah, karena Anda set 'onUpdate cascade' di migration,
+                // maka foreign key di tabel users otomatis ikut berubah. Aman.
+                $pegawai->update($validated);
 
-        return redirect()->route('admin.pegawai.index')->with('success', 'Data pegawai berhasil diperbarui.');
+                // B. Sinkronisasi Data User
+                // Kita cari user berdasarkan NIP yang BARU (jika NIP diedit, $pegawai->nip sudah terupdate di memori model)
+                $linkedUser = User::where('pegawai_nip', $pegawai->nip)->first();
+
+                if ($linkedUser) {
+                    // Update email & nama di tabel users agar sinkron
+                    $linkedUser->update([
+                        'email' => $validated['email'],
+                        'name'  => $validated['nama'], 
+                    ]);
+                }
+            });
+
+            return redirect()->route('admin.pegawai.index')->with('success', 'Data pegawai (dan akun user terkait) berhasil diperbarui.');
+
+        } catch (\Exception $e) {
+            // Jika terjadi error di dalam transaction (misal email user bentrok dengan admin lain),
+            // semua perubahan akan di-rollback.
+            return back()->withInput()->with('error', 'Gagal mengupdate data: ' . $e->getMessage());
+        }
     }
     
     public function destroy($nip)
     {
+        // PROTEKSI: Admin Bidang DITOLAK
+        if (!$this->canManagePegawai()) {
+            abort(403);
+        }
+
         $user = Auth::user();
         $pegawai = Pegawai::where('nip', $nip)->firstOrFail();
 

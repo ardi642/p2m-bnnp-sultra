@@ -33,9 +33,11 @@ class P2mLingkunganBersinarFactory extends Factory
             
             // Pilih acak dari Enum yang tersedia
             'sasaran_kegiatan' => $this->faker->randomElement([
-                'lingkungan pendidikan', 
-                'lingkungan kerja', 
-                'lingkungan masyarakat'
+                'sekolah/kampus bersinar', 
+                'pondok pesantren bersinar', 
+                'tempat hiburan bersinar',
+                'tempat wisata bersinar',
+                'industri bersinar'
             ]),
             
             // Generate nama tempat/wilayah yang terlihat realistis

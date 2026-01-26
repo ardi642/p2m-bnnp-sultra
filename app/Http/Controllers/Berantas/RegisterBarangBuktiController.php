@@ -260,7 +260,7 @@ class RegisterBarangBuktiController extends Controller
         
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        if ($user->isOperator() && $register->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_berantas']) && $register->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403);
         }
 
@@ -274,7 +274,7 @@ class RegisterBarangBuktiController extends Controller
         
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        if ($user->isOperator() && $register->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_berantas']) && $register->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403);
         }
         

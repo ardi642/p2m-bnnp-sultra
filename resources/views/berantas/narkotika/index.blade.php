@@ -10,9 +10,13 @@
                 <h1 class="h3 mb-1 fw-bold text-dark">Master Narkotika</h1>
                 <p class="text-muted mb-0">Kelola daftar nama dan golongan narkotika</p>
             </div>
+
+            @if (auth()->user()->hasRole(['operator_satker', 'operator_berantas']))
             <button type="button" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#createModal">
                 <i class="bi bi-plus-lg"></i> Tambah Narkotika
             </button>
+            @endif
+
         </div>
 
         {{-- 1. ALERT SUKSES (HIJAU) --}}
@@ -142,7 +146,10 @@
                                     </a>
                                 </th>
 
+                                @if (auth()->user()->hasRole(['operator_satker', 'operator_berantas']))
                                 <th class="py-3 px-4 text-end" width="15%">Aksi</th>
+                                @endif
+
                             </tr>
                         </thead>
                         <tbody>
@@ -171,6 +178,7 @@
                                         {{ $item->created_at ? $item->created_at->format('d/m/Y H:i') : '-' }}
                                     </td>
                                     
+                                    @if (auth()->user()->hasRole(['operator_satker', 'operator_berantas']))
                                     <td class="px-4 text-end">
                                         <div class="d-flex justify-content-end gap-2">
                                             {{-- EDIT --}}
@@ -195,10 +203,11 @@
                                             </form>
                                         </div>
                                     </td>
+                                    @endif
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center py-5 text-muted fst-italic">
+                                    <td colspan="{{ auth()->user()->hasRole(['operator_satker', 'operator_berantas']) ? 5 : 4 }}" class="text-center py-5 text-muted fst-italic">
                                         <i class="bi bi-search fs-1 d-block mb-2 opacity-25"></i>
                                         Data tidak ditemukan.
                                     </td>
@@ -239,6 +248,7 @@
         </div>
     </div>
 
+    @if (auth()->user()->hasRole(['operator_satker', 'operator_berantas']))
     {{-- MODAL CREATE --}}
     <div class="modal fade" id="createModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -308,6 +318,8 @@
             </div>
         </div>
     </div>
+
+    @endif
 
 </main>
 @endsection

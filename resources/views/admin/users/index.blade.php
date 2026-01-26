@@ -4,6 +4,7 @@
 <main class="admin-main">
     <div class="container-fluid p-4 p-lg-5">
         
+        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="h3 mb-0">Manajemen User</h1>
@@ -14,16 +15,29 @@
             </a>
         </div>
 
+        {{-- ALERT SESSION (Notifikasi Sukses/Gagal dari Controller) --}}
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
         <div class="card shadow-lg">
             <div class="card-body p-8">
                 
                 {{-- SEARCH & FILTER FORM --}}
                 <form action="{{ route('admin.users.index') }}" method="GET" class="mb-4">
-                    {{-- Hidden input per_page agar settingan jumlah data tidak reset saat search --}}
                     <input type="hidden" name="per_page" value="{{ request('per_page', 10) }}">
 
                     <div class="row g-3">
-                        {{-- Filter Satker --}}
                         @if(auth()->user()->role === 'admin')
                         <div class="col-md-4">
                             <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Filter Satker...">
@@ -36,7 +50,6 @@
                         </div>
                         @endif
                         
-                        {{-- Search Input --}}
                         <div class="col-md">
                             <div class="input-group">
                                 <input type="text" name="search" class="form-control" placeholder="Cari Nama / NIP / Email..." value="{{ request('search') }}">
@@ -47,7 +60,7 @@
                     </div>
                 </form>
 
-                {{-- TABLE WRAPPER DENGAN SCROLL & STICKY HEADER --}}
+                {{-- TABLE WRAPPER --}}
                 <div class="custom-table-scroll mb-3">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
@@ -82,30 +95,66 @@
                                 </td>
                                 <td>{{ $user->email }}</td>
                                 <td>
-                                    @if($user->role == 'admin')
-                                        <span class="badge bg-danger">Super Admin</span>
-                                    @elseif($user->role == 'admin_satker')
-                                        <span class="badge bg-warning text-dark">Admin Satker</span>
-                                    @else
-                                        <span class="badge bg-info text-dark">Operator</span>
-                                    @endif
+                                    @switch($user->role)
+                                        @case('admin') <span class="badge rounded-pill bg-danger">Super Admin</span> @break
+                                        @case('admin_satker') <span class="badge rounded-pill bg-primary">Admin Satker</span> @break
+                                        @case('operator_satker') <span class="badge rounded-pill bg-info text-dark">Operator Satker</span> @break
+                                        @case('admin_p2m') <span class="badge rounded-pill bg-success">Admin P2M</span> @break
+                                        @case('operator_p2m') <span class="badge rounded-pill" style="background-color: #20c997;">Operator P2M</span> @break
+                                        @case('admin_berantas') <span class="badge rounded-pill bg-dark">Admin Berantas</span> @break
+                                        @case('operator_berantas') <span class="badge rounded-pill bg-secondary">Operator Berantas</span> @break
+                                        @case('admin_rehab') <span class="badge rounded-pill" style="background-color: #fd7e14;">Admin Rehab</span> @break
+                                        @case('operator_rehab') <span class="badge rounded-pill bg-warning text-dark">Operator Rehab</span> @break
+                                        @default <span class="badge rounded-pill bg-light text-dark border">{{ $user->role }}</span>
+                                    @endswitch
                                 </td>
                                 <td class="text-center">
                                     <div class="d-flex gap-2 justify-content-center">
-                                        @if($user->role !== 'admin')
-                                            {{-- RESET PASSWORD --}}
-                                            <form action="{{ route('admin.users.reset_password', $user->id) }}" method="POST" onsubmit="return confirm('Reset password user ini ke default?');">
-                                                @csrf @method('PUT')
-                                                <button type="submit" class="btn btn-sm btn-dark" title="Reset Password"><i class="me-0 bi bi-arrow-counterclockwise"></i></button>
-                                            </form>
-                                            {{-- HAPUS USER --}}
-                                            <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Hapus user ini?');">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger" title="Hapus User"><i class="me-0 bi bi-trash"></i></button>
-                                            </form>
-                                        @else
-                                            <span class="text-muted small"><i class="bi bi-lock-fill"></i> Locked</span>
+                                        
+                                        @php
+                                            $currentUser = auth()->user();
+                                            $isSuperAdmin  = $currentUser->role === 'admin';
+                                            $isAdminSatker = $currentUser->role === 'admin_satker' && $user->role !== 'admin';
+                                            $isMyOperatorP2M = ($currentUser->role === 'admin_p2m' && $user->role === 'operator_p2m');
+                                            $isMyOperatorBerantas = ($currentUser->role === 'admin_berantas' && $user->role === 'operator_berantas');
+                                            $isMyOperatorRehab = ($currentUser->role === 'admin_rehab' && $user->role === 'operator_rehab');
+
+                                            $isAuthorizedToModify = $isSuperAdmin || $isAdminSatker || $isMyOperatorP2M || $isMyOperatorBerantas || $isMyOperatorRehab;
+                                        @endphp
+
+                                        {{-- TOMBOL EDIT --}}
+                                        @if(($isSuperAdmin || $isAdminSatker) && $currentUser->id !== $user->id)
+                                            <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-sm btn-warning text-dark" title="Edit Role">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
                                         @endif
+
+                                        {{-- TOMBOL RESET & HAPUS (PAKAI SWEETALERT) --}}
+                                        @if($isAuthorizedToModify && $currentUser->id !== $user->id)
+                                            
+                                            {{-- Form Reset Password --}}
+                                            <form action="{{ route('admin.users.reset_password', $user->id) }}" method="POST" class="form-reset">
+                                                @csrf @method('PUT')
+                                                <button type="submit" class="btn btn-sm btn-dark" title="Reset Password">
+                                                    <i class="me-0 bi bi-arrow-counterclockwise"></i>
+                                                </button>
+                                            </form>
+
+                                            {{-- Form Hapus User --}}
+                                            <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="form-delete">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Hapus User">
+                                                    <i class="me-0 bi bi-trash"></i>
+                                                </button>
+                                            </form>
+
+                                        @endif
+
+                                        {{-- Indikator Terkunci --}}
+                                        @if(!($isSuperAdmin || $isAdminSatker) && !$isAuthorizedToModify)
+                                            <span class="text-muted small" title="Akses Terkunci"><i class="bi bi-lock-fill"></i></span>
+                                        @endif
+
                                     </div>
                                 </td>
                             </tr>
@@ -116,34 +165,19 @@
                     </table>
                 </div>
 
-                {{-- PAGINATION & PER PAGE --}}
+                {{-- PAGINATION --}}
                 <div class="d-flex justify-content-between align-items-center mt-4">
-                    
-                    {{-- BAGIAN KIRI: Dropdown Jumlah Data --}}
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted small text-nowrap">Tampilkan</span>
-                        
-                        <select class="form-select form-select-sm border-secondary-subtle" 
-                                style="width: auto;" 
-                                onchange="window.location.href = this.value">
+                        <select class="form-select form-select-sm border-secondary-subtle" style="width: auto;" onchange="window.location.href = this.value">
                             @foreach([10, 25, 50, 100] as $num)
-                                <option value="{{ request()->fullUrlWithQuery(['per_page' => $num, 'page' => 1]) }}"
-                                        {{ request('per_page') == $num ? 'selected' : '' }}>
-                                    {{ $num }}
-                                </option>
+                                <option value="{{ request()->fullUrlWithQuery(['per_page' => $num, 'page' => 1]) }}" {{ request('per_page') == $num ? 'selected' : '' }}>{{ $num }}</option>
                             @endforeach
                         </select>
-                        
                         <span class="text-muted small text-nowrap">data / halaman</span>
                     </div>
-
-                    {{-- BAGIAN KANAN: Pagination Links --}}
-                    <div>
-                        {{ $users->links() }}
-                    </div>
-                    
+                    <div>{{ $users->links() }}</div>
                 </div>
-                {{-- END PAGINATION --}}
 
             </div>
         </div>
@@ -152,35 +186,77 @@
 @endsection
 
 @push('styles') 
- 
 <style>
-    /* CSS KHUSUS UNTUK TABEL SCROLL & STICKY */
     .custom-table-scroll {
-        max-height: 60vh;       /* Batasi tinggi tabel */
-        overflow-y: auto;       /* Munculkan scrollbar vertikal */
-        position: relative;     /* Agar posisi sticky relative terhadap kotak ini */
-        border: 1px solid #dee2e6; /* Border tipis pembatas area scroll */
+        max-height: 60vh;
+        overflow-y: auto;
+        position: relative;
+        border: 1px solid #dee2e6;
     }
-
-    /* Memaksa Header Diam di Tempat */
     .custom-table-scroll thead th {
         position: sticky !important;
         top: 0 !important;
         z-index: 2;
-        
-        /* PENTING: Warna background header agar tidak tembus pandang */
         background-color: #f8f9fa !important; 
-        
-        /* Garis bawah header agar tegas */
         box-shadow: inset 0 -1px 0 #dee2e6;
     }
 </style>
 @endpush
 
 @push('scripts')
+{{-- IMPORT SWEETALERT2 DARI CDN --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {
         if(document.getElementById('select-satker')) new TomSelect('#select-satker', { plugins: ['remove_button'] });
+
+        // --- LOGIKA SWEETALERT DELETE ---
+        const deleteForms = document.querySelectorAll('.form-delete');
+        deleteForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault(); // Cegah submit langsung
+                
+                Swal.fire({
+                    title: 'Hapus User ini?',
+                    text: "Data yang dihapus tidak dapat dikembalikan!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit(); // Submit form manual jika user klik Ya
+                    }
+                });
+            });
+        });
+
+        // --- LOGIKA SWEETALERT RESET PASSWORD ---
+        const resetForms = document.querySelectorAll('.form-reset');
+        resetForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault(); 
+                
+                Swal.fire({
+                    title: 'Reset Password?',
+                    text: "Password user akan kembali ke default ('password').",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6', // Warna biru
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Ya, Reset!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+        });
+
     });
 </script>
 @endpush

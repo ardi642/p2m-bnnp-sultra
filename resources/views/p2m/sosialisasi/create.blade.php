@@ -91,9 +91,10 @@
                                         <label class="form-label fw-semibold text-secondary small">Target Sasaran <span class="text-danger">*</span></label>
                                         <select class="form-select @error('sasaran_kegiatan') is-invalid @enderror" name="sasaran_kegiatan">
                                             <option value="" selected disabled>-- Pilih Lingkungan --</option>
-                                            <option value="lingkungan pendidikan" @selected(old('sasaran_kegiatan') == 'lingkungan pendidikan')>Lingkungan Pendidikan</option>
                                             <option value="lingkungan kerja" @selected(old('sasaran_kegiatan') == 'lingkungan kerja')>Lingkungan Kerja</option>
+                                            <option value="lingkungan pendidikan" @selected(old('sasaran_kegiatan') == 'lingkungan pendidikan')>Lingkungan Pendidikan</option>
                                             <option value="lingkungan masyarakat" @selected(old('sasaran_kegiatan') == 'lingkungan masyarakat')>Lingkungan Masyarakat</option>
+                                            <option value="lingkungan swasta" @selected(old('sasaran_kegiatan') == 'lingkungan swasta')>Lingkungan Swasta</option>
                                         </select>
                                         @error('sasaran_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>

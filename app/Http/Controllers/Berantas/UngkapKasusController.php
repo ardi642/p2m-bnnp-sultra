@@ -119,7 +119,7 @@ class UngkapKasusController extends Controller
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika', 'asc')->get();
 
         $yearQuery = BerantasUngkapKasus::selectRaw('YEAR(tanggal_kejadian) as year');
-        if ($user->isOperator()) {
+        if ($user->hasRole(['operator_satker', 'operator_berantas'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
         $years = $yearQuery->distinct()->orderByDesc('year')->pluck('year');
@@ -207,7 +207,7 @@ class UngkapKasusController extends Controller
                 'nomor_lkn'        => $request->nomor_lkn,
                 'tanggal_kejadian' => $request->tanggal_kejadian,
                 'alamat_tkp'       => $request->alamat_tkp,
-                'satuan_kerja_id'  => $user->isOperator() ? $satkerId : $request->satuan_kerja_id,
+                'satuan_kerja_id'  => $user->hasRole(['operator_satker', ['operator_berantas']]) ? $satkerId : $request->satuan_kerja_id,
             ]);
 
             $mapId = []; 
@@ -304,7 +304,7 @@ class UngkapKasusController extends Controller
             'dokumentasi'
         ])->findOrFail($id);
 
-        if ($user->isOperator() && $kasus->satuan_kerja_id !== $user->getSatkerId()) abort(403);
+        if ($user->hasRole(['operator_satker', ['operator_berantas']]) && $kasus->satuan_kerja_id !== $user->getSatkerId()) abort(403);
         
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika', 'asc')->get();
 
@@ -316,7 +316,7 @@ class UngkapKasusController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $kasus = BerantasUngkapKasus::findOrFail($id);
-        if ($user->isOperator() && $kasus->satuan_kerja_id !== $user->getSatkerId()) abort(403);
+        if ($user->hasRole(['operator_satker', ['operator_berantas']]) && $kasus->satuan_kerja_id !== $user->getSatkerId()) abort(403);
 
         $rules = [
             'nomor_lkn'        => 'required|unique:berantas_ungkap_kasus,nomor_lkn,' . $id,

@@ -12,12 +12,14 @@ import Swal from 'sweetalert2';
 import TomSelect from 'tom-select';
 import Alpine from 'alpinejs';
 import collapse from '@alpinejs/collapse';
+import ApexCharts from 'apexcharts';
 
 // ... (sisanya sama seperti kode sebelumnya)
 window.bootstrap = bootstrap;
 window.Swal = Swal;
 window.TomSelect = TomSelect;
 window.Alpine = Alpine;
+window.ApexCharts = ApexCharts;
 
 Alpine.plugin(collapse);
 

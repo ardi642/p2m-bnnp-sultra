@@ -11,7 +11,7 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $defaultPassword = Hash::make('12345678'); // Password Default
+        $defaultPassword = Hash::make('password'); // Password Default
 
         // ---------------------------------------------------
         // 1. BUAT SUPER ADMIN (Hanya 1 Akun Global)
@@ -91,7 +91,7 @@ class UserSeeder extends Seeder
                         'name' => $calonOperator->nama,
                         'email' => $emailOperator,
                         'password' => $defaultPassword,
-                        'role' => 'operator',
+                        'role' => 'operator_satker',
                         'pegawai_nip' => $calonOperator->nip,
                         'is_password_default' => true,
 

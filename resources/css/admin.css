@@ -1,105 +1,123 @@
+/* --- 1. VARIABEL GLOBAL --- */
 :root {
-    --sidebar-width: 260px;
-    --header-height: 64px;
-    --primary-color: #4f46e5;
-    --bg-light: #f3f4f6;
-    --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Animasi lebih halus */
+    --sidebar-width: 280px;
+    
+    /* Variabel ini HANYA untuk mengatur jarak Sidebar & Konten ke bawah.
+       Header aslinya tingginya AUTO mengikuti isi.
+       (Logo 50px + Padding 20px*2 = +/- 90px)
+    */
+    --header-spacing: 90px; 
+    
+    --bg-light: #f8f9fc;
+    --transition-speed: 0.3s;
 }
 
 body {
     background-color: var(--bg-light);
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-size: 0.95rem;
     overflow-x: hidden;
 }
 
-/* --- WRAPPER --- */
+/* --- 2. LAYOUT WRAPPER --- */
 .admin-wrapper {
     display: flex;
     width: 100%;
     min-height: 100vh;
 }
 
-/* --- SIDEBAR (DEFAULT SEMBUNYI / CLOSED) --- */
+/* --- 3. HEADER (FIXED TOP, TINGGI MENYESUAIKAN ISI) --- */
+.admin-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e3e6f0;
+    
+    /* Posisi Fixed Paling Atas */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    
+    /* HAPUS HEIGHT FIXED. Biarkan Auto mengikuti Padding */
+    /* height: 100px; <--- DIHAPUS */
+    
+    z-index: 1050; 
+    
+    display: flex;
+    align-items: center;
+}
+
+/* --- 4. SIDEBAR (POSISI DI BAWAH HEADER) --- */
 .admin-sidebar {
     width: var(--sidebar-width);
-    background: #fff;
-    border-right: 1px solid #e5e7eb;
+    min-width: var(--sidebar-width);
+    background: #ffffff;
+    border-right: 1px solid #e3e6f0;
+    
     position: fixed;
-    top: 0; left: 0;
-    height: 100vh;
+    /* Mulai Tepat di Bawah Header (Gunakan variabel spacing) */
+    top: var(--header-spacing); 
+    left: 0;
+    
+    /* Tinggi Sidebar = Layar dikurang tinggi header */
+    height: calc(100vh - var(--header-spacing)); 
+    
     z-index: 1040;
-    
-    /* Default State: Sembunyi ke kiri (Off-canvas) */
-    transform: translateX(-100%);
-    transition: transform var(--transition);
-    
-    display: flex;
-    flex-direction: column;
+    transition: margin-left var(--transition-speed) ease;
+    overflow-y: auto; 
 }
 
-/* KONDISI SIDEBAR OPEN (Class dikontrol Alpine) */
-body.sidebar-open .admin-sidebar {
-    transform: translateX(0); /* Munculkan Sidebar */
-}
-
-/* --- MAIN CONTENT --- */
+/* --- 5. MAIN CONTENT (TURUN KE BAWAH) --- */
 .main-content {
-    flex: 1;
     width: 100%;
-    /* Default State: Margin 0 (Full Width karena sidebar sembunyi) */
-    margin-left: 0; 
-    transition: margin-left var(--transition);
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    transition: margin-left var(--transition-speed) ease;
+    
+    /* Dorong konten ke bawah agar tidak ketutupan header */
+    padding-top: var(--header-spacing); 
 }
 
-/* KONDISI MAIN CONTENT SAAT SIDEBAR OPEN (KHUSUS DESKTOP) */
-@media (min-width: 992px) {
-    /* Hanya geser konten di desktop. Di mobile konten tetap full width tertutup overlay */
-    body.sidebar-open .main-content {
-        margin-left: var(--sidebar-width);
-    }
+/* --- 6. LOGIKA TOGGLE --- */
+body:not(.sidebar-open) .admin-sidebar {
+    margin-left: calc(var(--sidebar-width) * -1);
+}
+body:not(.sidebar-open) .main-content {
+    margin-left: 0;
 }
 
-/* --- ELEMENT LAINNYA --- */
-.sidebar-header {
-    height: var(--header-height);
-    display: flex; align-items: center; padding: 0 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+body.sidebar-open .admin-sidebar {
+    margin-left: 0;
 }
-.sidebar-content { flex: 1; overflow-y: auto; padding: 1rem 0; }
+body.sidebar-open .main-content {
+    margin-left: var(--sidebar-width);
+}
+
+/* --- 7. UTILITIES --- */
+.form-control, .form-select, .ts-control {
+    background-color: #ffffff !important;
+    border: 1px solid #d1d3e2 !important;
+    color: #333 !important;
+    font-size: 1rem;
+}
+.ts-dropdown, .dropdown-menu { z-index: 9999 !important; }
+
 .nav-link {
-    color: #4b5563; padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
-    font-weight: 500; transition: 0.2s; border-left: 3px solid transparent;
+    font-size: 1rem !important;
+    font-weight: 500;
+    padding: 12px 16px;
+    color: #6e707e;
+    transition: all 0.2s;
 }
-.nav-link:hover, .nav-link.active { background-color: #f9fafb; color: var(--primary-color); border-left-color: var(--primary-color); }
-.nav-link i.icon-main { margin-right: 10px; font-size: 1.1rem; width: 20px; text-align: center; }
-.nav-treeview { background-color: #f9fafb; list-style: none; padding: 0; margin: 0; }
-.nav-treeview .nav-link { padding-left: 3.5rem; font-size: 0.9rem; border-left: none; }
-.arrow-icon { transition: transform 0.2s; font-size: 0.8rem; }
-.arrow-rotate { transform: rotate(180deg); }
+.nav-link:hover { background-color: #f8f9fc; color: #4e73df; }
+.nav-link.active { color: #4e73df; font-weight: 700; background-color: #f8f9fc; }
 
-.admin-header {
-    height: var(--header-height); background: #fff; border-bottom: 1px solid #e5e7eb;
-    display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem;
-    position: sticky; top: 0; z-index: 900;
-}
-.admin-footer { padding: 1.5rem; background: #fff; border-top: 1px solid #e5e7eb; margin-top: auto; }
-.admin-main { flex: 1; width: 100%; }
-
-/* --- MOBILE OVERLAY --- */
+/* MOBILE OVERLAY */
 .sidebar-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5); z-index: 1030;
-    
-    /* Default Sembunyi */
-    opacity: 0; visibility: hidden; 
-    transition: all var(--transition);
+    background: rgba(0,0,0,0.5); z-index: 1045; display: none;
 }
-
-/* Overlay Muncul Hanya di Mobile saat Sidebar Open */
-@media (max-width: 991.98px) {
-    body.sidebar-open .sidebar-overlay {
-        opacity: 1; visibility: visible;
-    }
+@media (max-width: 768px) {
+    body.sidebar-open .sidebar-overlay { display: block; }
+    body.sidebar-open .main-content { margin-left: 0 !important; }
 }

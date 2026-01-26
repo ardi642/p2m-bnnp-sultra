@@ -134,18 +134,22 @@ class KieController extends Controller
 
         // Logic Tahun (Sesuai Satker)
         $yearQuery = P2mKie::selectRaw('YEAR(tanggal_pelaksanaan) as year');
-        if ($user->isOperator()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
+
+        $statsQuery = clone $query;
+        $totalKegiatan = $statsQuery->count();
+
         $query->with('dokumentasi');
 
         $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : 10;
         $kies = $query->paginate($perPage)->withQueryString();
 
-        return view('p2m.kie.index', compact('kies', 'satuanKerjas', 'years', 'pegawais', 'user'));
+        return view('p2m.kie.index', compact('kies', 'satuanKerjas', 'years', 'pegawais', 'user', 'totalKegiatan'));
     }
 
     public function create(): View 
@@ -192,7 +196,7 @@ class KieController extends Controller
         try {
             $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
             
-            if ($user->isOperator()) {
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
             }
 
@@ -230,7 +234,7 @@ class KieController extends Controller
         $user = Auth::user();
         $kegiatan = P2mKie::with('pegawai')->findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403, 'Akses Ditolak');
         }
 
@@ -256,7 +260,7 @@ class KieController extends Controller
         $user = Auth::user();
         $kegiatan = P2mKie::findOrFail($id);
 
-        if ($user->isOperator() && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) abort(403);
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) abort(403);
 
         $rules = [
             'tempat_kegiatan'        => 'required',
@@ -278,7 +282,7 @@ class KieController extends Controller
 
         try {
             $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
-            if ($user->isOperator()) unset($dataUpdate['satuan_kerja_id']);
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) unset($dataUpdate['satuan_kerja_id']);
 
             $kegiatan->update($dataUpdate);
 

@@ -74,8 +74,8 @@ class CfdExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize,
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('E')->getAlignment()->setWrapText(true); // Kolom Pegawai
-        $sheet->getStyle('A:G')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+        $sheet->getStyle('F')->getAlignment()->setWrapText(true); // Kolom Pegawai
+        $sheet->getStyle('A:H')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
         return [
             1 => ['font' => ['bold' => true]],
         ];

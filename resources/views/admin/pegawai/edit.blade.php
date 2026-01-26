@@ -15,6 +15,24 @@
             </a>
         </div>
 
+        {{-- === BAGIAN PERBAIKAN: FLASH MESSAGES === --}}
+        {{-- Menampilkan pesan sukses --}}
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        {{-- Menampilkan pesan error (Termasuk jika Transaction Gagal) --}}
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Gagal!</strong> {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+        {{-- === BATAS BAGIAN PERBAIKAN === --}}
+
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
                 
@@ -23,7 +41,7 @@
                     @method('PUT')
 
                     {{-- === BAGIAN 1: IDENTITAS === --}}
-                    <div class="mb-8">
+                    <div class="mb-5">
                         <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
                             <i class="bi bi-person-lines-fill text-primary me-2"></i>1. Identitas Pegawai
                         </h5>
@@ -54,7 +72,7 @@
                     </div>
 
                     {{-- === BAGIAN 2: KONTAK === --}}
-                    <div class="mb-8">
+                    <div class="mb-5">
                         <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
                             <i class="bi bi-chat-dots text-primary me-2"></i>2. Kontak & Komunikasi
                         </h5>
@@ -83,7 +101,7 @@
                     </div>
 
                     {{-- === BAGIAN 3: PENEMPATAN === --}}
-                    <div class="mb-8">
+                    <div class="mb-5">
                         <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
                             <i class="bi bi-building-gear text-primary me-2"></i>3. Lokasi Penempatan
                         </h5>

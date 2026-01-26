@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\TatExport;
+use App\Models\BerantasTatBarangBukti;
+use App\Models\BerantasTatTersangka;
 
 class TatController extends Controller
 {
@@ -120,10 +122,46 @@ class TatController extends Controller
         $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
 
-        $perPage = $request->input('per_page', 10);
-        $data = $this->getFilteredQuery($request)->paginate($perPage)->withQueryString();
+        $query = $this->getFilteredQuery($request);
 
-        return view('berantas.tat.index', compact('data', 'satuanKerjas', 'years', 'masterNarkotika'));
+        // LOGIKA AGREGAT EFISIEN (LEVEL DATABASE)
+        // Buat "Resep" Subquery (Hanya instruksi, tidak memakan RAM)
+        $tatIdSubquery = (clone $query)->select('berantas_tat.id');
+
+        // Hitung Total Kasus TAT
+        $totalKasus = (clone $query)->count();
+
+        // Hitung Total Tersangka TAT menggunakan Subquery
+        $totalTersangka = BerantasTatTersangka::whereIn('berantas_tat_id', $tatIdSubquery)->count();
+
+        // Hitung Total Jenis Barang Bukti Narkotika pada TAT
+        $totalBBNarkotika = BerantasTatBarangBukti::whereIn('berantas_tat_id', $tatIdSubquery)
+                            ->where('kategori', 'Narkotika')
+                            ->count();
+
+        // Hitung Total Berat Narkotika (Konversi Otomatis ke Gram di level DB)
+        // Note: Kita asumsikan input satuan adalah 'Gram', 'Kg', atau 'Ton'
+        $totalBeratGram = BerantasTatBarangBukti::whereIn('berantas_tat_id', $tatIdSubquery)
+                            ->where('kategori', 'Narkotika')
+                            ->selectRaw("SUM(CASE 
+                                WHEN satuan = 'Kg' THEN kuantitas * 1000 
+                                WHEN satuan = 'Ton' THEN kuantitas * 1000000 
+                                ELSE kuantitas 
+                            END) as total")
+                            ->value('total') ?? 0;
+
+        $perPage = $request->input('per_page', 10);
+        
+        if (!in_array($perPage, [10, 25, 50, 100])) {
+            $perPage = 10;
+        }
+
+        $data = $query->paginate($perPage)->withQueryString();
+
+        return view('berantas.tat.index', compact(
+            'data', 'satuanKerjas', 'years', 'masterNarkotika',
+            'totalKasus', 'totalTersangka', 'totalBBNarkotika', 'totalBeratGram'
+        ));
     }
 
     public function create()

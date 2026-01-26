@@ -44,8 +44,8 @@ class LoginController extends Controller
 
             // 6. Redirect User
             // intended() akan mengarahkan user ke halaman yang ingin mereka buka sebelum dihadang login
-            // Jika tidak ada, default ke 'dashboard' (atau route('p2m.index'))
-            return redirect()->intended(route('p2m.index'));
+            // Jika tidak ada, default ke 'dashboard'
+            return redirect()->intended(route('dashboard.index'));
         }
 
         // 7. Jika Login Gagal

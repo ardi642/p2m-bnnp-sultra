@@ -53,8 +53,8 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function() {
     
     // Dashboard & Umum
-    Route::get('/', function () { return view('welcome'); })->name('dashboard');
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+    // Route::get('/', function () { return view('welcome'); })->name('dashboard');
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
 
     // API Data (Satu endpoint fleksibel untuk semua bidang)
     Route::get('/api/dashboard/global', [DashboardController::class, 'getGlobalData'])->name('api.dashboard.global');

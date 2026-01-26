@@ -13,8 +13,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\UngkapKasusExport;
+use App\Models\BerantasUngkapBarangBukti;
+use App\Models\BerantasUngkapTersangka;
 
 class UngkapKasusController extends Controller
 {
@@ -25,8 +28,6 @@ class UngkapKasusController extends Controller
         if (empty($kategori)) return $query;
 
         return $query->where(function($q) use ($kategori, $request) {
-            
-            // 1. Logika Blok Narkotika
             if (in_array('Narkotika', $kategori)) {
                 $q->orWhere(function($sub) use ($request) {
                     $sub->where('kategori', 'Narkotika');
@@ -35,13 +36,9 @@ class UngkapKasusController extends Controller
                     }
                 });
             }
-
-            // 2. Logika Blok Non-Narkotika
             if (in_array('Non-Narkotika', $kategori)) {
                 $q->orWhere(function($sub) use ($request) {
                     $sub->where('kategori', 'Non-Narkotika');
-                    
-                    // FIX: Looping array kata kunci pencarian
                     if ($request->filled('search_non_narkotika')) {
                         $keywords = (array)$request->search_non_narkotika;
                         $sub->where(function($kQ) use ($keywords) {
@@ -65,7 +62,6 @@ class UngkapKasusController extends Controller
             'satuanKerja', 
             'tersangka' => function($q) { $q->orderBy('urutan', 'asc'); }, 
             'barangBukti' => function($q) use ($request) {
-                // Terapkan filter pada Eager Loading agar tampilan item sinkron
                 $this->applyCaseFilter($q, $request);
                 $q->orderBy('urutan', 'asc');
             },
@@ -125,16 +121,37 @@ class UngkapKasusController extends Controller
         $years = $yearQuery->distinct()->orderByDesc('year')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
+
+        $kasusIdSubquery = (clone $query)->select('berantas_ungkap_kasus.id');
+        $totalKasus = (clone $query)->count();
+        $totalTersangka = BerantasUngkapTersangka::whereIn('berantas_ungkap_kasus_id', $kasusIdSubquery)->count();
+        $totalBBNarkotika = BerantasUngkapBarangBukti::whereIn('berantas_ungkap_kasus_id', $kasusIdSubquery)
+                            ->where('kategori', 'Narkotika')->count();
+        
+        $totalBeratGram = BerantasUngkapBarangBukti::whereIn('berantas_ungkap_kasus_id', $kasusIdSubquery)
+                            ->where('kategori', 'Narkotika')
+                            ->selectRaw("SUM(CASE 
+                                WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 
+                                WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 
+                                ELSE kuantitas 
+                            END) as total")->value('total') ?? 0;
+        
         $perPage = $request->input('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100])) $perPage = 10;
+
         $kasus = $query->paginate($perPage)->withQueryString();
 
-        return view('berantas.ungkap-kasus.index', compact('kasus', 'satuanKerjas', 'years', 'masterNarkotika'));
+        return view('berantas.ungkap-kasus.index', compact(
+            'kasus', 'satuanKerjas', 'years', 'masterNarkotika',
+            'totalKasus', 'totalTersangka', 'totalBBNarkotika', 'totalBeratGram'
+        ));
     }
 
     public function create()
     {
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika', 'asc')->get();
-        return view('berantas.ungkap-kasus.create', compact('masterNarkotika'));
+        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
+        return view('berantas.ungkap-kasus.create', compact('masterNarkotika', 'satuanKerjas'));
     }
 
     public function store(Request $request)
@@ -155,7 +172,6 @@ class UngkapKasusController extends Controller
             'barang_bukti'            => 'required|array|min:1',
             'barang_bukti.*.kategori' => 'required|in:Narkotika,Non-Narkotika',
             'barang_bukti.*.jumlah'   => 'required|numeric|min:0',
-            // Wajib Array karena Multiple
             'barang_bukti.*.pemilik_id' => 'required|array|min:1', 
             'dokumentasi'             => 'nullable|array',
         ];
@@ -169,7 +185,6 @@ class UngkapKasusController extends Controller
             $inputBB = collect($request->barang_bukti);
             
             $allSuspectIds = $inputTersangka->pluck('temp_id')->filter();
-            // Flatten karena multiple select menghasilkan array of arrays
             $linkedOwnerIds = $inputBB->pluck('pemilik_id')->flatten()->filter(); 
             $orphans = $allSuspectIds->diff($linkedOwnerIds);
 
@@ -180,7 +195,6 @@ class UngkapKasusController extends Controller
 
             foreach ($request->barang_bukti as $index => $bb) {
                 if ($bb['kategori'] === 'Narkotika') {
-                    // Validasi Array
                     if (empty($bb['narkotika_id'])) {
                         $validator->errors()->add("barang_bukti.$index.narkotika_id", "Jenis Narkotika wajib dipilih.");
                     }
@@ -188,7 +202,6 @@ class UngkapKasusController extends Controller
                         $validator->errors()->add("barang_bukti.$index.satuan", "Satuan Narkotika harus Gram, Kg, atau Ton.");
                     }
                 } else {
-                    // Validasi Array
                     if (empty($bb['nama_barang_bukti'])) {
                         $validator->errors()->add("barang_bukti.$index.nama_barang_bukti", "Nama Barang Bukti wajib diisi.");
                     }
@@ -201,13 +214,15 @@ class UngkapKasusController extends Controller
 
         if ($validator->fails()) return back()->withErrors($validator)->withInput();
 
+        $filesMoved = []; 
+
         DB::beginTransaction();
         try {
             $kasus = BerantasUngkapKasus::create([
                 'nomor_lkn'        => $request->nomor_lkn,
                 'tanggal_kejadian' => $request->tanggal_kejadian,
                 'alamat_tkp'       => $request->alamat_tkp,
-                'satuan_kerja_id'  => $user->hasRole(['operator_satker', ['operator_berantas']]) ? $satkerId : $request->satuan_kerja_id,
+                'satuan_kerja_id'  => $user->isAdmin() ? $request->satuan_kerja_id : $satkerId,
             ]);
 
             $mapId = []; 
@@ -234,8 +249,6 @@ class UngkapKasusController extends Controller
 
             $urutanBB = 1;
             foreach ($request->barang_bukti as $bbData) {
-                
-                // --- LOGIC MULTIPLE INSERT ---
                 $items = ($bbData['kategori'] === 'Narkotika') 
                     ? ($bbData['narkotika_id'] ?? []) 
                     : ($bbData['nama_barang_bukti'] ?? []);
@@ -244,7 +257,6 @@ class UngkapKasusController extends Controller
 
                 foreach ($items as $itemValue) {
                     $isNarkotika = $bbData['kategori'] === 'Narkotika';
-
                     $bb = $kasus->barangBukti()->create([
                         'kategori'                  => $bbData['kategori'],
                         'narkotika_id'              => $isNarkotika ? $itemValue : null,
@@ -255,7 +267,6 @@ class UngkapKasusController extends Controller
                         'urutan'                    => $urutanBB++,
                     ]);
 
-                    // Sync Many-to-Many
                     $realOwnerIds = [];
                     foreach ($bbData['pemilik_id'] as $tempId) {
                         if (isset($mapId[$tempId])) $realOwnerIds[] = $mapId[$tempId];
@@ -264,20 +275,34 @@ class UngkapKasusController extends Controller
                 }
             }
 
+            // === DOKUMENTASI (MOVE DARI TEMP) ===
             if ($request->filled('dokumentasi')) {
                 foreach ($request->input('dokumentasi') as $folder) {
                     $tempFile = TemporaryFile::where('folder', $folder)->first();
                     if ($tempFile) {
                         $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        $destPath = 'dokumentasi/berantas/' . date('Y') . '/' . $tempFile->filename;
+                        $mimeType = Storage::mimeType($sourcePath);
+                        $size = Storage::size($sourcePath);
+
+                        $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
+                        $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
+                        
+                        // Path: dokumentasi/ungkap-kasus/TAHUN/...
+                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
+                        $destinationPath = 'dokumentasi/ungkap-kasus/' . date('Y') . '/' . $cleanFileName;
+                        
                         if (Storage::exists($sourcePath)) {
-                            Storage::disk('public')->move($sourcePath, $destPath);
+                            // Copy dari Temp ke Public menggunakan PUT ReadStream
+                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
+                            $filesMoved[] = $destinationPath;
+
                             $kasus->dokumentasi()->create([
                                 'nama_file_asli' => $tempFile->filename,
-                                'path_file' => $destPath,
-                                'tipe_file' => Storage::mimeType('public/'.$destPath),
-                                'ukuran_file' => Storage::size('public/'.$destPath),
+                                'path_file'      => $destinationPath,
+                                'tipe_file'      => $mimeType,
+                                'ukuran_file'    => $size,
                             ]);
+                            
                             Storage::deleteDirectory('public/tmp/' . $folder);
                             $tempFile->delete();
                         }
@@ -290,7 +315,13 @@ class UngkapKasusController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', $e->getMessage())->withInput();
+            // Hapus file fisik jika transaksi DB gagal
+            foreach ($filesMoved as $path) {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+            return back()->with('error', 'Gagal menyimpan: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -304,11 +335,12 @@ class UngkapKasusController extends Controller
             'dokumentasi'
         ])->findOrFail($id);
 
-        if ($user->hasRole(['operator_satker', ['operator_berantas']]) && $kasus->satuan_kerja_id !== $user->getSatkerId()) abort(403);
+        if ($user->hasRole(['operator_satker', 'operator_berantas']) && $kasus->satuan_kerja_id !== $user->getSatkerId()) abort(403);
         
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika', 'asc')->get();
+        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
 
-        return view('berantas.ungkap-kasus.edit', compact('kasus', 'masterNarkotika'));
+        return view('berantas.ungkap-kasus.edit', compact('kasus', 'masterNarkotika', 'satuanKerjas'));
     }
 
     public function update(Request $request, $id)
@@ -316,7 +348,7 @@ class UngkapKasusController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $kasus = BerantasUngkapKasus::findOrFail($id);
-        if ($user->hasRole(['operator_satker', ['operator_berantas']]) && $kasus->satuan_kerja_id !== $user->getSatkerId()) abort(403);
+        if ($user->hasRole(['operator_satker', 'operator_berantas']) && $kasus->satuan_kerja_id !== $user->getSatkerId()) abort(403);
 
         $rules = [
             'nomor_lkn'        => 'required|unique:berantas_ungkap_kasus,nomor_lkn,' . $id,
@@ -331,6 +363,7 @@ class UngkapKasusController extends Controller
             'barang_bukti.*.kategori' => 'required|in:Narkotika,Non-Narkotika',
             'barang_bukti.*.jumlah' => 'required|numeric',
             'barang_bukti.*.pemilik_id' => 'required|array|min:1',
+            'dokumentasi'       => 'nullable|array',
         ];
 
         if ($user->isAdmin()) $rules['satuan_kerja_id'] = 'required|exists:satuan_kerja,id';
@@ -352,6 +385,9 @@ class UngkapKasusController extends Controller
 
         if ($validator->fails()) return back()->withErrors($validator)->withInput();
 
+        $newFilesMoved = [];
+        $filesToDelete = [];
+
         DB::beginTransaction();
         try {
             $dataUpdate = [
@@ -362,10 +398,11 @@ class UngkapKasusController extends Controller
             if ($user->isAdmin()) $dataUpdate['satuan_kerja_id'] = $request->satuan_kerja_id;
             $kasus->update($dataUpdate);
 
-            // Handle Tersangka
+            // === 1. TERSANGKA ===
             $inputTersangka = $request->tersangka ?? [];
             $existingIds = collect($inputTersangka)->pluck('id')->filter()->toArray();
             
+            // Hapus yang dibuang
             $kasus->tersangka()->whereNotIn('id', $existingIds)->each(function($t) {
                 if($t->foto_tersangka) Storage::disk('public')->delete($t->foto_tersangka);
                 $t->delete();
@@ -382,17 +419,27 @@ class UngkapKasusController extends Controller
                     'urutan'         => $urutanTsk++,
                 ];
 
+                // Cek Flag Hapus Foto (Dari input hidden di view)
+                $shouldDeleteFoto = isset($tData['delete_foto']) && $tData['delete_foto'] == '1';
+
+                // Handle Upload
                 if ($request->hasFile("tersangka.{$index}.foto")) {
                     $file = $request->file("tersangka.{$index}.foto");
                     $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
                     $payload['foto_tersangka'] = $file->storeAs('foto_tersangka/' . date('Y'), $filename, 'public');
+                } elseif ($shouldDeleteFoto) {
+                    // Jika user minta hapus dan tidak upload baru
+                    $payload['foto_tersangka'] = null;
                 }
 
                 if (isset($tData['id']) && $tData['id']) {
                     $model = $kasus->tersangka()->find($tData['id']);
                     if ($model) {
-                        if (isset($payload['foto_tersangka']) && $model->foto_tersangka) {
-                            Storage::disk('public')->delete($model->foto_tersangka);
+                        // Hapus fisik lama jika: Upload Baru ATAU User minta hapus
+                        if (($request->hasFile("tersangka.{$index}.foto") || $shouldDeleteFoto) && $model->foto_tersangka) {
+                            if(Storage::disk('public')->exists($model->foto_tersangka)) {
+                                Storage::disk('public')->delete($model->foto_tersangka);
+                            }
                         }
                         $model->update($payload);
                     }
@@ -406,18 +453,13 @@ class UngkapKasusController extends Controller
                 }
             }
 
-            // Handle Barang Bukti
+            // === 2. BARANG BUKTI ===
             $inputBB = $request->barang_bukti ?? [];
             $existingBBIds = collect($inputBB)->pluck('id')->filter()->toArray();
-            
-            // Delete unused rows. Note: karena logic multiple, 1 input bisa jadi banyak row.
-            // Hapus yang tidak ada di list ID yang disubmit.
             $kasus->barangBukti()->whereNotIn('id', $existingBBIds)->delete();
 
             $urutanBB = 1;
             foreach ($inputBB as $bbData) {
-                
-                // --- LOGIC MULTIPLE UPDATE ---
                 $items = ($bbData['kategori'] === 'Narkotika') 
                     ? ($bbData['narkotika_id'] ?? []) 
                     : ($bbData['nama_barang_bukti'] ?? []);
@@ -426,7 +468,6 @@ class UngkapKasusController extends Controller
 
                 foreach ($items as $itemValue) {
                     $isNarkotika = $bbData['kategori'] === 'Narkotika';
-
                     $payloadBB = [
                         'kategori'                  => $bbData['kategori'],
                         'narkotika_id'              => $isNarkotika ? $itemValue : null,
@@ -437,19 +478,13 @@ class UngkapKasusController extends Controller
                         'urutan'                    => $urutanBB++,
                     ];
 
-                    // Logic: Update row pertama, Create sisanya
                     if (isset($bbData['id']) && $bbData['id'] && $itemValue === reset($items)) {
                         $bb = $kasus->barangBukti()->find($bbData['id']);
-                        if($bb) {
-                             $bb->update($payloadBB);
-                        } else {
-                             $bb = $kasus->barangBukti()->create($payloadBB);
-                        }
+                        if($bb) $bb->update($payloadBB); else $bb = $kasus->barangBukti()->create($payloadBB);
                     } else {
                         $bb = $kasus->barangBukti()->create($payloadBB);
                     }
 
-                    // Sync Owners
                     $realOwnerIds = [];
                     foreach ($bbData['pemilik_id'] as $val) {
                         if (isset($mapId[$val])) {
@@ -463,26 +498,42 @@ class UngkapKasusController extends Controller
                 }
             }
 
+            // === 3. DOKUMENTASI ===
+            // Hapus yang ditandai
             if ($request->has('delete_files')) {
-                foreach (DokumentasiKegiatan::whereIn('id', $request->delete_files)->get() as $file) {
-                    if(Storage::disk('public')->exists($file->path_file)) Storage::disk('public')->delete($file->path_file);
+                $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
+                foreach ($filesToRemove as $file) {
+                    $filesToDelete[] = $file->path_file;
                     $file->delete();
                 }
             }
+
+            // Upload baru
             if ($request->filled('dokumentasi')) {
                 foreach ($request->input('dokumentasi') as $folder) {
                     $tempFile = TemporaryFile::where('folder', $folder)->first();
                     if ($tempFile) {
                         $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        $destPath = 'dokumentasi/berantas/' . date('Y') . '/' . $tempFile->filename;
+                        $mimeType = Storage::mimeType($sourcePath);
+                        $size = Storage::size($sourcePath);
+
+                        $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
+                        $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
+                        
+                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
+                        $destinationPath = 'dokumentasi/ungkap-kasus/' . date('Y') . '/' . $cleanFileName;
+                        
                         if (Storage::exists($sourcePath)) {
-                            Storage::disk('public')->move($sourcePath, $destPath);
+                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
+                            $newFilesMoved[] = $destinationPath;
+
                             $kasus->dokumentasi()->create([
                                 'nama_file_asli' => $tempFile->filename,
-                                'path_file' => $destPath,
-                                'tipe_file' => Storage::mimeType('public/'.$destPath),
-                                'ukuran_file' => Storage::size('public/'.$destPath),
+                                'path_file'      => $destinationPath,
+                                'tipe_file'      => $mimeType,
+                                'ukuran_file'    => $size,
                             ]);
+                            
                             Storage::deleteDirectory('public/tmp/' . $folder);
                             $tempFile->delete();
                         }
@@ -491,21 +542,47 @@ class UngkapKasusController extends Controller
             }
 
             DB::commit();
+
+            // Cleanup Fisik File Lama
+            foreach ($filesToDelete as $path) {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+
             return redirect()->route('berantas.ungkap-kasus.index')->with('success', 'Data diperbarui.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', $e->getMessage())->withInput();
+            // Cleanup Fisik File Baru (jika gagal)
+            foreach ($newFilesMoved as $path) {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+            return back()->with('error', 'Gagal update: ' . $e->getMessage())->withInput();
         }
     }
 
     public function destroy($id)
     {
         $kasus = BerantasUngkapKasus::findOrFail($id);
+        $filesToDelete = [];
+        foreach($kasus->dokumentasi as $doc) { $filesToDelete[] = $doc->path_file; }
+        foreach($kasus->tersangka as $tsk) { if($tsk->foto_tersangka) $filesToDelete[] = $tsk->foto_tersangka; }
+
         DB::beginTransaction();
         try {
-            $kasus->delete(); DB::commit(); return back()->with('success', 'Data dihapus.');
-        } catch (\Exception $e) { DB::rollBack(); return back()->with('error', $e->getMessage()); }
+            $kasus->delete(); 
+            DB::commit(); 
+            foreach($filesToDelete as $path) {
+                if(Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            }
+            return back()->with('success', 'Data dihapus.');
+        } catch (\Exception $e) { 
+            DB::rollBack(); 
+            return back()->with('error', $e->getMessage()); 
+        }
     }
 
     public function export(Request $request)

@@ -484,7 +484,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="8" class="text-center py-5 text-muted fst-italic border-bottom">Tidak ada data kasus.</td></tr>
+                                        <tr><td colspan="8" class="text-center py-5 text-muted fst-italic border-bottom">Tidak data kasus yang diinput.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

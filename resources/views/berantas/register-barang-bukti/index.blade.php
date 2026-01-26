@@ -198,14 +198,61 @@
                                 </div>
                             </div>
                             
-                            <div class="d-flex justify-content-between align-items-center mb-3 px-3 px-lg-0">
-                                <button type="submit" formaction="{{ route('berantas.register-barang-bukti.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 shadow-sm">
-                                    <i class="bi bi-file-earmark-excel"></i> <span class="d-none d-lg-inline">Export Excel</span>
-                                </button>
-                                <div class="text-muted small fst-italic">
-                                    Total Data: <strong>{{ $data->total() }}</strong>
+                            {{-- BAGIAN TOMBOL EXPORT & AGREGASI DATA --}}
+                            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-end align-items-lg-center mb-3 px-3 px-lg-0">
+                                
+                                {{-- 1. Tombol Export (Ukuran Normal) --}}
+                                <div class="mb-2 mb-lg-0">
+                                    <button type="submit" formaction="{{ route('berantas.register-barang-bukti.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 px-3 shadow-none">
+                                        <i class="bi bi-file-earmark-excel"></i> <span>Export Excel</span>
+                                    </button>
+                                </div>
+
+                                {{-- 2. Kartu Agregasi (Style: bg-light, text-muted, font kecil) --}}
+                                <div class="d-flex flex-wrap justify-content-end gap-2">
+                                    
+                                    {{-- A. Total Register --}}
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-journal-text text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total Register:</span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalRegister, 0, ',', '.') }}</span>
+                                    </div>
+
+                                    {{-- B. Total BB Narkotika --}}
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-boxes text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total BB Narkotika:</span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalBBNarkotika, 0, ',', '.') }}</span>
+                                    </div>
+
+                                    {{-- C. Total Berat --}}
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-speedometer2 text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total Berat:</span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalBeratGram, 2, ',', '.') }} Gram</span>
+                                    </div>
+
+                                    {{-- D. Sumber: Tangkap (Icon Handcuffs) --}}
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-person-x text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Tangkap:</span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">
+                                            {{ number_format($totalTangkap, 0, ',', '.') }} ({{ $persenTangkap }}%)
+                                        </span>
+                                    </div>
+
+                                    {{-- E. Sumber: Temuan --}}
+                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
+                                        <i class="bi bi-search text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Temuan:</span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">
+                                            {{ number_format($totalTemuan, 0, ',', '.') }} ({{ $persenTemuan }}%)
+                                        </span>
+                                    </div>
+
                                 </div>
                             </div>
+
                         </form>
                         
                         {{-- TABEL DATA --}}

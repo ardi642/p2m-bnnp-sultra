@@ -129,12 +129,64 @@ class RegisterBarangBuktiController extends Controller
             ->distinct()->orderBy('year', 'desc')->pluck('year');
         
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
+
+        $query = $this->getQuery($request);
+
+        // --- AGREGASI DATA ---
         
-        $data = $this->getQuery($request)
-            ->paginate($request->get('per_page', 10))
-            ->withQueryString();
+        $totalRegister = $query->count();
+        $subQueryRegister = $query->clone()->reorder()->select('berantas_register_barang_bukti.id');
+
+        // Total Barang Bukti Narkotika
+        $totalBBNarkotika = \App\Models\BerantasRegisterBarangBuktiItem::query()
+            ->whereIn('register_barang_bukti_id', $subQueryRegister)
+            ->where('kategori', 'Narkotika')
+            ->count();
+
+        // Total Berat Narkotika (Gram)
+        $totalBeratGram = \App\Models\BerantasRegisterBarangBuktiItem::query()
+            ->whereIn('register_barang_bukti_id', $subQueryRegister)
+            ->where('kategori', 'Narkotika')
+            ->selectRaw("SUM(
+                CASE 
+                    WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 
+                    WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 
+                    ELSE kuantitas 
+                END
+            ) as total_gram")->value('total_gram') ?? 0;
+
+        // Agregasi Sumber Perolehan (KHUSUS NARKOTIKA)
+        // Perbaikan: Ditambahkan where kategori = Narkotika
+        $sumberStats = \App\Models\BerantasRegisterBarangBuktiItem::query()
+            ->whereIn('register_barang_bukti_id', $subQueryRegister)
+            ->where('kategori', 'Narkotika') // <--- FILTER INI YANG DITAMBAHKAN
+            ->select('sumber_perolehan', DB::raw('count(*) as total'))
+            ->groupBy('sumber_perolehan')
+            ->pluck('total', 'sumber_perolehan');
+            
+        $totalItemsNarkotika = $sumberStats->sum();
+        $totalTangkap = $sumberStats['Hasil Tangkap'] ?? 0;
+        $totalTemuan = $sumberStats['Temuan'] ?? 0;
         
-        return view('berantas.register-barang-bukti.index', compact('data', 'satuanKerjas', 'years', 'masterNarkotika'));
+        // Hitung Persentase (Berdasarkan total item narkotika saja)
+        $persenTangkap = $totalItemsNarkotika > 0 ? round(($totalTangkap / $totalItemsNarkotika) * 100, 1) : 0;
+        $persenTemuan = $totalItemsNarkotika > 0 ? round(($totalTemuan / $totalItemsNarkotika) * 100, 1) : 0;
+
+        // --- END AGREGASI ---
+        
+        $perPage = $request->input('per_page', 10);
+        
+        if (!in_array($perPage, [10, 25, 50, 100])) {
+            $perPage = 10;
+        }
+
+        $data = $query->paginate($perPage)->withQueryString();
+        
+        return view('berantas.register-barang-bukti.index', compact(
+            'data', 'satuanKerjas', 'years', 'masterNarkotika',
+            'totalRegister', 'totalBBNarkotika', 'totalBeratGram', 
+            'totalTangkap', 'totalTemuan', 'persenTangkap', 'persenTemuan'
+        ));
     }
 
     public function create()

@@ -18,59 +18,101 @@ class RegisterBarangBuktiExport implements FromCollection, WithHeadings, WithMap
     protected $query;
     private $counter = 0;
     private $totals = [];
+    
+    // Variabel untuk menampung data yang sudah di-flatten (dipecah per item)
+    private $flattenedData = [];
 
     public function __construct($query) {
         $this->query = $query;
+        $this->prepareData();
+    }
+
+    /**
+     * Memecah Data Register (Parent) menjadi baris-baris Item (Child)
+     * untuk memudahkan proses mapping dan merging.
+     */
+    private function prepareData()
+    {
+        $registers = $this->query->get();
+        $no = 1;
+
+        foreach ($registers as $reg) {
+            // Jika register tidak punya item, tetap tampilkan 1 baris (kosong)
+            if ($reg->items->isEmpty()) {
+                $this->flattenedData[] = [
+                    'no' => $no++,
+                    'satker' => $reg->satuanKerja->satuan_kerja ?? '-',
+                    'tanggal' => $reg->tanggal_perolehan->format('d/m/Y'),
+                    'lokasi' => $reg->lokasi_perolehan ?? '-',
+                    'sumber' => '-',
+                    'nama_barang' => '-',
+                    'jumlah' => '-',
+                    'is_first_row' => true, // Penanda awal register (untuk merge)
+                    'row_span' => 1
+                ];
+                continue;
+            }
+
+            // Jika ada item, looping item
+            $first = true;
+            $countItems = $reg->items->count();
+
+            foreach ($reg->items as $item) {
+                // Hitung Total Gram (Hanya Narkotika)
+                if ($item->kategori === 'Narkotika') {
+                    $qty = (float)$item->kuantitas;
+                    $satuan = $item->satuan;
+                    
+                    $gram = $qty;
+                    if ($satuan === 'Kg') $gram = $qty * 1000;
+                    if ($satuan === 'Ton') $gram = $qty * 1000000;
+                    
+                    $key = strtoupper($item->nama_barang);
+                    if (!isset($this->totals[$key])) $this->totals[$key] = 0;
+                    $this->totals[$key] += $gram;
+                }
+
+                $this->flattenedData[] = [
+                    'no' => $first ? $no++ : null,
+                    'satker' => $first ? ($reg->satuanKerja->satuan_kerja ?? '-') : null,
+                    'tanggal' => $first ? $reg->tanggal_perolehan->format('d/m/Y') : null,
+                    'lokasi' => $first ? ($reg->lokasi_perolehan ?? '-') : null,
+                    
+                    // Kolom Item (Selalu Tampil)
+                    'sumber' => $item->sumber_perolehan,
+                    'nama_barang' => $item->nama_barang,
+                    'jumlah' => (float)$item->kuantitas . ' ' . ucfirst($item->satuan),
+                    
+                    // Metadata Merging
+                    'is_first_row' => $first,
+                    'row_span' => $first ? $countItems : 0
+                ];
+
+                $first = false;
+            }
+        }
     }
 
     public function collection() {
-        return $this->query->get();
+        return collect($this->flattenedData);
     }
 
     public function headings(): array {
         return [
-            'NO', 'SATUAN KERJA', 'TANGGAL PEROLEHAN', 'SUMBER PEROLEHAN', 
-            'LOKASI PEROLEHAN', 'DAFTAR BARANG BUKTI', 'JUMLAH & SATUAN'
+            'NO', 'SATUAN KERJA', 'TANGGAL PEROLEHAN', 'LOKASI PEROLEHAN', 
+            'SUMBER', 'NAMA BARANG BUKTI', 'JUMLAH'
         ];
     }
 
     public function map($row): array {
-        $this->counter++;
-        $listNama = [];
-        $listJumlah = [];
-
-        foreach ($row->items as $item) {
-            $nama = $item->nama_barang;
-            $qty = (float)$item->kuantitas;
-            
-            // Ambil dari helper accessor model
-            $satuan = $item->satuan; 
-
-            // Hitung Total Gram (Hanya Narkotika)
-            if ($item->kategori === 'Narkotika') {
-                $gram = $qty;
-                if ($satuan === 'Kg') $gram = $qty * 1000;
-                if ($satuan === 'Ton') $gram = $qty * 1000000;
-                
-                $key = strtoupper($nama);
-                if (!isset($this->totals[$key])) $this->totals[$key] = 0;
-                $this->totals[$key] += $gram;
-            } else {
-                $nama .= " (Non-Narkotika)";
-            }
-
-            $listNama[] = "- " . $nama;
-            $listJumlah[] = $qty . " " . ucfirst($satuan);
-        }
-
         return [
-            $this->counter,
-            $row->satuanKerja->satuan_kerja ?? '-',
-            $row->tanggal_perolehan->format('d/m/Y'),
-            $row->sumber_perolehan,
-            $row->lokasi_perolehan ?? '-',
-            implode("\n", $listNama),
-            implode("\n", $listJumlah)
+            $row['no'],
+            $row['satker'],
+            $row['tanggal'],
+            $row['lokasi'],
+            $row['sumber'],
+            $row['nama_barang'],
+            $row['jumlah']
         ];
     }
 
@@ -86,22 +128,47 @@ class RegisterBarangBuktiExport implements FromCollection, WithHeadings, WithMap
                 $sheet = $event->sheet;
                 $highestRow = $sheet->getHighestRow();
                 
-                // Styling Data Table
+                // 1. LOGIKA MERGE VERTIKAL (PINTAR)
+                // Kita mulai dari baris ke-2 (karena baris 1 adalah Header)
+                $currentRow = 2; 
+
+                foreach ($this->flattenedData as $data) {
+                    if ($data['is_first_row'] && $data['row_span'] > 1) {
+                        $endRow = $currentRow + $data['row_span'] - 1;
+                        
+                        // Merge Kolom No
+                        $sheet->mergeCells("A{$currentRow}:A{$endRow}");
+                        // Merge Kolom Satker
+                        $sheet->mergeCells("B{$currentRow}:B{$endRow}");
+                        // Merge Kolom Tanggal
+                        $sheet->mergeCells("C{$currentRow}:C{$endRow}");
+                        // Merge Kolom Lokasi
+                        $sheet->mergeCells("D{$currentRow}:D{$endRow}");
+                    }
+                    $currentRow++;
+                }
+
+                // 2. Styling Data Table
                 $sheet->getStyle('A2:G' . $highestRow)->applyFromArray([
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                    'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true]
+                    'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true] // Align Top agar rapi saat merge
                 ]);
+                
+                // Center Alignment untuk kolom tertentu
+                $sheet->getStyle("A2:A{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // No
+                $sheet->getStyle("C2:C{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Tanggal
+                $sheet->getStyle("E2:E{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Sumber
+                
+                // 3. Lebar Kolom
+                $sheet->getColumnDimension('A')->setWidth(5);  
+                $sheet->getColumnDimension('B')->setWidth(30); 
+                $sheet->getColumnDimension('C')->setWidth(15); 
+                $sheet->getColumnDimension('D')->setWidth(30); 
+                $sheet->getColumnDimension('E')->setWidth(15); 
+                $sheet->getColumnDimension('F')->setWidth(35); 
+                $sheet->getColumnDimension('G')->setWidth(20); 
 
-                // --- PERBAIKAN LEBAR KOLOM DISINI ---
-                $sheet->getColumnDimension('A')->setWidth(5);  // No
-                $sheet->getColumnDimension('B')->setWidth(30); // Satker
-                $sheet->getColumnDimension('C')->setWidth(25); // Tanggal (Diperlebar)
-                $sheet->getColumnDimension('D')->setWidth(25); // Sumber (Diperlebar)
-                $sheet->getColumnDimension('E')->setWidth(30); // Lokasi
-                $sheet->getColumnDimension('F')->setWidth(40); // Daftar BB
-                $sheet->getColumnDimension('G')->setWidth(20); // Jumlah
-
-                // Footer Total
+                // 4. Footer Total
                 $footerRow = $highestRow + 2;
                 $sheet->setCellValue('A' . $footerRow, 'TOTAL REKAPITULASI NARKOTIKA (GRAM)');
                 $sheet->mergeCells("A{$footerRow}:E{$footerRow}");

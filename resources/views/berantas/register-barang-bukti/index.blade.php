@@ -216,7 +216,6 @@
                                         <th class="py-3 bg-light ps-3">No</th>
                                         <th class="py-3 bg-light text-start">{!! $sortLink('satuan_kerja_id', 'Satuan Kerja') !!}</th>
                                         <th class="py-3 bg-light text-start">{!! $sortLink('tanggal_perolehan', 'Tanggal') !!}</th>
-                                        <th class="py-3 bg-light text-start">{!! $sortLink('sumber_perolehan', 'Sumber') !!}</th>
                                         <th class="py-3 bg-light text-start">Lokasi Perolehan</th>
                                         <th class="py-3 bg-light text-start">Daftar Barang Bukti</th>
                                         <th class="py-3 bg-light">{!! $sortLink('created_at', 'Dibuat') !!}</th>
@@ -239,14 +238,6 @@
                                             </td>
 
                                             <td class="text-start py-3">
-                                                @if($row->sumber_perolehan == 'Hasil Tangkap')
-                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Hasil Tangkap</span>
-                                                @else
-                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Temuan</span>
-                                                @endif
-                                            </td>
-
-                                            <td class="text-start py-3">
                                                 <div class="small text-dark" style="max-width: 200px;">{{ Str::limit($row->lokasi_perolehan ?? '-', 50) }}</div>
                                             </td>
 
@@ -255,6 +246,11 @@
                                                     <div class="d-flex flex-column gap-1">
                                                         @foreach($row->items as $item)
                                                             <div class="small d-flex align-items-center">
+                                                                {{-- Badge Sumber --}}
+                                                                <span class="badge {{ $item->sumber_perolehan == 'Hasil Tangkap' ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning' }} border border-secondary-subtle me-2" style="font-size: 0.65rem;">
+                                                                    {{ $item->sumber_perolehan == 'Hasil Tangkap' ? 'Tangkap' : 'Temuan' }}
+                                                                </span>
+
                                                                 @if($item->kategori === 'Narkotika') 
                                                                     <i class="bi bi-capsule text-danger me-2" title="Narkotika"></i> 
                                                                 @else 
@@ -296,7 +292,7 @@
 
                                         {{-- TR DETAIL --}}
                                         <tr x-show="expanded.includes({{ $row->id }})" x-transition>
-                                            <td colspan="8" class="p-0 border-0">
+                                            <td colspan="7" class="p-0 border-0">
                                                 <div class="bg-body-tertiary p-4 border-bottom shadow-inner text-start">
                                                     <div class="card border-0 shadow-sm">
                                                         <div class="card-body">
@@ -306,10 +302,6 @@
                                                                 <div class="col-md-6">
                                                                     <label class="small text-secondary fw-bold text-uppercase mb-1">Satuan Kerja</label>
                                                                     <div class="text-dark fw-bold small">{{ $row->satuanKerja->satuan_kerja ?? '-' }}</div>
-                                                                </div>
-                                                                <div class="col-md-6">
-                                                                    <label class="small text-secondary fw-bold text-uppercase mb-1">Sumber Perolehan</label>
-                                                                    <div class="text-dark small">{{ $row->sumber_perolehan }}</div>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <label class="small text-secondary fw-bold text-uppercase mb-1">Tanggal Perolehan</label>
@@ -325,12 +317,8 @@
                                                                     <label class="small text-secondary fw-bold text-uppercase mb-1">Dibuat Pada</label>
                                                                     <div class="text-dark small">{{ $row->created_at->locale('id')->translatedFormat('d F Y H:i') }} WIB</div>
                                                                 </div>
-                                                                <div class="col-md-6">
-                                                                    <label class="small text-secondary fw-bold text-uppercase mb-1">Terakhir Diubah</label>
-                                                                    <div class="text-dark small">{{ $row->updated_at->locale('id')->translatedFormat('d F Y H:i') }} WIB</div>
-                                                                </div>
 
-                                                                {{-- BAGIAN DOKUMENTASI (VISUALISASI PERSIS P2M) --}}
+                                                                {{-- BAGIAN DOKUMENTASI --}}
                                                                 <div class="col-12 mt-3 text-start">
                                                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                                                         <span class="fw-bold text-secondary small">Dokumentasi & Lampiran</span>
@@ -366,8 +354,6 @@
                                                                         <div class="text-muted small fst-italic border rounded p-3 text-center bg-light">Tidak ada dokumentasi.</div>
                                                                     @endif
                                                                 </div>
-                                                                {{-- END BAGIAN DOKUMENTASI --}}
-
                                                             </div>
                                                         </div>
                                                     </div>
@@ -375,7 +361,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="8" class="text-center py-5 text-muted fst-italic border-bottom">Belum ada data register yang diinput.</td></tr>
+                                        <tr><td colspan="7" class="text-center py-5 text-muted fst-italic border-bottom">Belum ada data register yang diinput.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

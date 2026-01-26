@@ -513,10 +513,29 @@
                 const inputEl = document.querySelector('input.filepond');
 
                 this.pond = FilePond.create(inputEl, {
-                    server: { 
-                        process: '{{ route("upload.temp") }}', 
-                        revert: '{{ route("revert.temp") }}', 
-                        headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}
+                    server: {
+                        // PROCESS (Upload File Baru)
+                        process: {
+                            url: '{{ route("upload.temp") }}',
+                            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                            // PENTING: Matikan loading jika upload error/gagal
+                            onerror: (response) => {
+                                this.isUploading = false;
+                                console.error('Upload Error:', response);
+                            }
+                        },
+
+                        // REVERT (Hapus File Baru sebelum Disimpan)
+                        revert: {
+                            url: '{{ route("revert.temp") }}',
+                            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                        },
+
+                        // LOAD (Preview File Lama/Sementara saat Validasi Error)
+                        load: {
+                            url: '{{ route("load.temp") }}/?file=',
+                            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+                        }
                     },
                     files: [
                         @if(old('dokumentasi'))

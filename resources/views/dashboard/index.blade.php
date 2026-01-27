@@ -38,9 +38,17 @@
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-2">
                 <div class="nav nav-pills nav-fill gap-2">
-                    @if($permissions['p2m']) <button @click="activeTab = 'p2m'" :class="activeTab === 'p2m' ? 'bg-primary text-white shadow' : 'bg-light text-secondary'" class="nav-link fw-bold rounded transition-all py-2 fs-6"><i class="bi bi-people-fill me-2"></i>Bidang P2M</button> @endif
-                    @if($permissions['berantas']) <button @click="activeTab = 'berantas'" class="nav-link fw-bold bg-light text-secondary py-2 fs-6">Berantas</button> @endif
-                    @if($permissions['rehab']) <button @click="activeTab = 'rehab'" class="nav-link fw-bold bg-light text-secondary py-2 fs-6">Rehab</button> @endif
+                    @if($permissions['p2m']) 
+                        <button @click="activeTab = 'p2m'" :class="activeTab === 'p2m' ? 'bg-primary text-white shadow' : 'bg-light text-secondary'" class="nav-link fw-bold rounded transition-all py-2 fs-6"><i class="bi bi-people-fill me-2"></i>P2M</button> 
+                    @endif
+                    
+                    @if($permissions['berantas']) 
+                        <button @click="activeTab = 'berantas'" :class="activeTab === 'berantas' ? 'bg-primary text-white shadow' : 'bg-light text-secondary'" class="nav-link fw-bold rounded transition-all py-2 fs-6"><i class="bi bi-shield-shaded me-2"></i>Berantas</button> 
+                    @endif
+                    
+                    @if($permissions['rehab']) 
+                        <button @click="activeTab = 'rehab'" :class="activeTab === 'rehab' ? 'bg-primary text-white shadow' : 'bg-light text-secondary'" class="nav-link fw-bold rounded transition-all py-2 fs-6"><i class="bi bi-heart-pulse-fill me-2"></i>Rehab</button> 
+                    @endif
                 </div>
             </div>
         </div>
@@ -207,6 +215,131 @@
             </div>
 
         </div>
+
+        {{-- ========================================================================= --}}
+        {{-- TAB BERANTAS --}}
+        {{-- ========================================================================= --}}
+        <div x-show="activeTab === 'berantas'" x-transition>
+            
+            {{-- 1. Filter Rentang Tahun --}}
+            <div class="d-flex justify-content-end mb-3">
+                <div class="d-flex align-items-center bg-white p-2 rounded shadow-sm border gap-2">
+                    <span class="fw-bold text-muted small"><i class="bi bi-calendar-range me-2 text-primary"></i>Rentang Tahun:</span>
+                    <select x-model="startYear" class="form-select form-select-sm border-secondary fw-bold text-primary" style="width: 90px;">
+                        @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                    </select>
+                    <span class="fw-bold">-</span>
+                    <select x-model="endYear" class="form-select form-select-sm border-secondary fw-bold text-primary" style="width: 90px;">
+                        @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                    </select>
+                </div>
+            </div>
+
+            {{-- 2. Kartu Pilar Berwarna (LKN, TAT, Barang Bukti) --}}
+            <div class="row g-3 mb-4">
+                {{-- Ungkap Kasus (LKN) --}}
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100 bg-primary text-white p-4 overflow-hidden position-relative">
+                        <i class="bi bi-shield-shaded position-absolute opacity-10" style="font-size: 7rem; right: -10px; top: -10px;"></i>
+                        <h6 class="text-uppercase fw-bold opacity-75 mb-3">Ungkap Kasus (LKN)</h6>
+                        <div class="d-flex gap-4 mb-3 position-relative">
+                            <div>
+                                <small class="d-block opacity-75">Total LKN</small>
+                                <h3 class="fw-bold" x-text="berantasCards.lkn.kasus">0</h3>
+                            </div>
+                            <div>
+                                <small class="d-block opacity-75">Total Tersangka</small>
+                                <h3 class="fw-bold" x-text="berantasCards.lkn.tersangka">0</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white bg-opacity-10 p-2 rounded border border-white border-opacity-25 mt-auto">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>Total Berat Narkotika:</span>
+                                <span class="fw-bold" x-text="berantasCards.lkn.berat">0 g</span>
+                            </div>
+                            <div class="d-flex justify-content-between small">
+                                <span>Total Item Narkotika:</span>
+                                <span class="fw-bold" x-text="berantasCards.lkn.item">0 Item</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Asesmen (TAT) --}}
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100 bg-info text-white p-4 overflow-hidden position-relative">
+                        <i class="bi bi-person-lines-fill position-absolute opacity-10" style="font-size: 7rem; right: -10px; top: -10px;"></i>
+                        <h6 class="text-uppercase fw-bold opacity-75 mb-3">Asesmen (TAT)</h6>
+                        <div class="d-flex gap-4 mb-3 position-relative">
+                            <div>
+                                <small class="d-block opacity-75">Total Kasus</small>
+                                <h3 class="fw-bold" x-text="berantasCards.tat.kasus">0</h3>
+                            </div>
+                            <div>
+                                <small class="d-block opacity-75">Total Tersangka</small>
+                                <h3 class="fw-bold" x-text="berantasCards.tat.tersangka">0</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white bg-opacity-10 p-2 rounded border border-white border-opacity-25 mt-auto">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>Total Berat Narkotika:</span>
+                                <span class="fw-bold" x-text="berantasCards.tat.berat">0 g</span>
+                            </div>
+                            <div class="d-flex justify-content-between small">
+                                <span>Total Item Narkotika:</span>
+                                <span class="fw-bold" x-text="berantasCards.tat.item">0 Item</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Barang Bukti (Register) --}}
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100 bg-danger text-white p-4 d-flex flex-column">
+                        <h6 class="text-uppercase fw-bold opacity-75 mb-3 text-center">BARANG BUKTI</h6>
+                        <div class="text-center mb-3">
+                            <small class="d-block opacity-75">Total Berat Narkotika</small>
+                            <h2 class="fw-bold" x-text="berantasCards.bb.total_berat">0 g</h2>
+                            <span class="badge bg-white text-danger fw-bold shadow-sm" x-text="berantasCards.bb.total_item">0 Item</span>
+                        </div>
+                        <div class="row g-2 mt-auto">
+                            <div class="col-6">
+                                <div class="bg-white bg-opacity-10 p-2 rounded text-center border border-white border-opacity-25 h-100">
+                                    <small class="d-block opacity-75 small">Hasil Tangkap</small>
+                                    <b class="small d-block mt-1" x-text="berantasCards.bb.tangkap_berat">0 g</b>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="bg-white bg-opacity-10 p-2 rounded text-center border border-white border-opacity-25 h-100">
+                                    <small class="d-block opacity-75 small">Temuan</small>
+                                    <b class="small d-block mt-1" x-text="berantasCards.bb.temuan_berat">0 g</b>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- 3. Grafik Tren Berantas --}}
+            <div class="card border-0 shadow-sm p-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+                    <div>
+                        <h6 class="fw-bold m-0 text-dark">
+                            <i class="bi bi-bar-chart-fill text-primary me-2"></i>Tren Bulanan Narkotika: Volume vs Item
+                        </h6>
+                        <small class="text-muted">Data berdasarkan tahun yang dipilih</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small fw-bold text-muted">Tahun Grafik:</span>
+                        <select x-model="chartFilter.year" class="form-select form-select-sm border-secondary fw-bold text-primary" style="width: 100px;">
+                            @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                        </select>
+                    </div>
+                </div>
+                {{-- Area Render Chart --}}
+                <div x-ref="berantasMainChart" style="min-height: 400px;"></div>
+            </div>
+        </div>
     </div>
 </main>
 @endsection
@@ -215,46 +348,77 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('dashboardUnified', () => ({
+            // --- STATE GLOBAL ---
             startYear: '{{ date("Y") }}',
             endYear: '{{ date("Y") }}',
             satkerId: '',
             activeTab: '{{ $defaultTab }}', 
-            
-            p2mCards: { kegiatan: { total: 0 }, orang: { total: 0, list: {} }, media: { total_freq: 0, total_durasi: 0, list: {} }, wilayah: { total: 0, list: {} } },
-            
+
+            // --- STATE P2M ---
+            p2mCards: { 
+                kegiatan: { total: 0 }, 
+                orang: { total: 0, list: {} }, 
+                media: { total_freq: 0, total_durasi: 0, list: {} }, 
+                wilayah: { total: 0, list: {} } 
+            },
             chartFilter: { type: 'sosialisasi', year: '{{ date("Y") }}' },
             rightChartMode: 'anggaran',
             chartDataCache: null, 
             hasSasaran: true,
 
-            charts: { p2mRanking: null, left: null, right: null },
+            // --- STATE BERANTAS ---
+            berantasCards: { 
+                lkn: { kasus: 0, tersangka: 0, berat: '0 g', item: '0 Item' },
+                tat: { kasus: 0, tersangka: 0, berat: '0 g', item: '0 Item' },
+                bb: { total_berat: '0 g', total_item: '0 Item', tangkap_berat: '0 g', temuan_berat: '0 g' }
+            },
+
+            charts: { p2mRanking: null, left: null, right: null, berantasMain: null },
 
             init() {
                 let elSatker = document.getElementById('select-satker');
-                if (elSatker) {
+                if (elSatker && typeof TomSelect !== 'undefined') {
                     if (elSatker.tomselect) elSatker.tomselect.destroy();
-                    let ts = new TomSelect(elSatker, { create: false, controlInput: null, allowEmptyOption: true, placeholder: "Pilih Satuan Kerja..." });
+                    let ts = new TomSelect(elSatker, { 
+                        create: false, 
+                        controlInput: null, 
+                        allowEmptyOption: true, 
+                        placeholder: "Pilih Satuan Kerja..." 
+                    });
                     ts.on('change', (val) => { this.satkerId = val; });
                 }
                 
-                if(this.activeTab === 'p2m') {
-                    this.fetchP2M(); 
-                    this.fetchChartData(); 
-                }
+                this.loadActiveTabData();
 
-                this.$watch('startYear', () => this.fetchP2M());
-                this.$watch('endYear', () => this.fetchP2M());
-                this.$watch('satkerId', () => { this.fetchP2M(); this.fetchChartData(); });
-                this.$watch('chartFilter.type', () => { 
-                    this.rightChartMode = 'anggaran'; 
-                    this.fetchChartData(); 
+                // WATCHERS
+                this.$watch('activeTab', () => this.loadActiveTabData());
+                this.$watch('startYear', () => this.loadActiveTabData());
+                this.$watch('endYear', () => this.loadActiveTabData());
+                this.$watch('satkerId', () => this.loadActiveTabData());
+                
+                this.$watch('chartFilter.type', () => { if (this.activeTab === 'p2m') this.fetchChartData(); });
+                this.$watch('chartFilter.year', () => {
+                    if (this.activeTab === 'p2m') this.fetchChartData();
+                    if (this.activeTab === 'berantas') this.fetchBerantasChart();
                 });
-                this.$watch('chartFilter.year', () => this.fetchChartData());
-                this.$watch('rightChartMode', () => this.renderRightChart(this.chartDataCache));
+                this.$watch('rightChartMode', () => { if (this.activeTab === 'p2m') this.renderRightChart(this.chartDataCache); });
             },
 
-            fetchP2M() {
-                if(this.startYear > this.endYear) this.endYear = this.startYear;
+            loadActiveTabData() {
+                if (this.startYear > this.endYear) this.endYear = this.startYear;
+                if (this.activeTab === 'p2m') {
+                    this.fetchP2MGlobal(); 
+                    this.fetchChartData(); 
+                } else if (this.activeTab === 'berantas') {
+                    this.fetchBerantasGlobal();
+                    this.fetchBerantasChart();
+                }
+            },
+
+            // =========================================================================
+            // FUNGSI BIDANG P2M
+            // =========================================================================
+            fetchP2MGlobal() {
                 let url = `{{ route('api.dashboard.global') }}?scope=p2m&start_year=${this.startYear}&end_year=${this.endYear}&satker_id=${this.satkerId}`;
                 fetch(url).then(res => res.json()).then(data => {
                     this.p2mCards = data;
@@ -263,11 +427,10 @@
             },
 
             fetchChartData() {
-                let url = `{{ route('api.dashboard.chart') }}?type=${this.chartFilter.type}&year=${this.chartFilter.year}&satker_id=${this.satkerId}`;
+                let url = `{{ route('api.dashboard.chart') }}?scope=p2m&type=${this.chartFilter.type}&year=${this.chartFilter.year}&satker_id=${this.satkerId}`;
                 fetch(url).then(res => res.json()).then(data => {
                     this.chartDataCache = data;
                     this.hasSasaran = data.config.has_sasaran;
-                    
                     this.renderLeftChart(data);
                     this.renderRightChart(data);
                 });
@@ -276,157 +439,110 @@
             renderRanking(data) {
                 let options = {
                     series: [{ name: 'Jumlah Laporan', data: data.data }],
-                    chart: { type: 'bar', height: 500, toolbar: {show: false}, fontFamily: 'Nunito, sans-serif' },
-                    plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '70%', distributed: true } },
-                    colors: ['#0d6efd', '#198754', '#ffc107', '#0dcaf0', '#d63384', '#6f42c1', '#fd7e14', '#20c997'],
-                    xaxis: { categories: data.labels, labels: { style: { fontSize: '13px', fontWeight: 'bold' } } },
-                    yaxis: { labels: { style: { fontSize: '13px', fontWeight: 'bold', colors: '#333' } } },
-                    legend: { show: false }, 
-                    dataLabels: { enabled: true, textAnchor: 'start', style: { colors: ['#fff'], fontSize: '13px', fontWeight: 'bold' }, offsetX: 0 },
-                    tooltip: { theme: 'light' }
+                    chart: { type: 'bar', height: 500, toolbar: {show: false}, fontFamily: 'Nunito' },
+                    plotOptions: { bar: { horizontal: true, distributed: true } },
+                    xaxis: { categories: data.labels },
+                    dataLabels: { enabled: true }
                 };
-                if (this.charts.p2mRanking) {
-                    this.charts.p2mRanking.updateOptions(options);
-                } else {
-                    this.charts.p2mRanking = new ApexCharts(this.$refs.p2mRankingChart, options);
-                    this.charts.p2mRanking.render();
-                }
+                if (this.charts.p2mRanking) this.charts.p2mRanking.updateOptions(options);
+                else { this.charts.p2mRanking = new ApexCharts(this.$refs.p2mRankingChart, options); this.charts.p2mRanking.render(); }
             },
 
-            // RENDER CHART KIRI (KOMBINASI WARNA BARU)
+            // PERBAIKAN GRAFIK KIRI (Munculkan Angka)
             renderLeftChart(data) {
                 let unit = data.config.label_unit;
-                let series = [
-                    { name: 'Jumlah Kegiatan', type: 'column', data: data.tren.kegiatan }
-                ];
-
-                if (unit && unit !== '-') {
-                    series.push({ name: unit, type: 'line', data: data.tren.dampak });
-                }
-                if (data.config.has_positif) {
-                    series.push({ name: 'Terindikasi Positif', type: 'line', data: data.tren.positif });
-                }
+                let series = [{ name: 'Kegiatan', type: 'column', data: data.tren.kegiatan }];
+                if (unit && unit !== '-') series.push({ name: unit, type: 'line', data: data.tren.dampak });
+                if (data.config.has_positif) series.push({ name: 'Positif', type: 'line', data: data.tren.positif });
 
                 let options = {
                     series: series,
                     chart: { height: 450, type: 'line', toolbar: { show: false }, fontFamily: 'Nunito' },
-                    stroke: { width: [0, 4, 4], curve: 'smooth' }, 
-                    plotOptions: { 
-                        bar: { 
-                            columnWidth: '50%', 
-                            borderRadius: 4,
-                            // POSISI DATA BATANG: DI ATAS
-                            dataLabels: { position: 'top' } 
-                        } 
-                    },
-                    // WARNA: BIRU (Kegiatan), MERAH (Peserta/Garis), HITAM (Positif)
-                    colors: ['#0d6efd', '#dc3545', '#000000'], 
+                    stroke: { width: [0, 4, 4], curve: 'smooth' },
+                    colors: ['#0d6efd', '#dc3545', '#000000'],
                     labels: data.labels,
-                    xaxis: { labels: { style: { fontWeight: 'bold', fontSize: '15px', colors: '#000' } } }, 
-                    yaxis: [
-                        { title: { text: 'Jumlah Kegiatan', style: { fontSize: '14px', fontWeight: 'bold' } }, labels: { style: { colors: '#0d6efd', fontSize: '14px', fontWeight: 'bold' } } },
-                        { opposite: true, title: { text: unit, style: { fontSize: '14px', fontWeight: 'bold' } }, labels: { style: { colors: '#dc3545', fontSize: '14px', fontWeight: 'bold' } } }
-                    ],
-                    // --- BERSIH TANPA BAYANGAN ---
-                    dataLabels: { 
-                        enabled: true, 
-                        enabledOnSeries: undefined, 
-                        // WARNA TEKS: BIRU UNTUK BATANG, MERAH UNTUK GARIS
-                        style: { 
-                            fontSize: '13px',  
-                            fontWeight: 'bold',
-                            colors: ['#0d6efd', '#dc3545', '#000000'] 
-                        },
-                        background: { enabled: false }, // MATIKAN BOX
-                        dropShadow: { enabled: false }, // MATIKAN SHADOW
-                        offsetY: -20, // GESER KE ATAS BIAR GAK NEMPEL
-                        formatter: function (val, opts) {
-                            if (val === 0) return ""; 
-                            return new Intl.NumberFormat('id-ID').format(val);
-                        }
+                    // AGAR ANGKA MUNCUL DI GRAFIK
+                    dataLabels: {
+                        enabled: true,
+                        enabledOnSeries: [0, 1, 2],
+                        offsetY: -10,
+                        formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : "",
+                        style: { fontSize: '11px', colors: ["#304758"] }
                     },
-                    tooltip: { theme: 'light', style: { fontSize: '14px' } },
-                    legend: { position: 'top', fontSize: '14px', fontWeight: 'bold' }
+                    yaxis: [{ title: { text: 'Kegiatan' } }, { opposite: true, title: { text: unit } }]
                 };
-
-                if (this.charts.left) {
-                    this.charts.left.updateOptions(options);
-                } else {
-                    this.charts.left = new ApexCharts(this.$refs.leftChart, options);
-                    this.charts.left.render();
-                }
+                if (this.charts.left) this.charts.left.updateOptions(options);
+                else { this.charts.left = new ApexCharts(this.$refs.leftChart, options); this.charts.left.render(); }
             },
 
-            // RENDER CHART KANAN
+            // PERBAIKAN GRAFIK KANAN (Munculkan Angka & Persentase)
             renderRightChart(data) {
                 if(!data) return;
+                let isAnggaran = this.rightChartMode === 'anggaran';
+                let series = isAnggaran ? [{ name: 'DIPA', data: data.anggaran.dipa }, { name: 'Non-DIPA', data: data.anggaran.non_dipa }] : data.sasaran;
                 
-                let series = [];
-                let colors = [];
-
-                if (this.rightChartMode === 'anggaran') {
-                    series = [
-                        { name: 'DIPA', data: data.anggaran.dipa },
-                        { name: 'Non-DIPA', data: data.anggaran.non_dipa }
-                    ];
-                    colors = ['#0d6efd', '#ffc107']; 
-                } else {
-                    series = data.sasaran;
-                    // PALET STANDAR: Hijau, Ungu, Oranye, Biru Muda
-                    colors = ['#20c997', '#6f42c1', '#fd7e14', '#0dcaf0']; 
-                }
-
                 let options = {
                     series: series,
-                    plotOptions: { bar: { borderRadius: 4, columnWidth: '70%' } },
                     chart: { type: 'bar', height: 450, stacked: true, toolbar: { show: false }, fontFamily: 'Nunito' },
-                    colors: colors,
                     labels: data.labels,
-                    xaxis: { labels: { style: { fontWeight: 'bold', fontSize: '15px', colors: '#000' } } },
-                    yaxis: { labels: { style: { fontWeight: 'bold', fontSize: '14px' } } },
-                    legend: { position: 'top', horizontalAlign: 'right', fontSize: '13px', fontWeight: 'bold' },
-                    
-                    dataLabels: { 
-                        enabled: true, 
-                        style: { fontSize: '13px', fontWeight: 'bold', colors: ['#fff'] },
-                        dropShadow: { enabled: false }, // NO SHADOW
+                    dataLabels: {
+                        enabled: true,
                         formatter: function (val, opts) {
-                            if (val === 0) return ""; 
+                            if (val === 0) return "";
                             let total = 0;
-                            let seriesAll = opts.w.config.series;
-                            seriesAll.forEach(s => {
-                                total += s.data[opts.dataPointIndex];
-                            });
-                            let percent = 0;
-                            if(total > 0) percent = Math.round((val / total) * 100);
-                            
-                            if(percent < 5) return ""; // Sembunyikan jika terlalu kecil
-                            
+                            opts.w.config.series.forEach(s => { total += s.data[opts.dataPointIndex]; });
+                            let percent = Math.round((val / total) * 100);
                             return val + " (" + percent + "%)";
-                        }
+                        },
+                        style: { fontSize: '11px' }
                     },
-                    tooltip: { theme: 'light', style: { fontSize: '14px' } }
+                    legend: { position: 'bottom' }
                 };
+                if (this.charts.right) this.charts.right.destroy();
+                this.charts.right = new ApexCharts(this.$refs.rightChart, options);
+                this.charts.right.render();
+            },
 
-                if (this.charts.right) {
-                    this.charts.right.destroy(); 
-                    this.charts.right = new ApexCharts(this.$refs.rightChart, options);
-                    this.charts.right.render();
-                } else {
-                    this.charts.right = new ApexCharts(this.$refs.rightChart, options);
-                    this.charts.right.render();
-                }
+            // =========================================================================
+            // FUNGSI BIDANG BERANTAS
+            // =========================================================================
+            fetchBerantasGlobal() {
+                let url = `{{ route('api.dashboard.global') }}?scope=berantas&start_year=${this.startYear}&end_year=${this.endYear}&satker_id=${this.satkerId}`;
+                fetch(url).then(res => res.json()).then(data => { this.berantasCards = data; });
+            },
+
+            fetchBerantasChart() {
+                let url = `{{ route('api.dashboard.chart') }}?scope=berantas&year=${this.chartFilter.year}&satker_id=${this.satkerId}`;
+                fetch(url).then(res => res.json()).then(data => { this.renderBerantasMainChart(data); });
+            },
+
+            renderBerantasMainChart(data) {
+                let options = {
+                    series: [
+                        { name: 'Volume LKN (g)', type: 'area', data: data.tren.lkn_gram },
+                        { name: 'Volume TAT (g)', type: 'area', data: data.tren.tat_gram },
+                        { name: 'Jumlah Item', type: 'column', data: data.tren.total_item_count }
+                    ],
+                    chart: { height: 450, type: 'line', toolbar: {show: false}, fontFamily: 'Nunito' },
+                    stroke: { width: [3, 3, 0], curve: 'smooth' },
+                    fill: { opacity: [0.3, 0.3, 1] },
+                    xaxis: { categories: data.labels },
+                    dataLabels: {
+                        enabled: true,
+                        enabledOnSeries: [0, 1, 2],
+                        formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : ""
+                    },
+                    yaxis: [{ title: { text: 'Gram' } }, { opposite: true, title: { text: 'Item' } }]
+                };
+                if (this.charts.berantasMain) this.charts.berantasMain.destroy();
+                this.charts.berantasMain = new ApexCharts(this.$refs.berantasMainChart, options);
+                this.charts.berantasMain.render();
             },
 
             get satkerLabel() {
-                if (this.satkerId === "") return "Menampilkan Data Gabungan Seluruh Satuan Kerja (Provinsi & Kab/Kota)";
+                if (this.satkerId === "") return "Seluruh Satuan Kerja";
                 let el = document.getElementById('select-satker');
-                if (el && el.options.length > 0) {
-                    for (let i = 0; i < el.options.length; i++) {
-                        if (el.options[i].value == this.satkerId) return "Menampilkan Data: " + el.options[i].text;
-                    }
-                }
-                return "Menampilkan Data Satuan Kerja";
+                return el && el.options[el.selectedIndex] ? "Data: " + el.options[el.selectedIndex].text : "Data Satker";
             }
         }));
     });

@@ -32,11 +32,18 @@ class DashboardController extends Controller
         return view('dashboard.index', compact('satkers', 'years', 'permissions', 'defaultTab'));
     }
 
-    // API: Data Global Kartu Atas
+    // --- UPDATE FUNGSI INI ---
     public function getGlobalData(Request $request) {
         $startYear = $request->input('start_year', date('Y'));
         $endYear   = $request->input('end_year', date('Y'));
         $satkerId  = $this->getSatkerId($request);
+        $scope     = $request->input('scope', 'p2m');
+
+        // Tambahkan kondisi untuk berantas
+        if ($scope === 'berantas') {
+            return $this->getGlobalBerantas($startYear, $endYear, $satkerId);
+        }
+        
         return $this->getGlobalP2M($startYear, $endYear, $satkerId);
     }
 
@@ -47,6 +54,14 @@ class DashboardController extends Controller
     {
         $year = $request->input('year', date('Y'));
         $satkerId = $this->getSatkerId($request);
+
+        $scope = $request->input('scope', 'p2m');
+
+        // Tambahkan kondisi untuk berantas
+        if ($scope === 'berantas') {
+            return $this->getBerantasChartData($year, $satkerId);
+        }
+
         $type = $request->input('type', 'sosialisasi'); 
 
         $months = range(1, 12);
@@ -153,6 +168,63 @@ class DashboardController extends Controller
             ],
             'sasaran' => $sasaranSeries
         ]);
+    }
+
+    // --- TAMBAHKAN FUNGSI HELPER BARU DI PALING BAWAH CLASS ---
+    private function getGlobalBerantas($yStart, $yEnd, $satkerId) {
+        $filter = function($q, $col) use ($yStart, $yEnd, $satkerId) {
+            $q->whereYear($col, '>=', $yStart)->whereYear($col, '<=', $yEnd);
+            if ($satkerId) $q->where('satuan_kerja_id', $satkerId);
+            return $q;
+        };
+
+        $lknIds = $filter(DB::table('berantas_ungkap_kasus'), 'tanggal_kejadian')->pluck('id');
+        $tatIds = $filter(DB::table('berantas_tat'), 'tanggal_pelaksanaan')->pluck('id');
+        $regIds = $filter(DB::table('berantas_register_barang_bukti'), 'tanggal_perolehan')->pluck('id');
+
+        $sqlW = "SUM(CASE WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 ELSE kuantitas END)";
+
+        $qLkn = DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id', $lknIds)->where('kategori', 'Narkotika');
+        $qTat = DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id', $tatIds)->where('kategori', 'Narkotika');
+        $qReg = DB::table('berantas_register_barang_bukti_items')->whereIn('register_barang_bukti_id', $regIds)->where('kategori', 'Narkotika');
+
+        return response()->json([
+            'lkn' => [
+                'kasus' => number_format($lknIds->count()),
+                'tersangka' => number_format(DB::table('berantas_ungkap_tersangka')->whereIn('berantas_ungkap_kasus_id', $lknIds)->count()),
+                'berat' => number_format((clone $qLkn)->selectRaw($sqlW." as t")->value('t') ?? 0, 2, ',', '.') . ' g',
+                'item' => number_format((clone $qLkn)->count()) . ' Item'
+            ],
+            'tat' => [
+                'kasus' => number_format($tatIds->count()),
+                'tersangka' => number_format(DB::table('berantas_tat_tersangka')->whereIn('berantas_tat_id', $tatIds)->count()),
+                'berat' => number_format((clone $qTat)->sum('kuantitas') ?? 0, 2, ',', '.') . ' g',
+                'item' => number_format((clone $qTat)->count()) . ' Item'
+            ],
+            'bb' => [
+                'total_berat' => number_format((clone $qReg)->selectRaw($sqlW." as t")->value('t') ?? 0, 2, ',', '.') . ' g',
+                'total_item' => number_format((clone $qReg)->count()) . ' Item',
+                'tangkap_berat' => number_format((clone $qReg)->where('sumber_perolehan','Hasil Tangkap')->selectRaw($sqlW." as t")->value('t') ?? 0, 2, ',', '.') . ' g',
+                'temuan_berat' => number_format((clone $qReg)->where('sumber_perolehan','Temuan')->selectRaw($sqlW." as t")->value('t') ?? 0, 2, ',', '.') . ' g'
+            ]
+        ]);
+    }
+
+    private function getBerantasChartData($year, $satkerId) {
+        $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+        $lknW = []; $tatW = []; $items = [];
+        $sqlW = "SUM(CASE WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 ELSE kuantitas END)";
+
+        for ($m = 1; $m <= 12; $m++) {
+            $lknIds = DB::table('berantas_ungkap_kasus')->whereYear('tanggal_kejadian',$year)->whereMonth('tanggal_kejadian',$m)->when($satkerId, fn($q)=>$q->where('satuan_kerja_id',$satkerId))->pluck('id');
+            $tatIds = DB::table('berantas_tat')->whereYear('tanggal_pelaksanaan',$year)->whereMonth('tanggal_pelaksanaan',$m)->when($satkerId, fn($q)=>$q->where('satuan_kerja_id',$satkerId))->pluck('id');
+
+            $lknW[] = round(DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id',$lknIds)->where('kategori','Narkotika')->selectRaw($sqlW." as t")->value('t') ?? 0, 2);
+            $tatW[] = round(DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id',$tatIds)->where('kategori','Narkotika')->sum('kuantitas') ?? 0, 2);
+            $items[] = DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id',$lknIds)->where('kategori','Narkotika')->count() + 
+                    DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id',$tatIds)->where('kategori','Narkotika')->count();
+        }
+        return response()->json(['labels' => $labels, 'tren' => ['lkn_gram' => $lknW, 'tat_gram' => $tatW, 'total_item_count' => $items]]);
     }
 
     // Helper: Konfigurasi Mapping Tabel

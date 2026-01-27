@@ -219,9 +219,9 @@
         {{-- ========================================================================= --}}
         {{-- TAB BERANTAS --}}
         {{-- ========================================================================= --}}
+
         <div x-show="activeTab === 'berantas'" x-transition>
-            
-            {{-- 1. Filter Rentang Tahun --}}
+            {{-- A. FILTER RENTANG TAHUN UNTUK KARTU ATAS --}}
             <div class="d-flex justify-content-end mb-3">
                 <div class="d-flex align-items-center bg-white p-2 rounded shadow-sm border gap-2">
                     <span class="fw-bold text-muted small"><i class="bi bi-calendar-range me-2 text-primary"></i>Rentang Tahun:</span>
@@ -235,67 +235,38 @@
                 </div>
             </div>
 
-            {{-- 2. Kartu Pilar Berwarna (LKN, TAT, Barang Bukti) --}}
+            {{-- B. KARTU RINGKASAN UTAMA (INI JANGAN SAMPAI HILANG) --}}
             <div class="row g-3 mb-4">
-                {{-- Ungkap Kasus (LKN) --}}
                 <div class="col-md-4">
                     <div class="card border-0 shadow-sm h-100 bg-primary text-white p-4 overflow-hidden position-relative">
                         <i class="bi bi-shield-shaded position-absolute opacity-10" style="font-size: 7rem; right: -10px; top: -10px;"></i>
-                        <h6 class="text-uppercase fw-bold opacity-75 mb-3">Ungkap Kasus (LKN)</h6>
-                        <div class="d-flex gap-4 mb-3 position-relative">
-                            <div>
-                                <small class="d-block opacity-75">Total LKN</small>
-                                <h3 class="fw-bold" x-text="berantasCards.lkn.kasus">0</h3>
-                            </div>
-                            <div>
-                                <small class="d-block opacity-75">Total Tersangka</small>
-                                <h3 class="fw-bold" x-text="berantasCards.lkn.tersangka">0</h3>
-                            </div>
+                        <h6 class="text-uppercase fw-bold opacity-75 mb-3">UNGKAP KASUS (LKN)</h6>
+                        <div class="d-flex gap-4 mb-3">
+                            <div><small class="d-block opacity-75">Total LKN</small><h3 class="fw-bold" x-text="berantasCards.lkn.kasus">0</h3></div>
+                            <div><small class="d-block opacity-75">Total Tersangka</small><h3 class="fw-bold" x-text="berantasCards.lkn.tersangka">0</h3></div>
                         </div>
                         <div class="bg-white bg-opacity-10 p-2 rounded border border-white border-opacity-25 mt-auto">
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>Total Berat Narkotika:</span>
-                                <span class="fw-bold" x-text="berantasCards.lkn.berat">0 g</span>
-                            </div>
-                            <div class="d-flex justify-content-between small">
-                                <span>Total Item Narkotika:</span>
-                                <span class="fw-bold" x-text="berantasCards.lkn.item">0 Item</span>
-                            </div>
+                            <div class="d-flex justify-content-between small"><span>Total Berat Narkotika:</span><span class="fw-bold" x-text="berantasCards.lkn.berat">0 g</span></div>
+                            <div class="d-flex justify-content-between small"><span>Total Item Narkotika:</span><span class="fw-bold" x-text="berantasCards.lkn.item">0 Item</span></div>
                         </div>
                     </div>
                 </div>
-
-                {{-- Asesmen (TAT) --}}
                 <div class="col-md-4">
                     <div class="card border-0 shadow-sm h-100 bg-info text-white p-4 overflow-hidden position-relative">
                         <i class="bi bi-person-lines-fill position-absolute opacity-10" style="font-size: 7rem; right: -10px; top: -10px;"></i>
-                        <h6 class="text-uppercase fw-bold opacity-75 mb-3">Asesmen (TAT)</h6>
-                        <div class="d-flex gap-4 mb-3 position-relative">
-                            <div>
-                                <small class="d-block opacity-75">Total Kasus</small>
-                                <h3 class="fw-bold" x-text="berantasCards.tat.kasus">0</h3>
-                            </div>
-                            <div>
-                                <small class="d-block opacity-75">Total Tersangka</small>
-                                <h3 class="fw-bold" x-text="berantasCards.tat.tersangka">0</h3>
-                            </div>
+                        <h6 class="text-uppercase fw-bold opacity-75 mb-3">ASESMEN (TAT)</h6>
+                        <div class="d-flex gap-4 mb-3">
+                            <div><small class="d-block opacity-75">Total Kasus</small><h3 class="fw-bold" x-text="berantasCards.tat.kasus">0</h3></div>
+                            <div><small class="d-block opacity-75">Total Tersangka</small><h3 class="fw-bold" x-text="berantasCards.tat.tersangka">0</h3></div>
                         </div>
                         <div class="bg-white bg-opacity-10 p-2 rounded border border-white border-opacity-25 mt-auto">
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>Total Berat Narkotika:</span>
-                                <span class="fw-bold" x-text="berantasCards.tat.berat">0 g</span>
-                            </div>
-                            <div class="d-flex justify-content-between small">
-                                <span>Total Item Narkotika:</span>
-                                <span class="fw-bold" x-text="berantasCards.tat.item">0 Item</span>
-                            </div>
+                            <div class="d-flex justify-content-between small"><span>Total Berat Narkotika:</span><span class="fw-bold" x-text="berantasCards.tat.berat">0 g</span></div>
+                            <div class="d-flex justify-content-between small"><span>Total Item Narkotika:</span><span class="fw-bold" x-text="berantasCards.tat.item">0 Item</span></div>
                         </div>
                     </div>
                 </div>
-
-                {{-- Barang Bukti (Register) --}}
                 <div class="col-md-4">
-                    <div class="card border-0 shadow-sm h-100 bg-danger text-white p-4 d-flex flex-column">
+                    <div class="card border-0 shadow-sm h-100 bg-danger text-white p-4">
                         <h6 class="text-uppercase fw-bold opacity-75 mb-3 text-center">BARANG BUKTI</h6>
                         <div class="text-center mb-3">
                             <small class="d-block opacity-75">Total Berat Narkotika</small>
@@ -303,43 +274,62 @@
                             <span class="badge bg-white text-danger fw-bold shadow-sm" x-text="berantasCards.bb.total_item">0 Item</span>
                         </div>
                         <div class="row g-2 mt-auto">
-                            <div class="col-6">
-                                <div class="bg-white bg-opacity-10 p-2 rounded text-center border border-white border-opacity-25 h-100">
-                                    <small class="d-block opacity-75 small">Hasil Tangkap</small>
-                                    <b class="small d-block mt-1" x-text="berantasCards.bb.tangkap_berat">0 g</b>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="bg-white bg-opacity-10 p-2 rounded text-center border border-white border-opacity-25 h-100">
-                                    <small class="d-block opacity-75 small">Temuan</small>
-                                    <b class="small d-block mt-1" x-text="berantasCards.bb.temuan_berat">0 g</b>
-                                </div>
-                            </div>
+                            <div class="col-6"><div class="bg-white bg-opacity-10 p-2 rounded text-center border border-white border-opacity-25"><small class="d-block opacity-75">Hasil Tangkap</small><b class="d-block small" x-text="berantasCards.bb.tangkap_berat">0</b><span class="small" style="font-size:0.7rem" x-text="berantasCards.bb.tangkap_item">0 Item</span></div></div>
+                            <div class="col-6"><div class="bg-white bg-opacity-10 p-2 rounded text-center border border-white border-opacity-25"><small class="d-block opacity-75">Temuan</small><b class="d-block small" x-text="berantasCards.bb.temuan_berat">0</b><span class="small" style="font-size:0.7rem" x-text="berantasCards.bb.temuan_item">0 Item</span></div></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- 3. Grafik Tren Berantas --}}
-            <div class="card border-0 shadow-sm p-4">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
-                    <div>
-                        <h6 class="fw-bold m-0 text-dark">
-                            <i class="bi bi-bar-chart-fill text-primary me-2"></i>Tren Bulanan Narkotika: Volume vs Item
-                        </h6>
-                        <small class="text-muted">Data berdasarkan tahun yang dipilih</small>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="small fw-bold text-muted">Tahun Grafik:</span>
-                        <select x-model="chartFilter.year" class="form-select form-select-sm border-secondary fw-bold text-primary" style="width: 100px;">
-                            @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
-                        </select>
-                    </div>
+            {{-- C. GRAFIK DETAIL PER BARIS --}}
+            <div class="card border-0 shadow-sm p-4 mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+                    <h6 class="fw-bold m-0 text-dark"><i class="bi bi-graph-up text-primary me-2"></i>Tren Bulanan Per Pilar (Narkotika Only)</h6>
+                    <select x-model="chartFilter.year" class="form-select form-select-sm border-secondary fw-bold" style="width: 100px;">
+                        @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                    </select>
                 </div>
-                {{-- Area Render Chart --}}
-                <div x-ref="berantasMainChart" style="min-height: 400px;"></div>
+
+                <div class="mb-5 border-bottom pb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="small fw-bold text-primary mb-0">1. UNGKAP KASUS (LKN)</h6>
+                        <div class="d-flex gap-1">
+                            <span class="badge bg-light text-dark border py-2 px-3">Total LKN: <span x-text="berantasTrendSummary.lkn.kasus"></span></span>
+                            <span class="badge bg-light text-dark border py-2 px-3">Total Tersangka: <span x-text="berantasTrendSummary.lkn.tersangka"></span></span>
+                            <span class="badge bg-light text-dark border py-2 px-3">Total BB Narkotika: <span x-text="berantasTrendSummary.lkn.item"></span></span>
+                            <span class="badge bg-light text-dark border py-2 px-3">Total Berat: <span x-text="berantasTrendSummary.lkn.berat"></span></span>
+                        </div>
+                    </div>
+                    <div x-ref="chartLknFull" style="min-height: 350px;"></div>
+                </div>
+
+                <div class="mb-5 border-bottom pb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="small fw-bold text-info mb-0">2. ASESMEN (TAT)</h6>
+                        <div class="d-flex gap-1">
+                            <span class="badge bg-light text-dark border py-2 px-3">Total Kasus: <span x-text="berantasTrendSummary.tat.kasus"></span></span>
+                            <span class="badge bg-light text-dark border py-2 px-3">Total Tersangka: <span x-text="berantasTrendSummary.tat.tersangka"></span></span>
+                            <span class="badge bg-light text-dark border py-2 px-3">Total BB Narkotika: <span x-text="berantasTrendSummary.tat.item"></span></span>
+                            <span class="badge bg-light text-dark border py-2 px-3">Total Berat: <span x-text="berantasTrendSummary.tat.berat"></span></span>
+                        </div>
+                    </div>
+                    <div x-ref="chartTatFull" style="min-height: 350px;"></div>
+                </div>
+
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="small fw-bold text-danger mb-0">3. BARANG BUKTI (REGISTER)</h6>
+                        <div class="d-flex gap-1">
+                            <span class="badge bg-light text-dark border py-2 px-3">Total Register: <span x-text="berantasTrendSummary.bb.total_reg"></span></span>
+                            <span class="badge bg-light text-dark border py-2 px-3">Total BB Narkotika: <span x-text="berantasTrendSummary.bb.total_item"></span></span>
+                            <span class="badge bg-light text-dark border py-2 px-3">Total Berat: <span x-text="berantasTrendSummary.bb.total_berat"></span></span>
+                        </div>
+                    </div>
+                    <div x-ref="chartBbFull" style="min-height: 350px;"></div>
+                </div>
             </div>
         </div>
+
     </div>
 </main>
 @endsection
@@ -354,7 +344,7 @@
             satkerId: '',
             activeTab: '{{ $defaultTab }}', 
 
-            // --- STATE P2M ---
+            // --- STATE P2M (TETAP SEPERTI ASLINYA) ---
             p2mCards: { 
                 kegiatan: { total: 0 }, 
                 orang: { total: 0, list: {} }, 
@@ -366,25 +356,29 @@
             chartDataCache: null, 
             hasSasaran: true,
 
-            // --- STATE BERANTAS ---
+            // --- STATE BERANTAS (KARTU ATAS & BADGE GRAFIK) ---
             berantasCards: { 
                 lkn: { kasus: 0, tersangka: 0, berat: '0 g', item: '0 Item' },
                 tat: { kasus: 0, tersangka: 0, berat: '0 g', item: '0 Item' },
-                bb: { total_berat: '0 g', total_item: '0 Item', tangkap_berat: '0 g', temuan_berat: '0 g' }
+                bb: { 
+                    total_berat: '0 g', total_item: '0 Item', 
+                    tangkap_berat: '0 g', tangkap_item: '0 Item',
+                    temuan_berat: '0 g', temuan_item: '0 Item' 
+                }
+            },
+            berantasTrendSummary: {
+                lkn: { kasus: 0, tersangka: 0, item: 0, berat: '0 g' },
+                tat: { kasus: 0, tersangka: 0, item: 0, berat: '0 g' },
+                bb: { total_reg: 0, total_item: 0, total_berat: '0 g', tangkap: '0', temuan: '0' }
             },
 
-            charts: { p2mRanking: null, left: null, right: null, berantasMain: null },
+            charts: { p2mRanking: null, left: null, right: null, chartLknFull: null, chartTatFull: null, chartBbFull: null },
 
             init() {
                 let elSatker = document.getElementById('select-satker');
                 if (elSatker && typeof TomSelect !== 'undefined') {
                     if (elSatker.tomselect) elSatker.tomselect.destroy();
-                    let ts = new TomSelect(elSatker, { 
-                        create: false, 
-                        controlInput: null, 
-                        allowEmptyOption: true, 
-                        placeholder: "Pilih Satuan Kerja..." 
-                    });
+                    let ts = new TomSelect(elSatker, { create: false, controlInput: null, allowEmptyOption: true, placeholder: "Pilih Satuan Kerja..." });
                     ts.on('change', (val) => { this.satkerId = val; });
                 }
                 
@@ -395,12 +389,8 @@
                 this.$watch('startYear', () => this.loadActiveTabData());
                 this.$watch('endYear', () => this.loadActiveTabData());
                 this.$watch('satkerId', () => this.loadActiveTabData());
-                
+                this.$watch('chartFilter.year', () => { if (this.activeTab === 'berantas') this.fetchBerantasChart(); });
                 this.$watch('chartFilter.type', () => { if (this.activeTab === 'p2m') this.fetchChartData(); });
-                this.$watch('chartFilter.year', () => {
-                    if (this.activeTab === 'p2m') this.fetchChartData();
-                    if (this.activeTab === 'berantas') this.fetchBerantasChart();
-                });
                 this.$watch('rightChartMode', () => { if (this.activeTab === 'p2m') this.renderRightChart(this.chartDataCache); });
             },
 
@@ -410,102 +400,46 @@
                     this.fetchP2MGlobal(); 
                     this.fetchChartData(); 
                 } else if (this.activeTab === 'berantas') {
-                    this.fetchBerantasGlobal();
+                    // PANGGIL KEDUA DATA: KARTU ATAS & GRAFIK BAWAH
+                    this.fetchBerantasGlobal(); 
                     this.fetchBerantasChart();
                 }
             },
 
-            // =========================================================================
-            // FUNGSI BIDANG P2M
-            // =========================================================================
+            // --- FUNGSI P2M (ORIGINAL) ---
             fetchP2MGlobal() {
                 let url = `{{ route('api.dashboard.global') }}?scope=p2m&start_year=${this.startYear}&end_year=${this.endYear}&satker_id=${this.satkerId}`;
-                fetch(url).then(res => res.json()).then(data => {
-                    this.p2mCards = data;
-                    this.renderRanking(data.ranking_chart);
-                });
+                fetch(url).then(res => res.json()).then(data => { this.p2mCards = data; this.renderRanking(data.ranking_chart); });
             },
 
             fetchChartData() {
                 let url = `{{ route('api.dashboard.chart') }}?scope=p2m&type=${this.chartFilter.type}&year=${this.chartFilter.year}&satker_id=${this.satkerId}`;
-                fetch(url).then(res => res.json()).then(data => {
-                    this.chartDataCache = data;
-                    this.hasSasaran = data.config.has_sasaran;
-                    this.renderLeftChart(data);
-                    this.renderRightChart(data);
-                });
+                fetch(url).then(res => res.json()).then(data => { this.chartDataCache = data; this.hasSasaran = data.config.has_sasaran; this.renderLeftChart(data); this.renderRightChart(data); });
             },
 
             renderRanking(data) {
-                let options = {
-                    series: [{ name: 'Jumlah Laporan', data: data.data }],
-                    chart: { type: 'bar', height: 500, toolbar: {show: false}, fontFamily: 'Nunito' },
-                    plotOptions: { bar: { horizontal: true, distributed: true } },
-                    xaxis: { categories: data.labels },
-                    dataLabels: { enabled: true }
-                };
-                if (this.charts.p2mRanking) this.charts.p2mRanking.updateOptions(options);
-                else { this.charts.p2mRanking = new ApexCharts(this.$refs.p2mRankingChart, options); this.charts.p2mRanking.render(); }
+                let options = { series: [{ name: 'Laporan', data: data.data }], chart: { type: 'bar', height: 500, toolbar: {show: false} }, plotOptions: { bar: { horizontal: true, distributed: true } }, xaxis: { categories: data.labels }, dataLabels: { enabled: true } };
+                if (this.charts.p2mRanking) this.charts.p2mRanking.updateOptions(options); else { this.charts.p2mRanking = new ApexCharts(this.$refs.p2mRankingChart, options); this.charts.p2mRanking.render(); }
             },
 
-            // PERBAIKAN GRAFIK KIRI (Munculkan Angka)
             renderLeftChart(data) {
                 let unit = data.config.label_unit;
                 let series = [{ name: 'Kegiatan', type: 'column', data: data.tren.kegiatan }];
                 if (unit && unit !== '-') series.push({ name: unit, type: 'line', data: data.tren.dampak });
                 if (data.config.has_positif) series.push({ name: 'Positif', type: 'line', data: data.tren.positif });
-
-                let options = {
-                    series: series,
-                    chart: { height: 450, type: 'line', toolbar: { show: false }, fontFamily: 'Nunito' },
-                    stroke: { width: [0, 4, 4], curve: 'smooth' },
-                    colors: ['#0d6efd', '#dc3545', '#000000'],
-                    labels: data.labels,
-                    // AGAR ANGKA MUNCUL DI GRAFIK
-                    dataLabels: {
-                        enabled: true,
-                        enabledOnSeries: [0, 1, 2],
-                        offsetY: -10,
-                        formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : "",
-                        style: { fontSize: '11px', colors: ["#304758"] }
-                    },
-                    yaxis: [{ title: { text: 'Kegiatan' } }, { opposite: true, title: { text: unit } }]
-                };
-                if (this.charts.left) this.charts.left.updateOptions(options);
-                else { this.charts.left = new ApexCharts(this.$refs.leftChart, options); this.charts.left.render(); }
+                let options = { series: series, chart: { height: 450, type: 'line', toolbar: { show: false } }, stroke: { width: [0, 4, 4], curve: 'smooth' }, colors: ['#0d6efd', '#dc3545', '#000000'], labels: data.labels, dataLabels: { enabled: true, enabledOnSeries: [0, 1], formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : "" }, yaxis: [{ title: { text: 'Kegiatan' } }, { opposite: true, title: { text: unit } }] };
+                if (this.charts.left) this.charts.left.updateOptions(options); else { this.charts.left = new ApexCharts(this.$refs.leftChart, options); this.charts.left.render(); }
             },
 
-            // PERBAIKAN GRAFIK KANAN (Munculkan Angka & Persentase)
             renderRightChart(data) {
                 if(!data) return;
                 let isAnggaran = this.rightChartMode === 'anggaran';
                 let series = isAnggaran ? [{ name: 'DIPA', data: data.anggaran.dipa }, { name: 'Non-DIPA', data: data.anggaran.non_dipa }] : data.sasaran;
-                
-                let options = {
-                    series: series,
-                    chart: { type: 'bar', height: 450, stacked: true, toolbar: { show: false }, fontFamily: 'Nunito' },
-                    labels: data.labels,
-                    dataLabels: {
-                        enabled: true,
-                        formatter: function (val, opts) {
-                            if (val === 0) return "";
-                            let total = 0;
-                            opts.w.config.series.forEach(s => { total += s.data[opts.dataPointIndex]; });
-                            let percent = Math.round((val / total) * 100);
-                            return val + " (" + percent + "%)";
-                        },
-                        style: { fontSize: '11px' }
-                    },
-                    legend: { position: 'bottom' }
-                };
-                if (this.charts.right) this.charts.right.destroy();
-                this.charts.right = new ApexCharts(this.$refs.rightChart, options);
-                this.charts.right.render();
+                let options = { series: series, chart: { type: 'bar', height: 450, stacked: true, toolbar: { show: false } }, labels: data.labels, dataLabels: { enabled: true, formatter: function (val, opts) { if (val === 0) return ""; let total = 0; opts.w.config.series.forEach(s => { total += s.data[opts.dataPointIndex]; }); return val + " (" + Math.round((val / total) * 100) + "%)"; } } };
+                if (this.charts.right) this.charts.right.destroy(); this.charts.right = new ApexCharts(this.$refs.rightChart, options); this.charts.right.render();
             },
 
-            // =========================================================================
-            // FUNGSI BIDANG BERANTAS
-            // =========================================================================
+            // --- FUNGSI BERANTAS (KARTU ATAS & GRAFIK COMBO) ---
             fetchBerantasGlobal() {
                 let url = `{{ route('api.dashboard.global') }}?scope=berantas&start_year=${this.startYear}&end_year=${this.endYear}&satker_id=${this.satkerId}`;
                 fetch(url).then(res => res.json()).then(data => { this.berantasCards = data; });
@@ -513,30 +447,29 @@
 
             fetchBerantasChart() {
                 let url = `{{ route('api.dashboard.chart') }}?scope=berantas&year=${this.chartFilter.year}&satker_id=${this.satkerId}`;
-                fetch(url).then(res => res.json()).then(data => { this.renderBerantasMainChart(data); });
+                fetch(url).then(res => res.json()).then(data => {
+                    this.berantasTrendSummary = data.summary;
+                    this.renderBerantasCombo(this.$refs.chartLknFull, [{ name: 'LKN', type: 'column', data: data.tren.lkn.kasus }, { name: 'Tersangka', type: 'column', data: data.tren.lkn.tersangka }, { name: 'Item Narko', type: 'column', data: data.tren.lkn.item }, { name: 'Berat (g)', type: 'line', data: data.tren.lkn.berat }], '#0d6efd', 'chartLknFull');
+                    this.renderBerantasCombo(this.$refs.chartTatFull, [{ name: 'Kasus', type: 'column', data: data.tren.tat.kasus }, { name: 'Tersangka', type: 'column', data: data.tren.tat.tersangka }, { name: 'Item Narko', type: 'column', data: data.tren.tat.item }, { name: 'Berat (g)', type: 'line', data: data.tren.tat.berat }], '#0dcaf0', 'chartTatFull');
+                    this.renderBerantasCombo(this.$refs.chartBbFull, [{ name: 'Register', type: 'column', data: data.tren.bb.reg }, { name: 'Tangkap', type: 'column', data: data.tren.bb.tangkap }, { name: 'Temuan', type: 'column', data: data.tren.bb.temuan }, { name: 'Berat (g)', type: 'line', data: data.tren.bb.berat }], '#dc3545', 'chartBbFull');
+                });
             },
 
-            renderBerantasMainChart(data) {
+            renderBerantasCombo(el, series, primaryColor, chartKey) {
                 let options = {
-                    series: [
-                        { name: 'Volume LKN (g)', type: 'area', data: data.tren.lkn_gram },
-                        { name: 'Volume TAT (g)', type: 'area', data: data.tren.tat_gram },
-                        { name: 'Jumlah Item', type: 'column', data: data.tren.total_item_count }
-                    ],
-                    chart: { height: 450, type: 'line', toolbar: {show: false}, fontFamily: 'Nunito' },
-                    stroke: { width: [3, 3, 0], curve: 'smooth' },
-                    fill: { opacity: [0.3, 0.3, 1] },
-                    xaxis: { categories: data.labels },
-                    dataLabels: {
-                        enabled: true,
-                        enabledOnSeries: [0, 1, 2],
-                        formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : ""
-                    },
-                    yaxis: [{ title: { text: 'Gram' } }, { opposite: true, title: { text: 'Item' } }]
+                    series: series,
+                    chart: { height: 350, type: 'line', toolbar: { show: false }, fontFamily: 'Nunito' },
+                    stroke: { width: [0, 0, 0, 4], curve: 'smooth' },
+                    colors: [primaryColor, '#ffc107', '#198754', primaryColor],
+                    dataLabels: { enabled: true, enabledOnSeries: [0, 1, 2, 3], formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : '', style: { fontSize: '10px' }, background: { enabled: true, opacity: 0.7 } },
+                    xaxis: { categories: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'] },
+                    yaxis: [{ title: { text: "Jumlah" } }, { opposite: true, title: { text: "Gram" } }],
+                    tooltip: { shared: true, intersect: false },
+                    legend: { position: 'top', horizontalAlign: 'right' }
                 };
-                if (this.charts.berantasMain) this.charts.berantasMain.destroy();
-                this.charts.berantasMain = new ApexCharts(this.$refs.berantasMainChart, options);
-                this.charts.berantasMain.render();
+                if (this.charts[chartKey]) this.charts[chartKey].destroy();
+                this.charts[chartKey] = new ApexCharts(el, options);
+                this.charts[chartKey].render();
             },
 
             get satkerLabel() {

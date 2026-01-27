@@ -57,9 +57,73 @@ class DashboardController extends Controller
 
         $scope = $request->input('scope', 'p2m');
 
-        // Tambahkan kondisi untuk berantas
+        // --- LOGIKA KHUSUS BERANTAS ---
         if ($scope === 'berantas') {
-            return $this->getBerantasChartData($year, $satkerId);
+            $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            $sqlGram = "SUM(CASE WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 ELSE kuantitas END)";
+
+            $lknData = ['kasus' => [], 'tersangka' => [], 'item' => [], 'berat' => []];
+            $tatData = ['kasus' => [], 'tersangka' => [], 'item' => [], 'berat' => []];
+            $bbData  = ['reg' => [], 'tangkap' => [], 'temuan' => [], 'item' => [], 'berat' => []];
+
+            for ($m = 1; $m <= 12; $m++) {
+                // 1. DATA LKN BULANAN
+                $lknIds = DB::table('berantas_ungkap_kasus')->whereYear('tanggal_kejadian', $year)->whereMonth('tanggal_kejadian', $m)->when($satkerId, fn($q) => $q->where('satuan_kerja_id', $satkerId))->pluck('id');
+                $lknData['kasus'][] = $lknIds->count();
+                $lknData['tersangka'][] = DB::table('berantas_ungkap_tersangka')->whereIn('berantas_ungkap_kasus_id', $lknIds)->count();
+                $lknData['item'][] = DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id', $lknIds)->where('kategori', 'Narkotika')->count();
+                $lknData['berat'][] = round(DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id', $lknIds)->where('kategori', 'Narkotika')->selectRaw($sqlGram." as t")->value('t') ?? 0, 2);
+
+                // 2. DATA TAT BULANAN
+                $tatIds = DB::table('berantas_tat')->whereYear('tanggal_pelaksanaan', $year)->whereMonth('tanggal_pelaksanaan', $m)->when($satkerId, fn($q) => $q->where('satuan_kerja_id', $satkerId))->pluck('id');
+                $tatData['kasus'][] = $tatIds->count();
+                $tatData['tersangka'][] = DB::table('berantas_tat_tersangka')->whereIn('berantas_tat_id', $tatIds)->count();
+                $tatData['item'][] = DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id', $tatIds)->where('kategori', 'Narkotika')->count();
+                $tatData['berat'][] = round(DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id', $tatIds)->where('kategori', 'Narkotika')->sum('kuantitas') ?? 0, 2);
+
+                // 3. DATA REGISTER BB BULANAN
+                $regIds = DB::table('berantas_register_barang_bukti')->whereYear('tanggal_perolehan', $year)->whereMonth('tanggal_perolehan', $m)->when($satkerId, fn($q) => $q->where('satuan_kerja_id', $satkerId))->pluck('id');
+                $bbData['reg'][] = $regIds->count();
+                $bbData['tangkap'][] = DB::table('berantas_register_barang_bukti_items')->whereIn('register_barang_bukti_id', $regIds)->where('kategori', 'Narkotika')->where('sumber_perolehan', 'Hasil Tangkap')->count();
+                $bbData['temuan'][] = DB::table('berantas_register_barang_bukti_items')->whereIn('register_barang_bukti_id', $regIds)->where('kategori', 'Narkotika')->where('sumber_perolehan', 'Temuan')->count();
+                $bbData['item'][] = DB::table('berantas_register_barang_bukti_items')->whereIn('register_barang_bukti_id', $regIds)->where('kategori', 'Narkotika')->count();
+                $bbData['berat'][] = round(DB::table('berantas_register_barang_bukti_items')->whereIn('register_barang_bukti_id', $regIds)->where('kategori', 'Narkotika')->selectRaw($sqlGram." as t")->value('t') ?? 0, 2);
+            }
+
+            // --- DATA SUMMARY TAHUNAN UNTUK BADGES ---
+            $yLknIds = DB::table('berantas_ungkap_kasus')->whereYear('tanggal_kejadian', $year)->when($satkerId, fn($q) => $q->where('satuan_kerja_id', $satkerId))->pluck('id');
+            $yTatIds = DB::table('berantas_tat')->whereYear('tanggal_pelaksanaan', $year)->when($satkerId, fn($q) => $q->where('satuan_kerja_id', $satkerId))->pluck('id');
+            $yRegIds = DB::table('berantas_register_barang_bukti')->whereYear('tanggal_perolehan', $year)->when($satkerId, fn($q) => $q->where('satuan_kerja_id', $satkerId))->pluck('id');
+            $regItems = DB::table('berantas_register_barang_bukti_items')->whereIn('register_barang_bukti_id', $yRegIds)->where('kategori', 'Narkotika');
+            $regTotalCount = (clone $regItems)->count();
+            $regTangkap = (clone $regItems)->where('sumber_perolehan', 'Hasil Tangkap')->count();
+            $regTemuan = (clone $regItems)->where('sumber_perolehan', 'Temuan')->count();
+
+            return response()->json([
+                'labels' => $labels,
+                'tren' => ['lkn' => $lknData, 'tat' => $tatData, 'bb' => $bbData],
+                'summary' => [
+                    'lkn' => [
+                        'kasus' => number_format($yLknIds->count()),
+                        'tersangka' => number_format(DB::table('berantas_ungkap_tersangka')->whereIn('berantas_ungkap_kasus_id', $yLknIds)->count()),
+                        'item' => number_format(DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id', $yLknIds)->where('kategori', 'Narkotika')->count()),
+                        'berat' => number_format(array_sum($lknData['berat']), 2, ',', '.') . ' g'
+                    ],
+                    'tat' => [
+                        'kasus' => number_format($yTatIds->count()),
+                        'tersangka' => number_format(DB::table('berantas_tat_tersangka')->whereIn('berantas_tat_id', $yTatIds)->count()),
+                        'item' => number_format(DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id', $yTatIds)->where('kategori', 'Narkotika')->count()),
+                        'berat' => number_format(array_sum($tatData['berat']), 2, ',', '.') . ' g'
+                    ],
+                    'bb' => [
+                        'total_reg' => number_format($yRegIds->count()),
+                        'total_item' => number_format($regTotalCount),
+                        'total_berat' => number_format(array_sum($bbData['berat']), 2, ',', '.') . ' g',
+                        'tangkap' => $regTangkap . " (" . ($regTotalCount > 0 ? round(($regTangkap/$regTotalCount)*100, 1) : 0) . "%)",
+                        'temuan' => $regTemuan . " (" . ($regTotalCount > 0 ? round(($regTemuan/$regTotalCount)*100, 1) : 0) . "%)",
+                    ]
+                ]
+            ]);
         }
 
         $type = $request->input('type', 'sosialisasi'); 
@@ -178,15 +242,24 @@ class DashboardController extends Controller
             return $q;
         };
 
+        // Mengambil ID Parent berdasarkan filter waktu dan satker
         $lknIds = $filter(DB::table('berantas_ungkap_kasus'), 'tanggal_kejadian')->pluck('id');
         $tatIds = $filter(DB::table('berantas_tat'), 'tanggal_pelaksanaan')->pluck('id');
         $regIds = $filter(DB::table('berantas_register_barang_bukti'), 'tanggal_perolehan')->pluck('id');
 
+        // SQL Helper untuk konversi berat (Kg/Ton ke Gram) secara presisi
         $sqlW = "SUM(CASE WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 ELSE kuantitas END)";
 
+        // Query dasar untuk kategori Narkotika pada masing-masing pilar
         $qLkn = DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id', $lknIds)->where('kategori', 'Narkotika');
         $qTat = DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id', $tatIds)->where('kategori', 'Narkotika');
+        
+        // Query dasar untuk Register Barang Bukti (Pilar ke-3)
         $qReg = DB::table('berantas_register_barang_bukti_items')->whereIn('register_barang_bukti_id', $regIds)->where('kategori', 'Narkotika');
+
+        // Kloning query untuk mendapatkan data spesifik Hasil Tangkap dan Temuan
+        $qTangkap = (clone $qReg)->where('sumber_perolehan', 'Hasil Tangkap');
+        $qTemuan = (clone $qReg)->where('sumber_perolehan', 'Temuan');
 
         return response()->json([
             'lkn' => [
@@ -204,8 +277,14 @@ class DashboardController extends Controller
             'bb' => [
                 'total_berat' => number_format((clone $qReg)->selectRaw($sqlW." as t")->value('t') ?? 0, 2, ',', '.') . ' g',
                 'total_item' => number_format((clone $qReg)->count()) . ' Item',
-                'tangkap_berat' => number_format((clone $qReg)->where('sumber_perolehan','Hasil Tangkap')->selectRaw($sqlW." as t")->value('t') ?? 0, 2, ',', '.') . ' g',
-                'temuan_berat' => number_format((clone $qReg)->where('sumber_perolehan','Temuan')->selectRaw($sqlW." as t")->value('t') ?? 0, 2, ',', '.') . ' g'
+                
+                // Data spesifik Hasil Tangkap
+                'tangkap_berat' => number_format((clone $qTangkap)->selectRaw($sqlW." as t")->value('t') ?? 0, 2, ',', '.') . ' g',
+                'tangkap_item' => number_format((clone $qTangkap)->count()) . ' Item',
+                
+                // Data spesifik Temuan
+                'temuan_berat' => number_format((clone $qTemuan)->selectRaw($sqlW." as t")->value('t') ?? 0, 2, ',', '.') . ' g',
+                'temuan_item' => number_format((clone $qTemuan)->count()) . ' Item'
             ]
         ]);
     }

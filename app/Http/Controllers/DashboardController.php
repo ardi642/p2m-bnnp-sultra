@@ -57,25 +57,39 @@ class DashboardController extends Controller
 
         $scope = $request->input('scope', 'p2m');
 
+        // --- SCOPE REHAB ---
         if ($scope === 'rehab') {
             $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            
+            // Inisialisasi array data
             $tren = [
-                'rj' => ['t' => [], 'r' => []],
-                'pr' => ['t' => [], 'r' => []],
-                'sk' => ['t' => [], 'r' => []]
+                'rj' => ['t' => array_fill(0, 12, 0), 'r' => array_fill(0, 12, 0)],
+                'pr' => ['t' => array_fill(0, 12, 0), 'r' => array_fill(0, 12, 0)],
+                'sk' => ['t' => array_fill(0, 12, 0), 'r' => array_fill(0, 12, 0)]
             ];
 
-            for ($m = 1; $m <= 12; $m++) {
-                $d = DB::table('rehab_laporan_bulanan')->whereYear('periode', $year)->whereMonth('periode', $m)
-                    ->when($satkerId, fn($q) => $q->where('satuan_kerja_id', $satkerId))
-                    ->selectRaw('SUM(target_rawat_jalan) as t_rj, SUM(realisasi_rawat_jalan) as r_rj, SUM(target_pasca_rehab) as t_pr, SUM(realisasi_pasca_rehab) as r_pr, SUM(target_skhpn) as t_sk, SUM(realisasi_skhpn) as r_sk')
-                    ->first();
-                
-                $tren['rj']['t'][] = (int)($d->t_rj ?? 0); $tren['rj']['r'][] = (int)($d->r_rj ?? 0);
-                $tren['pr']['t'][] = (int)($d->t_pr ?? 0); $tren['pr']['r'][] = (int)($d->r_pr ?? 0);
-                $tren['sk']['t'][] = (int)($d->t_sk ?? 0); $tren['sk']['r'][] = (int)($d->r_sk ?? 0);
+            // Ambil data dalam satu query untuk efisiensi
+            $data = DB::table('rehab_laporan_bulanan')
+                ->whereYear('periode', $year)
+                ->when($satkerId, fn($q) => $q->where('satuan_kerja_id', $satkerId))
+                ->selectRaw('
+                    MONTH(periode) as bulan,
+                    SUM(target_rawat_jalan) as t_rj, SUM(realisasi_rawat_jalan) as r_rj,
+                    SUM(target_pasca_rehab) as t_pr, SUM(realisasi_pasca_rehab) as r_pr,
+                    SUM(target_skhpn) as t_sk, SUM(realisasi_skhpn) as r_sk
+                ')
+                ->groupBy('bulan')
+                ->get();
+
+            // Mapping data ke array bulanan (index 0 = Januari)
+            foreach ($data as $d) {
+                $idx = $d->bulan - 1; 
+                $tren['rj']['t'][$idx] = (int)$d->t_rj; $tren['rj']['r'][$idx] = (int)$d->r_rj;
+                $tren['pr']['t'][$idx] = (int)$d->t_pr; $tren['pr']['r'][$idx] = (int)$d->r_pr;
+                $tren['sk']['t'][$idx] = (int)$d->t_sk; $tren['sk']['r'][$idx] = (int)$d->r_sk;
             }
 
+            // Hitung Summary Tahunan untuk Badge
             $calcPct = fn($r, $t) => $t > 0 ? round(($r / $t) * 100, 1) : 0;
             $sum = fn($arr) => array_sum($arr);
 

@@ -39,7 +39,7 @@ class DashboardController extends Controller
         $satkerId  = $this->getSatkerId($request);
         $scope     = $request->input('scope', 'p2m');
 
-        // Tambahkan kondisi untuk berantas
+        if ($scope === 'rehab') return $this->getGlobalRehab($startYear, $endYear, $satkerId);
         if ($scope === 'berantas') {
             return $this->getGlobalBerantas($startYear, $endYear, $satkerId);
         }
@@ -57,7 +57,39 @@ class DashboardController extends Controller
 
         $scope = $request->input('scope', 'p2m');
 
-        // --- LOGIKA KHUSUS BERANTAS ---
+        if ($scope === 'rehab') {
+            $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            $tren = [
+                'rj' => ['t' => [], 'r' => []],
+                'pr' => ['t' => [], 'r' => []],
+                'sk' => ['t' => [], 'r' => []]
+            ];
+
+            for ($m = 1; $m <= 12; $m++) {
+                $d = DB::table('rehab_laporan_bulanan')->whereYear('periode', $year)->whereMonth('periode', $m)
+                    ->when($satkerId, fn($q) => $q->where('satuan_kerja_id', $satkerId))
+                    ->selectRaw('SUM(target_rawat_jalan) as t_rj, SUM(realisasi_rawat_jalan) as r_rj, SUM(target_pasca_rehab) as t_pr, SUM(realisasi_pasca_rehab) as r_pr, SUM(target_skhpn) as t_sk, SUM(realisasi_skhpn) as r_sk')
+                    ->first();
+                
+                $tren['rj']['t'][] = (int)($d->t_rj ?? 0); $tren['rj']['r'][] = (int)($d->r_rj ?? 0);
+                $tren['pr']['t'][] = (int)($d->t_pr ?? 0); $tren['pr']['r'][] = (int)($d->r_pr ?? 0);
+                $tren['sk']['t'][] = (int)($d->t_sk ?? 0); $tren['sk']['r'][] = (int)($d->r_sk ?? 0);
+            }
+
+            $calcPct = fn($r, $t) => $t > 0 ? round(($r / $t) * 100, 1) : 0;
+            $sum = fn($arr) => array_sum($arr);
+
+            return response()->json([
+                'labels' => $labels,
+                'tren' => $tren,
+                'summary' => [
+                    'rj' => ['t' => number_format($sum($tren['rj']['t'])), 'r' => number_format($sum($tren['rj']['r'])), 'p' => $calcPct($sum($tren['rj']['r']), $sum($tren['rj']['t']))],
+                    'pr' => ['t' => number_format($sum($tren['pr']['t'])), 'r' => number_format($sum($tren['pr']['r'])), 'p' => $calcPct($sum($tren['pr']['r']), $sum($tren['pr']['t']))],
+                    'sk' => ['t' => number_format($sum($tren['sk']['t'])), 'r' => number_format($sum($tren['sk']['r'])), 'p' => $calcPct($sum($tren['sk']['r']), $sum($tren['sk']['t']))],
+                ]
+            ]);
+        }
+
         if ($scope === 'berantas') {
             $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
             $sqlGram = "SUM(CASE WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 ELSE kuantitas END)";
@@ -234,6 +266,73 @@ class DashboardController extends Controller
         ]);
     }
 
+
+    private function getBerantasChartData($year, $satkerId) {
+        $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+        $lknW = []; $tatW = []; $items = [];
+        $sqlW = "SUM(CASE WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 ELSE kuantitas END)";
+
+        for ($m = 1; $m <= 12; $m++) {
+            $lknIds = DB::table('berantas_ungkap_kasus')->whereYear('tanggal_kejadian',$year)->whereMonth('tanggal_kejadian',$m)->when($satkerId, fn($q)=>$q->where('satuan_kerja_id',$satkerId))->pluck('id');
+            $tatIds = DB::table('berantas_tat')->whereYear('tanggal_pelaksanaan',$year)->whereMonth('tanggal_pelaksanaan',$m)->when($satkerId, fn($q)=>$q->where('satuan_kerja_id',$satkerId))->pluck('id');
+
+            $lknW[] = round(DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id',$lknIds)->where('kategori','Narkotika')->selectRaw($sqlW." as t")->value('t') ?? 0, 2);
+            $tatW[] = round(DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id',$tatIds)->where('kategori','Narkotika')->sum('kuantitas') ?? 0, 2);
+            $items[] = DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id',$lknIds)->where('kategori','Narkotika')->count() + 
+                    DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id',$tatIds)->where('kategori','Narkotika')->count();
+        }
+        return response()->json(['labels' => $labels, 'tren' => ['lkn_gram' => $lknW, 'tat_gram' => $tatW, 'total_item_count' => $items]]);
+    }
+
+    // Helper: Konfigurasi Mapping Tabel
+    private function getTableConfig($type) {
+        switch ($type) {
+            case 'sosialisasi': 
+                return ['table' => 'p2m_sosialisasi', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];
+            case 'tes_urine':   
+                return ['table' => 'p2m_tes_urine', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];
+            case 'upacara':     
+                return ['table' => 'p2m_upacara', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta_upacara', 'unit_label' => 'Peserta (Orang)'];
+            case 'cfd':         
+                return ['table' => 'p2m_cfd', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];
+            case 'safari':      
+                // PERBAIKAN LABEL: Peserta (bukan Jemaah)
+                return ['table' => 'p2m_safari_religi', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_masyarakat', 'unit_label' => 'Peserta (Orang)'];
+            
+            case 'media_elektronik':     
+                return ['table' => 'p2m_elektronik', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 'unit_label' => 'Durasi (Hari)'];
+            case 'media_non_elektronik': 
+                return ['table' => 'p2m_non_elektronik', 'date_col' => 'tanggal_mulai_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 'unit_label' => 'Durasi (Hari)'];
+            case 'media_online':         
+                return ['table' => 'p2m_online', 'date_col' => 'tanggal_mulai_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 'unit_label' => 'Durasi (Hari)'];
+            
+            case 'kie': 
+                return ['table' => 'p2m_kie', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => null, 'unit_label' => '-'];
+            
+            case 'desa_bersinar':       
+                return ['table' => 'p2m_desa_bersinar', 'date_col' => 'tanggal_pencanangan', 'val_col' => null, 'unit_label' => '-'];
+            case 'lingkungan_bersinar': 
+                return ['table' => 'p2m_lingkungan_bersinar', 'date_col' => 'tanggal_pencanangan', 'val_col' => 'jumlah_penggiat_p4gn', 'unit_label' => 'Penggiat (Orang)'];
+
+            default: 
+                return ['table' => 'p2m_sosialisasi', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta'];
+        }
+    }
+
+    private function getGlobalRehab($yStart, $yEnd, $satkerId) {
+        $data = DB::table('rehab_laporan_bulanan')->whereYear('periode', '>=', $yStart)->whereYear('periode', '<=', $yEnd)
+            ->when($satkerId, fn($q) => $q->where('satuan_kerja_id', $satkerId))
+            ->selectRaw('SUM(target_rawat_jalan) as t_rj, SUM(realisasi_rawat_jalan) as r_rj, SUM(target_pasca_rehab) as t_pr, SUM(realisasi_pasca_rehab) as r_pr, SUM(target_skhpn) as t_sk, SUM(realisasi_skhpn) as r_sk')
+            ->first();
+
+        $calcPct = fn($r, $t) => $t > 0 ? round(($r / $t) * 100, 1) : 0;
+        return response()->json([
+            'rj' => ['target' => number_format($data->t_rj ?? 0), 'realisasi' => number_format($data->r_rj ?? 0), 'pct' => $calcPct($data->r_rj, $data->t_rj)],
+            'pr' => ['target' => number_format($data->t_pr ?? 0), 'realisasi' => number_format($data->r_pr ?? 0), 'pct' => $calcPct($data->r_pr, $data->t_pr)],
+            'sk' => ['target' => number_format($data->t_sk ?? 0), 'realisasi' => number_format($data->r_sk ?? 0), 'pct' => $calcPct($data->r_sk, $data->t_sk)],
+        ]);
+    }
+
     // --- TAMBAHKAN FUNGSI HELPER BARU DI PALING BAWAH CLASS ---
     private function getGlobalBerantas($yStart, $yEnd, $satkerId) {
         $filter = function($q, $col) use ($yStart, $yEnd, $satkerId) {
@@ -287,58 +386,6 @@ class DashboardController extends Controller
                 'temuan_item' => number_format((clone $qTemuan)->count()) . ' Item'
             ]
         ]);
-    }
-
-    private function getBerantasChartData($year, $satkerId) {
-        $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-        $lknW = []; $tatW = []; $items = [];
-        $sqlW = "SUM(CASE WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 ELSE kuantitas END)";
-
-        for ($m = 1; $m <= 12; $m++) {
-            $lknIds = DB::table('berantas_ungkap_kasus')->whereYear('tanggal_kejadian',$year)->whereMonth('tanggal_kejadian',$m)->when($satkerId, fn($q)=>$q->where('satuan_kerja_id',$satkerId))->pluck('id');
-            $tatIds = DB::table('berantas_tat')->whereYear('tanggal_pelaksanaan',$year)->whereMonth('tanggal_pelaksanaan',$m)->when($satkerId, fn($q)=>$q->where('satuan_kerja_id',$satkerId))->pluck('id');
-
-            $lknW[] = round(DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id',$lknIds)->where('kategori','Narkotika')->selectRaw($sqlW." as t")->value('t') ?? 0, 2);
-            $tatW[] = round(DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id',$tatIds)->where('kategori','Narkotika')->sum('kuantitas') ?? 0, 2);
-            $items[] = DB::table('berantas_ungkap_barang_bukti')->whereIn('berantas_ungkap_kasus_id',$lknIds)->where('kategori','Narkotika')->count() + 
-                    DB::table('berantas_tat_barang_bukti')->whereIn('berantas_tat_id',$tatIds)->where('kategori','Narkotika')->count();
-        }
-        return response()->json(['labels' => $labels, 'tren' => ['lkn_gram' => $lknW, 'tat_gram' => $tatW, 'total_item_count' => $items]]);
-    }
-
-    // Helper: Konfigurasi Mapping Tabel
-    private function getTableConfig($type) {
-        switch ($type) {
-            case 'sosialisasi': 
-                return ['table' => 'p2m_sosialisasi', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];
-            case 'tes_urine':   
-                return ['table' => 'p2m_tes_urine', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];
-            case 'upacara':     
-                return ['table' => 'p2m_upacara', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta_upacara', 'unit_label' => 'Peserta (Orang)'];
-            case 'cfd':         
-                return ['table' => 'p2m_cfd', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];
-            case 'safari':      
-                // PERBAIKAN LABEL: Peserta (bukan Jemaah)
-                return ['table' => 'p2m_safari_religi', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_masyarakat', 'unit_label' => 'Peserta (Orang)'];
-            
-            case 'media_elektronik':     
-                return ['table' => 'p2m_elektronik', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 'unit_label' => 'Durasi (Hari)'];
-            case 'media_non_elektronik': 
-                return ['table' => 'p2m_non_elektronik', 'date_col' => 'tanggal_mulai_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 'unit_label' => 'Durasi (Hari)'];
-            case 'media_online':         
-                return ['table' => 'p2m_online', 'date_col' => 'tanggal_mulai_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 'unit_label' => 'Durasi (Hari)'];
-            
-            case 'kie': 
-                return ['table' => 'p2m_kie', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => null, 'unit_label' => '-'];
-            
-            case 'desa_bersinar':       
-                return ['table' => 'p2m_desa_bersinar', 'date_col' => 'tanggal_pencanangan', 'val_col' => null, 'unit_label' => '-'];
-            case 'lingkungan_bersinar': 
-                return ['table' => 'p2m_lingkungan_bersinar', 'date_col' => 'tanggal_pencanangan', 'val_col' => 'jumlah_penggiat_p4gn', 'unit_label' => 'Penggiat (Orang)'];
-
-            default: 
-                return ['table' => 'p2m_sosialisasi', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta'];
-        }
     }
 
     // --- LOGIKA KARTU ATAS (GET GLOBAL P2M) - TETAP SAMA ---

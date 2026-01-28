@@ -335,6 +335,64 @@
             </div>
         </div>
 
+        {{-- ========================================================================= --}}
+        {{-- TAB REHAB --}}
+        {{-- ========================================================================= --}}
+        <div x-show="activeTab === 'rehab'" x-transition>
+            {{-- A. FILTER RENTANG TAHUN UNTUK KARTU ATAS --}}
+            <div class="d-flex justify-content-end mb-3">
+                <div class="d-flex align-items-center bg-white p-2 rounded shadow-sm border gap-2">
+                    <span class="fw-bold text-muted small"><i class="bi bi-calendar-range me-2 text-success"></i>Rentang Tahun:</span>
+                    <select x-model="startYear" class="form-select form-select-sm border-secondary fw-bold text-success" style="width: 90px;">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
+                    <span class="fw-bold">-</span>
+                    <select x-model="endYear" class="form-select form-select-sm border-secondary fw-bold text-success" style="width: 90px;">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
+                </div>
+            </div>
+
+            {{-- B. KARTU RINGKASAN UTAMA REHAB --}}
+            <div class="row g-3 mb-4">
+                <template x-for="(data, key) in {rj: 'RAWAT JALAN', pr: 'PASCA REHABILITASI', sk: 'LAYANAN SKHPN'}">
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm h-100 p-4 text-white overflow-hidden position-relative" :class="key === 'rj' ? 'bg-success' : (key === 'pr' ? 'bg-teal' : 'bg-dark')" style="background-color: #198754;">
+                            <h6 class="text-uppercase fw-bold opacity-75 mb-3 small" x-text="data"></h6>
+                            <div class="d-flex justify-content-between align-items-end mb-3">
+                                <div><small class="d-block opacity-75">Total Realisasi</small><h2 class="fw-bold m-0" x-text="rehabCards[key].realisasi">0</h2></div>
+                                <div class="text-end"><span class="display-6 fw-bold" x-text="rehabCards[key].pct + '%'">0%</span><small class="d-block opacity-75">Capaian</small></div>
+                            </div>
+                            <div class="bg-white bg-opacity-10 p-2 rounded border border-white border-opacity-25 mt-auto">
+                                <div class="d-flex justify-content-between small"><span>Target Tahunan:</span><span class="fw-bold" x-text="rehabCards[key].target">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            {{-- C. GRAFIK DETAIL PER BARIS --}}
+            <div class="card border-0 shadow-sm p-4 mt-4">
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                    <h5 class="fw-bold m-0 text-dark"><i class="bi bi-graph-up text-success me-2"></i>Tren Capaian Bulanan</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold text-muted">Tahun Grafik:</span>
+                        <select x-model="chartFilter.year" class="form-select border-success fw-bold text-success" style="width: 120px;">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
+                    </div>
+                </div>
+
+                <template x-for="(label, key) in {rj: '1. LAYANAN RAWAT JALAN', pr: '2. LAYANAN PASCA REHABILITASI', sk: '3. LAYANAN SKHPN'}">
+                    <div class="mb-5 border-bottom pb-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                            <h6 class="fw-bold text-success mb-0 fs-5" x-text="label"></h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge bg-white text-dark border border-secondary fs-6 p-2">Target: <span x-text="rehabTrendSummary[key].t"></span></span>
+                                <span class="badge bg-white text-dark border border-secondary fs-6 p-2">Realisasi: <span x-text="rehabTrendSummary[key].r"></span></span>
+                                <span class="badge fs-6 p-2" :class="rehabTrendSummary[key].p >= 80 ? 'bg-success text-white' : 'bg-warning text-dark'">Capaian: <span x-text="rehabTrendSummary[key].p + '%'"></span></span>
+                            </div>
+                        </div>
+                        <div :x-ref="'chartRehab' + key" style="min-height: 400px;"></div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
     </div>
 </main>
 @endsection
@@ -343,17 +401,39 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('dashboardUnified', () => ({
-            // --- STATE GLOBAL & P2M (TETAP SAMA) ---
-            startYear: '{{ date("Y") }}', endYear: '{{ date("Y") }}', satkerId: '', activeTab: '{{ $defaultTab }}', 
-            p2mCards: { kegiatan: { total: 0 }, orang: { total: 0, list: {} }, media: { total_freq: 0, total_durasi: 0, list: {} }, wilayah: { total: 0, list: {} } },
-            chartFilter: { type: 'sosialisasi', year: '{{ date("Y") }}' },
-            rightChartMode: 'anggaran', chartDataCache: null, hasSasaran: true,
+            // ==========================================================
+            // 1. STATE GLOBAL & P2M (TETAP SAMA)
+            // ==========================================================
+            startYear: '{{ date("Y") }}',
+            endYear: '{{ date("Y") }}',
+            satkerId: '',
+            activeTab: '{{ $defaultTab }}',
 
-            // --- STATE BERANTAS ---
-            berantasCards: { 
+            p2mCards: {
+                kegiatan: { total: 0 },
+                orang: { total: 0, list: {} },
+                media: { total_freq: 0, total_durasi: 0, list: {} },
+                wilayah: { total: 0, list: {} }
+            },
+            chartFilter: { type: 'sosialisasi', year: '{{ date("Y") }}' },
+            rightChartMode: 'anggaran',
+            chartDataCache: null,
+            hasSasaran: true,
+
+            // ==========================================================
+            // 2. STATE BERANTAS (TETAP SAMA)
+            // ==========================================================
+            berantasCards: {
                 lkn: { kasus: 0, tersangka: 0, berat: '0 g', item: '0 Item' },
                 tat: { kasus: 0, tersangka: 0, berat: '0 g', item: '0 Item' },
-                bb: { total_berat: '0 g', total_item: '0 Item', tangkap_berat: '0 g', tangkap_item: '0 Item', temuan_berat: '0 g', temuan_item: '0 Item' }
+                bb: {
+                    total_berat: '0 g',
+                    total_item: '0 Item',
+                    tangkap_berat: '0 g',
+                    tangkap_item: '0 Item',
+                    temuan_berat: '0 g',
+                    temuan_item: '0 Item'
+                }
             },
             berantasTrendSummary: {
                 lkn: { kasus: 0, tersangka: 0, item: 0, berat: '0 g' },
@@ -361,68 +441,205 @@
                 bb: { total_reg: 0, total_item: 0, total_berat: '0 g', tangkap: '0', temuan: '0' }
             },
 
-            charts: { p2mRanking: null, left: null, right: null, chartLknFull: null, chartTatFull: null, chartBbFull: null },
+            // ==========================================================
+            // 3. STATE REHAB (TAMBAHAN BARU)
+            // ==========================================================
+            rehabCards: {
+                rj: { target: 0, realisasi: 0, pct: 0 },
+                pr: { target: 0, realisasi: 0, pct: 0 },
+                sk: { target: 0, realisasi: 0, pct: 0 }
+            },
+            rehabTrendSummary: {
+                rj: { t: 0, r: 0, p: 0 },
+                pr: { t: 0, r: 0, p: 0 },
+                sk: { t: 0, r: 0, p: 0 }
+            },
 
+            // Instance Chart Containers
+            charts: {
+                p2mRanking: null,
+                left: null,
+                right: null,
+                chartLknFull: null,
+                chartTatFull: null,
+                chartBbFull: null,
+                chartRehabrj: null,
+                chartRehabpr: null,
+                chartRehabsk: null
+            },
+
+            // ==========================================================
+            // 4. INIT & WATCHERS
+            // ==========================================================
             init() {
                 let elSatker = document.getElementById('select-satker');
                 if (elSatker && typeof TomSelect !== 'undefined') {
                     if (elSatker.tomselect) elSatker.tomselect.destroy();
-                    let ts = new TomSelect(elSatker, { create: false, controlInput: null, allowEmptyOption: true, placeholder: "Pilih Satuan Kerja..." });
+                    let ts = new TomSelect(elSatker, {
+                        create: false,
+                        controlInput: null,
+                        allowEmptyOption: true,
+                        placeholder: "Pilih Satuan Kerja..."
+                    });
                     ts.on('change', (val) => { this.satkerId = val; });
                 }
+
                 this.loadActiveTabData();
+
+                // Global Watchers
                 this.$watch('activeTab', () => this.loadActiveTabData());
                 this.$watch('startYear', () => this.loadActiveTabData());
                 this.$watch('endYear', () => this.loadActiveTabData());
                 this.$watch('satkerId', () => this.loadActiveTabData());
-                this.$watch('chartFilter.year', () => { if (this.activeTab === 'berantas') this.fetchBerantasChart(); if (this.activeTab === 'p2m') this.fetchChartData(); });
-                this.$watch('chartFilter.type', () => { if (this.activeTab === 'p2m') this.fetchChartData(); });
-                this.$watch('rightChartMode', () => { if (this.activeTab === 'p2m') this.renderRightChart(this.chartDataCache); });
+
+                // Grafik Specific Watchers
+                this.$watch('chartFilter.year', () => {
+                    if (this.activeTab === 'berantas') this.fetchBerantasChart();
+                    if (this.activeTab === 'p2m') this.fetchChartData();
+                    if (this.activeTab === 'rehab') this.fetchRehabChart();
+                });
+
+                this.$watch('chartFilter.type', () => {
+                    if (this.activeTab === 'p2m') this.fetchChartData();
+                });
+
+                this.$watch('rightChartMode', () => {
+                    if (this.activeTab === 'p2m') this.renderRightChart(this.chartDataCache);
+                });
             },
 
             loadActiveTabData() {
                 if (this.startYear > this.endYear) this.endYear = this.startYear;
-                if (this.activeTab === 'p2m') { this.fetchP2MGlobal(); this.fetchChartData(); } 
-                else if (this.activeTab === 'berantas') { this.fetchBerantasGlobal(); this.fetchBerantasChart(); }
+
+                if (this.activeTab === 'p2m') {
+                    this.fetchP2MGlobal();
+                    this.fetchChartData();
+                } else if (this.activeTab === 'berantas') {
+                    this.fetchBerantasGlobal();
+                    this.fetchBerantasChart();
+                } else if (this.activeTab === 'rehab') {
+                    this.fetchRehabGlobal();
+                    this.fetchRehabChart();
+                }
             },
 
-            // =========================================================================
-            // FUNGSI BERANTAS (KONTRAST & FONT BESAR)
-            // =========================================================================
+            // ==========================================================
+            // 5. FUNGSI REHAB (RELAWAN BARU)
+            // ==========================================================
+            fetchRehabGlobal() {
+                let url = `{{ route('api.dashboard.global') }}?scope=rehab&start_year=${this.startYear}&end_year=${this.endYear}&satker_id=${this.satkerId}`;
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => { this.rehabCards = data; });
+            },
+
+            fetchRehabChart() {
+                let url = `{{ route('api.dashboard.chart') }}?scope=rehab&year=${this.chartFilter.year}&satker_id=${this.satkerId}`;
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        this.rehabTrendSummary = data.summary;
+                        this.renderRehabGrouped(this.$refs.chartRehabrj, data.tren.rj, '#198754', 'chartRehabrj');
+                        this.renderRehabGrouped(this.$refs.chartRehabpr, data.tren.pr, '#20c997', 'chartRehabpr');
+                        this.renderRehabGrouped(this.$refs.chartRehabsk, data.tren.sk, '#0dcaf0', 'chartRehabsk');
+                    });
+            },
+
+            renderRehabGrouped(el, data, color, chartKey) {
+                let options = {
+                    series: [
+                        { name: 'Target', data: data.t },
+                        { name: 'Realisasi', data: data.r }
+                    ],
+                    chart: {
+                        type: 'bar',
+                        height: 400,
+                        toolbar: { show: true },
+                        fontFamily: 'Nunito'
+                    },
+                    plotOptions: {
+                        bar: {
+                            horizontal: false,
+                            columnWidth: '65%',
+                            borderRadius: 4,
+                            dataLabels: { position: 'top' }
+                        }
+                    },
+                    colors: ['#dee2e6', color],
+                    dataLabels: {
+                        enabled: true,
+                        offsetY: -25,
+                        style: {
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            colors: ['#444']
+                        },
+                        formatter: (val) => val > 0 ? val : ''
+                    },
+                    xaxis: {
+                        categories: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'],
+                        labels: {
+                            style: { fontSize: '13px', fontWeight: 'bold', colors: '#000' }
+                        }
+                    },
+                    yaxis: {
+                        title: { text: "Jumlah Layanan", style: { fontWeight: 'bold', fontSize: '14px' } },
+                        labels: { style: { fontSize: '12px' } }
+                    },
+                    legend: {
+                        position: 'top',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                    },
+                    tooltip: { shared: true, style: { fontSize: '14px' } }
+                };
+
+                if (this.charts[chartKey]) this.charts[chartKey].destroy();
+                this.charts[chartKey] = new ApexCharts(el, options);
+                this.charts[chartKey].render();
+            },
+
+            // ==========================================================
+            // 6. FUNGSI BERANTAS (TETAP SAMA - SUDAH RAPI)
+            // ==========================================================
             fetchBerantasGlobal() {
                 let url = `{{ route('api.dashboard.global') }}?scope=berantas&start_year=${this.startYear}&end_year=${this.endYear}&satker_id=${this.satkerId}`;
-                fetch(url).then(res => res.json()).then(data => { this.berantasCards = data; });
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => { this.berantasCards = data; });
             },
 
             fetchBerantasChart() {
                 let url = `{{ route('api.dashboard.chart') }}?scope=berantas&year=${this.chartFilter.year}&satker_id=${this.satkerId}`;
-                fetch(url).then(res => res.json()).then(data => {
-                    this.berantasTrendSummary = data.summary;
+                fetch(url)
+                    .then(res => res.json())
+                    .then(data => {
+                        this.berantasTrendSummary = data.summary;
+                        
+                        // LKN
+                        this.renderBerantasCombo(this.$refs.chartLknFull, [
+                            { name: 'Total LKN', type: 'column', data: data.tren.lkn.kasus },
+                            { name: 'Tersangka', type: 'column', data: data.tren.lkn.tersangka },
+                            { name: 'Item Narko', type: 'column', data: data.tren.lkn.item },
+                            { name: 'Berat (Gram)', type: 'line', data: data.tren.lkn.berat }
+                        ], ['#0d6efd', '#ffc107', '#198754', '#000000'], 'chartLknFull');
 
-                    // 1. LKN: LKN (Blue), Suspect (Gold), Item (Green), BERAT (BLACK LINE)
-                    this.renderBerantasCombo(this.$refs.chartLknFull, [
-                        { name: 'Total LKN', type: 'column', data: data.tren.lkn.kasus },
-                        { name: 'Tersangka', type: 'column', data: data.tren.lkn.tersangka },
-                        { name: 'Item Narko', type: 'column', data: data.tren.lkn.item },
-                        { name: 'Berat (Gram)', type: 'line', data: data.tren.lkn.berat }
-                    ], ['#0d6efd', '#ffc107', '#198754', '#000000'], 'chartLknFull');
+                        // TAT
+                        this.renderBerantasCombo(this.$refs.chartTatFull, [
+                            { name: 'Total TAT', type: 'column', data: data.tren.tat.kasus },
+                            { name: 'Tersangka', type: 'column', data: data.tren.tat.tersangka },
+                            { name: 'Item Narko', type: 'column', data: data.tren.tat.item },
+                            { name: 'Berat (Gram)', type: 'line', data: data.tren.tat.berat }
+                        ], ['#0dcaf0', '#ffc107', '#198754', '#000000'], 'chartTatFull');
 
-                    // 2. TAT: TAT (Cyan), Suspect (Gold), Item (Green), BERAT (BLACK LINE)
-                    this.renderBerantasCombo(this.$refs.chartTatFull, [
-                        { name: 'Total TAT', type: 'column', data: data.tren.tat.kasus },
-                        { name: 'Tersangka', type: 'column', data: data.tren.tat.tersangka },
-                        { name: 'Item Narko', type: 'column', data: data.tren.tat.item },
-                        { name: 'Berat (Gram)', type: 'line', data: data.tren.tat.berat }
-                    ], ['#0dcaf0', '#ffc107', '#198754', '#000000'], 'chartTatFull');
-
-                    // 3. REGISTER: Register (Red), Tangkap (Blue), Temuan (Gold), BERAT (BLACK LINE)
-                    this.renderBerantasCombo(this.$refs.chartBbFull, [
-                        { name: 'Register', type: 'column', data: data.tren.bb.reg },
-                        { name: 'Tangkap', type: 'column', data: data.tren.bb.tangkap },
-                        { name: 'Temuan', type: 'column', data: data.tren.bb.temuan },
-                        { name: 'Berat (Gram)', type: 'line', data: data.tren.bb.berat }
-                    ], ['#dc3545', '#0d6efd', '#ffc107', '#000000'], 'chartBbFull');
-                });
+                        // Register
+                        this.renderBerantasCombo(this.$refs.chartBbFull, [
+                            { name: 'Register', type: 'column', data: data.tren.bb.reg },
+                            { name: 'Tangkap', type: 'column', data: data.tren.bb.tangkap },
+                            { name: 'Temuan', type: 'column', data: data.tren.bb.temuan },
+                            { name: 'Berat (Gram)', type: 'line', data: data.tren.bb.berat }
+                        ], ['#dc3545', '#0d6efd', '#ffc107', '#000000'], 'chartBbFull');
+                    });
             },
 
             renderBerantasCombo(el, series, colorArray, chartKey) {
@@ -435,18 +652,18 @@
                         enabled: true,
                         enabledOnSeries: [0, 1, 2, 3],
                         formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : '',
-                        style: { fontSize: '13px', fontWeight: 'bold' }, // FONT BESAR UNTUK ANGKA GRAFIK
+                        style: { fontSize: '13px', fontWeight: 'bold' },
                         background: { enabled: true, opacity: 0.9, borderRadius: 2, padding: 4 }
                     },
-                    xaxis: { 
+                    xaxis: {
                         categories: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'],
-                        labels: { style: { fontSize: '13px', fontWeight: 'bold', colors: '#000' } } // FONT BESAR BULAN
+                        labels: { style: { fontSize: '13px', fontWeight: 'bold', colors: '#000' } }
                     },
                     yaxis: [
-                        { title: { text: "Jumlah", style: { fontSize: '14px', fontWeight: 'bold' } }, labels: { style: { fontSize: '12px' } } }, 
+                        { title: { text: "Jumlah", style: { fontSize: '14px', fontWeight: 'bold' } }, labels: { style: { fontSize: '12px' } } },
                         { opposite: true, title: { text: "Volume (Gram)", style: { fontSize: '14px', fontWeight: 'bold' } }, labels: { style: { fontSize: '12px' } } }
                     ],
-                    legend: { position: 'top', fontSize: '14px', fontWeight: 'bold' }, // FONT BESAR LEGENDA
+                    legend: { position: 'top', fontSize: '14px', fontWeight: 'bold' },
                     tooltip: { shared: true, style: { fontSize: '14px' } }
                 };
                 if (this.charts[chartKey]) this.charts[chartKey].destroy();
@@ -454,13 +671,95 @@
                 this.charts[chartKey].render();
             },
 
-            // --- FUNGSI P2M (ORIGINAL - TIDAK BERUBAH) ---
-            fetchP2MGlobal() { let url = `{{ route('api.dashboard.global') }}?scope=p2m&start_year=${this.startYear}&end_year=${this.endYear}&satker_id=${this.satkerId}`; fetch(url).then(res => res.json()).then(data => { this.p2mCards = data; this.renderRanking(data.ranking_chart); }); },
-            fetchChartData() { let url = `{{ route('api.dashboard.chart') }}?scope=p2m&type=${this.chartFilter.type}&year=${this.chartFilter.year}&satker_id=${this.satkerId}`; fetch(url).then(res => res.json()).then(data => { this.chartDataCache = data; this.hasSasaran = data.config.has_sasaran; this.renderLeftChart(data); this.renderRightChart(data); }); },
-            renderRanking(data) { let options = { series: [{ name: 'Laporan', data: data.data }], chart: { type: 'bar', height: 500, toolbar: {show: false} }, plotOptions: { bar: { horizontal: true, distributed: true } }, xaxis: { categories: data.labels }, dataLabels: { enabled: true } }; if (this.charts.p2mRanking) this.charts.p2mRanking.updateOptions(options); else { this.charts.p2mRanking = new ApexCharts(this.$refs.p2mRankingChart, options); this.charts.p2mRanking.render(); } },
-            renderLeftChart(data) { let unit = data.config.label_unit; let series = [{ name: 'Kegiatan', type: 'column', data: data.tren.kegiatan }]; if (unit && unit !== '-') series.push({ name: unit, type: 'line', data: data.tren.dampak }); if (data.config.has_positif) series.push({ name: 'Positif', type: 'line', data: data.tren.positif }); let options = { series: series, chart: { height: 450, type: 'line', toolbar: { show: false } }, stroke: { width: [0, 4, 4], curve: 'smooth' }, colors: ['#0d6efd', '#dc3545', '#000000'], labels: data.labels, dataLabels: { enabled: true, enabledOnSeries: [0, 1], formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : "" }, yaxis: [{ title: { text: 'Kegiatan' } }, { opposite: true, title: { text: unit } }] }; if (this.charts.left) this.charts.left.updateOptions(options); else { this.charts.left = new ApexCharts(this.$refs.leftChart, options); this.charts.left.render(); } },
-            renderRightChart(data) { if(!data) return; let s = this.rightChartMode === 'anggaran' ? [{ name: 'DIPA', data: data.anggaran.dipa }, { name: 'Non-DIPA', data: data.anggaran.non_dipa }] : data.sasaran; let options = { series: s, chart: { type: 'bar', height: 450, stacked: true, toolbar: { show: false } }, labels: data.labels, dataLabels: { enabled: true, formatter: function (val, opts) { if (val === 0) return ""; let t = 0; opts.w.config.series.forEach(x => { t += x.data[opts.dataPointIndex]; }); return val + " (" + Math.round((val / t) * 100) + "%)"; } } }; if (this.charts.right) this.charts.right.destroy(); this.charts.right = new ApexCharts(this.$refs.rightChart, options); this.charts.right.render(); },
-            get satkerLabel() { if (this.satkerId === "") return "Seluruh Satuan Kerja"; let el = document.getElementById('select-satker'); return el && el.options[el.selectedIndex] ? "Data: " + el.options[el.selectedIndex].text : "Data Satker"; }
+            // ==========================================================
+            // 7. FUNGSI P2M (ORIGINAL - TIDAK BERUBAH)
+            // ==========================================================
+            fetchP2MGlobal() {
+                let url = `{{ route('api.dashboard.global') }}?scope=p2m&start_year=${this.startYear}&end_year=${this.endYear}&satker_id=${this.satkerId}`;
+                fetch(url).then(res => res.json()).then(data => {
+                    this.p2mCards = data;
+                    this.renderRanking(data.ranking_chart);
+                });
+            },
+
+            fetchChartData() {
+                let url = `{{ route('api.dashboard.chart') }}?scope=p2m&type=${this.chartFilter.type}&year=${this.chartFilter.year}&satker_id=${this.satkerId}`;
+                fetch(url).then(res => res.json()).then(data => {
+                    this.chartDataCache = data;
+                    this.hasSasaran = data.config.has_sasaran;
+                    this.renderLeftChart(data);
+                    this.renderRightChart(data);
+                });
+            },
+
+            renderRanking(data) {
+                let options = {
+                    series: [{ name: 'Laporan', data: data.data }],
+                    chart: { type: 'bar', height: 500, toolbar: {show: false} },
+                    plotOptions: { bar: { horizontal: true, distributed: true } },
+                    xaxis: { categories: data.labels },
+                    dataLabels: { enabled: true }
+                };
+                if (this.charts.p2mRanking) this.charts.p2mRanking.updateOptions(options);
+                else {
+                    this.charts.p2mRanking = new ApexCharts(this.$refs.p2mRankingChart, options);
+                    this.charts.p2mRanking.render();
+                }
+            },
+
+            renderLeftChart(data) {
+                let unit = data.config.label_unit;
+                let series = [{ name: 'Kegiatan', type: 'column', data: data.tren.kegiatan }];
+                if (unit && unit !== '-') series.push({ name: unit, type: 'line', data: data.tren.dampak });
+                if (data.config.has_positif) series.push({ name: 'Positif', type: 'line', data: data.tren.positif });
+
+                let options = {
+                    series: series,
+                    chart: { height: 450, type: 'line', toolbar: { show: false } },
+                    stroke: { width: [0, 4, 4], curve: 'smooth' },
+                    colors: ['#0d6efd', '#dc3545', '#000000'],
+                    labels: data.labels,
+                    dataLabels: {
+                        enabled: true,
+                        enabledOnSeries: [0, 1],
+                        formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : ""
+                    },
+                    yaxis: [{ title: { text: 'Kegiatan' } }, { opposite: true, title: { text: unit } }]
+                };
+                if (this.charts.left) this.charts.left.updateOptions(options);
+                else {
+                    this.charts.left = new ApexCharts(this.$refs.leftChart, options);
+                    this.charts.left.render();
+                }
+            },
+
+            renderRightChart(data) {
+                if(!data) return;
+                let s = this.rightChartMode === 'anggaran' ? [{ name: 'DIPA', data: data.anggaran.dipa }, { name: 'Non-DIPA', data: data.anggaran.non_dipa }] : data.sasaran;
+                let options = {
+                    series: s,
+                    chart: { type: 'bar', height: 450, stacked: true, toolbar: { show: false } },
+                    labels: data.labels,
+                    dataLabels: {
+                        enabled: true,
+                        formatter: function (val, opts) {
+                            if (val === 0) return "";
+                            let t = 0;
+                            opts.w.config.series.forEach(x => { t += x.data[opts.dataPointIndex]; });
+                            return val + " (" + Math.round((val / t) * 100) + "%)";
+                        }
+                    }
+                };
+                if (this.charts.right) this.charts.right.destroy();
+                this.charts.right = new ApexCharts(this.$refs.rightChart, options);
+                this.charts.right.render();
+            },
+
+            get satkerLabel() {
+                if (this.satkerId === "") return "Seluruh Satuan Kerja";
+                let el = document.getElementById('select-satker');
+                return el && el.options[el.selectedIndex] ? "Data: " + el.options[el.selectedIndex].text : "Data Satker";
+            }
         }));
     });
 </script>

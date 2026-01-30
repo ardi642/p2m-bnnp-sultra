@@ -231,15 +231,15 @@
                                 <thead class="bg-light sticky-top">
                                     <tr class="text-center align-middle small text-uppercase text-secondary text-nowrap">
                                         <th class="py-3 bg-light ps-3">No</th>
-                                        <th class="py-3 bg-light text-start" style="min-width: 200px;">{!! $sortLink('satuan_kerja', 'Satuan Kerja') !!}</th>
-                                        <th class="py-3 bg-light text-start" style="min-width: 150px;">{!! $sortLink('nomor_lkn', 'No. LKN') !!}</th>
-                                        <th class="py-3 bg-light text-start" style="min-width: 150px;">{!! $sortLink('tanggal_kejadian', 'Tanggal') !!}</th>
+                                        <th class="py-3 bg-light text-start">{!! $sortLink('satuan_kerja', 'Satuan Kerja') !!}</th>
+                                        <th class="py-3 bg-light text-start">{!! $sortLink('nomor_lkn', 'No. LKN') !!}</th>
+                                        <th class="py-3 bg-light text-start">{!! $sortLink('tanggal_kejadian', 'Tanggal') !!}</th>
                                         
                                         {{-- LEBAR KOLOM --}}
-                                        <th class="py-3 bg-light text-start" style="min-width: 350px;">Tersangka (Pemilik)</th>
-                                        <th class="py-3 bg-light text-start" style="min-width: 300px;">Barang Bukti</th>
+                                        <th class="py-3 bg-light text-start">Tersangka (Pemilik)</th>
+                                        <th class="py-3 bg-light text-start">Barang Bukti</th>
                                         
-                                        <th class="py-3 bg-light" style="min-width: 150px;">{!! $sortLink('created_at', 'Dibuat') !!}</th>
+                                        <th class="py-3 bg-light">{!! $sortLink('created_at', 'Dibuat') !!}</th>
                                         <th class="py-3 bg-light pe-3">Aksi</th>
                                     </tr>
                                 </thead>

@@ -120,22 +120,49 @@ class UngkapKasusController extends Controller
         }
         $years = $yearQuery->distinct()->orderByDesc('year')->pluck('year');
 
+        // 1. Ambil Query Utama untuk Tabel
         $query = $this->getFilteredQuery($request);
-
         $kasusIdSubquery = (clone $query)->select('berantas_ungkap_kasus.id');
+
+        // --- AGREGASI DATA (PERBAIKAN DIMULAI DISINI) ---
+
+        // 2. Buat Base Query untuk Barang Bukti agar Sinkron dengan Filter
+        $bbQuery = \App\Models\BerantasUngkapBarangBukti::query()
+            ->whereIn('berantas_ungkap_kasus_id', $kasusIdSubquery);
+
+        // Terapkan filter kategori/narkotika ke dalam perhitungan BB (Agregasi)
+        if ($request->filled('kategori_bb')) {
+            $bbQuery = $this->applyCaseFilter($bbQuery, $request);
+        }
+
+        // 3. Hitung Total Kasus (Jumlah Baris di Tabel)
         $totalKasus = (clone $query)->count();
-        $totalTersangka = BerantasUngkapTersangka::whereIn('berantas_ungkap_kasus_id', $kasusIdSubquery)->count();
-        $totalBBNarkotika = BerantasUngkapBarangBukti::whereIn('berantas_ungkap_kasus_id', $kasusIdSubquery)
-                            ->where('kategori', 'Narkotika')->count();
-        
-        $totalBeratGram = BerantasUngkapBarangBukti::whereIn('berantas_ungkap_kasus_id', $kasusIdSubquery)
-                            ->where('kategori', 'Narkotika')
-                            ->selectRaw("SUM(CASE 
-                                WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 
-                                WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 
-                                ELSE kuantitas 
-                            END) as total")->value('total') ?? 0;
-        
+
+        // 4. Hitung Total Barang Bukti Narkotika (Hanya yang lolos filter)
+        $totalBBNarkotika = (clone $bbQuery)->where('kategori', 'Narkotika')->count();
+
+        // 5. Hitung Total Berat Narkotika (Hanya yang lolos filter)
+        $totalBeratGram = (clone $bbQuery)
+            ->where('kategori', 'Narkotika')
+            ->selectRaw("SUM(CASE 
+                WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 
+                WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 
+                ELSE kuantitas 
+            END) as total")->value('total') ?? 0;
+
+        // 6. Hitung Total Tersangka (Hanya yang memiliki BB yang lolos filter)
+        // Jika tidak ada filter BB, hitung semua tersangka dalam kasus yang muncul
+        if ($request->filled('kategori_bb')) {
+            $totalTersangka = \App\Models\BerantasUngkapTersangka::whereIn('berantas_ungkap_kasus_id', $kasusIdSubquery)
+                ->whereHas('barangBukti', function($q) use ($request) {
+                    $this->applyCaseFilter($q, $request);
+                })->count();
+        } else {
+            $totalTersangka = \App\Models\BerantasUngkapTersangka::whereIn('berantas_ungkap_kasus_id', $kasusIdSubquery)->count();
+        }
+
+        // --- END AGREGASI ---
+
         $perPage = $request->input('per_page', 10);
         if (!in_array($perPage, [10, 25, 50, 100])) $perPage = 10;
 

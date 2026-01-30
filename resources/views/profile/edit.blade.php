@@ -127,19 +127,67 @@
                             <div class="row mb-3">
                                 <label class="col-md-4 col-form-label text-md-end text-muted">Hak Akses (Role)</label>
                                 <div class="col-md-6 d-flex align-items-center">
-                                    @if($user->role == 'admin')
-                                        <span class="badge bg-danger rounded-pill px-3 py-2">
-                                            <i class="bi bi-shield-lock-fill me-1"></i> Super Admin
-                                        </span>
-                                    @elseif($user->role == 'admin_satker')
-                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
-                                            <i class="bi bi-building-lock me-1"></i> Admin Satker
-                                        </span>
-                                    @else
-                                        <span class="badge bg-info text-dark rounded-pill px-3 py-2">
-                                            <i class="bi bi-person-workspace me-1"></i> Operator
-                                        </span>
-                                    @endif
+                                    @switch($user->role)
+                                        {{-- Core Admin Roles --}}
+                                        @case('admin')
+                                            <span class="badge bg-danger rounded-pill px-3 py-2">
+                                                <i class="bi bi-shield-lock-fill me-1"></i> Super Admin
+                                            </span>
+                                            @break
+
+                                        @case('admin_satker')
+                                            <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
+                                                <i class="bi bi-building-lock me-1"></i> Admin Satker
+                                            </span>
+                                            @break
+
+                                        @case('operator_satker')
+                                            <span class="badge bg-secondary rounded-pill px-3 py-2">
+                                                <i class="bi bi-person-badge me-1"></i> Operator Satker
+                                            </span>
+                                            @break
+
+                                        {{-- P2M Roles --}}
+                                        @case('admin_p2m')
+                                            <span class="badge bg-primary rounded-pill px-3 py-2">
+                                                <i class="bi bi-people-fill me-1"></i> Admin P2M
+                                            </span>
+                                            @break
+                                        @case('operator_p2m')
+                                            <span class="badge bg-info text-dark rounded-pill px-3 py-2">
+                                                <i class="bi bi-megaphone me-1"></i> Operator P2M
+                                            </span>
+                                            @break
+
+                                        {{-- Berantas Roles --}}
+                                        @case('admin_berantas')
+                                            <span class="badge bg-dark rounded-pill px-3 py-2">
+                                                <i class="bi bi-shield-shaded me-1"></i> Admin Berantas
+                                            </span>
+                                            @break
+                                        @case('operator_berantas')
+                                            <span class="badge border border-dark text-dark rounded-pill px-3 py-2">
+                                                <i class="bi bi-search me-1"></i> Operator Berantas
+                                            </span>
+                                            @break
+
+                                        {{-- Rehab Roles --}}
+                                        @case('admin_rehab')
+                                            <span class="badge bg-success rounded-pill px-3 py-2">
+                                                <i class="bi bi-heart-pulse-fill me-1"></i> Admin Rehab
+                                            </span>
+                                            @break
+                                        @case('operator_rehab')
+                                            <span class="badge rounded-pill px-3 py-2 text-white" style="background-color: #20c997;">
+                                                <i class="bi bi-bandaid me-1"></i> Operator Rehab
+                                            </span>
+                                            @break
+
+                                        @default
+                                            <span class="badge bg-light text-dark border rounded-pill px-3 py-2">
+                                                <i class="bi bi-person me-1"></i> User
+                                            </span>
+                                    @endswitch
                                 </div>
                             </div>
     

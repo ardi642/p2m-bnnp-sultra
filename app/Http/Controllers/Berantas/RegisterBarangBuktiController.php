@@ -132,20 +132,48 @@ class RegisterBarangBuktiController extends Controller
 
         $query = $this->getQuery($request);
 
-        // --- AGREGASI DATA ---
+        // --- AGREGASI DATA (PERBAIKAN) ---
         
         $totalRegister = $query->count();
         $subQueryRegister = $query->clone()->reorder()->select('berantas_register_barang_bukti.id');
 
-        // Total Barang Bukti Narkotika
-        $totalBBNarkotika = \App\Models\BerantasRegisterBarangBuktiItem::query()
-            ->whereIn('register_barang_bukti_id', $subQueryRegister)
-            ->where('kategori', 'Narkotika')
-            ->count();
+        // Buat Base Query untuk Item agar filter Item konsisten dengan Tabel
+        // Kita filter item berdasarkan Parent yang lolos filter, DAN filter item itu sendiri
+        $baseItemQuery = \App\Models\BerantasRegisterBarangBuktiItem::query()
+            ->whereIn('register_barang_bukti_id', $subQueryRegister);
 
-        // Total Berat Narkotika (Gram)
-        $totalBeratGram = \App\Models\BerantasRegisterBarangBuktiItem::query()
-            ->whereIn('register_barang_bukti_id', $subQueryRegister)
+        // Terapkan filter Item yang sama dengan yang ada di getQuery
+        if ($request->filled('kategori_bb')) {
+            $categories = (array)$request->kategori_bb;
+            $baseItemQuery->where(function($q) use ($categories, $request) {
+                if (in_array('Narkotika', $categories)) {
+                    $q->orWhere(function($narkoQ) use ($request) {
+                        $narkoQ->where('kategori', 'Narkotika');
+                        if ($request->filled('narkotika_ids')) {
+                            $narkoQ->whereIn('narkotika_id', (array)$request->narkotika_ids);
+                        }
+                    });
+                }
+                if (in_array('Non-Narkotika', $categories)) {
+                    $q->orWhere(function($nonQ) use ($request) {
+                        $nonQ->where('kategori', 'Non-Narkotika');
+                        if ($request->filled('search_non_narkotika')) {
+                            $nonQ->where(fn($textQ) => collect((array)$request->search_non_narkotika)->each(fn($k) => $textQ->orWhere('nama_barang_non_narkotika', 'LIKE', "%{$k}%")));
+                        }
+                    });
+                }
+            });
+        }
+
+        if ($request->filled('sumber_perolehan')) {
+            $baseItemQuery->whereIn('sumber_perolehan', (array)$request->sumber_perolehan);
+        }
+
+        // 1. Total Barang Bukti Narkotika (Hanya yang lolos filter)
+        $totalBBNarkotika = (clone $baseItemQuery)->where('kategori', 'Narkotika')->count();
+
+        // 2. Total Berat Narkotika (Hanya yang lolos filter)
+        $totalBeratGram = (clone $baseItemQuery)
             ->where('kategori', 'Narkotika')
             ->selectRaw("SUM(
                 CASE 
@@ -155,11 +183,9 @@ class RegisterBarangBuktiController extends Controller
                 END
             ) as total_gram")->value('total_gram') ?? 0;
 
-        // Agregasi Sumber Perolehan (KHUSUS NARKOTIKA)
-        // Perbaikan: Ditambahkan where kategori = Narkotika
-        $sumberStats = \App\Models\BerantasRegisterBarangBuktiItem::query()
-            ->whereIn('register_barang_bukti_id', $subQueryRegister)
-            ->where('kategori', 'Narkotika') // <--- FILTER INI YANG DITAMBAHKAN
+        // 3. Agregasi Sumber Perolehan (Hanya yang lolos filter & kategori Narkotika)
+        $sumberStats = (clone $baseItemQuery)
+            ->where('kategori', 'Narkotika')
             ->select('sumber_perolehan', DB::raw('count(*) as total'))
             ->groupBy('sumber_perolehan')
             ->pluck('total', 'sumber_perolehan');
@@ -168,17 +194,14 @@ class RegisterBarangBuktiController extends Controller
         $totalTangkap = $sumberStats['Hasil Tangkap'] ?? 0;
         $totalTemuan = $sumberStats['Temuan'] ?? 0;
         
-        // Hitung Persentase (Berdasarkan total item narkotika saja)
+        // Hitung Persentase
         $persenTangkap = $totalItemsNarkotika > 0 ? round(($totalTangkap / $totalItemsNarkotika) * 100, 1) : 0;
         $persenTemuan = $totalItemsNarkotika > 0 ? round(($totalTemuan / $totalItemsNarkotika) * 100, 1) : 0;
 
         // --- END AGREGASI ---
         
         $perPage = $request->input('per_page', 10);
-        
-        if (!in_array($perPage, [10, 25, 50, 100])) {
-            $perPage = 10;
-        }
+        if (!in_array($perPage, [10, 25, 50, 100])) $perPage = 10;
 
         $data = $query->paginate($perPage)->withQueryString();
         

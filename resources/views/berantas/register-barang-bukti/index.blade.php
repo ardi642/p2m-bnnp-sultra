@@ -408,7 +408,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="7" class="text-center py-5 text-muted fst-italic border-bottom">Belum ada data register yang diinput.</td></tr>
+                                        <tr><td colspan="7" class="text-center py-5 text-muted fst-italic border-bottom">Tidak ada data barang bukti</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

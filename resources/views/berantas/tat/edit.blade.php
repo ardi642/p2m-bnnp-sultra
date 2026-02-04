@@ -9,7 +9,9 @@
                 <h4 class="fw-bold text-dark mb-1">Edit Data TAT</h4>
                 <p class="text-secondary small mb-0">Update Data Tim Asesmen Terpadu</p>
             </div>
-            <a href="{{ route('berantas.tat.index') }}" class="btn btn-secondary btn-sm px-3">Kembali</a>
+            <a href="{{ route('berantas.tat.index') }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
+                <i class="bi bi-arrow-left"></i> Kembali
+            </a>
         </div>
 
         @if ($errors->any())

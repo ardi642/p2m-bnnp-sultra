@@ -46,40 +46,34 @@ class RehabLaporanExport implements FromView, ShouldAutoSize, WithStyles
 
     public function styles(Worksheet $sheet)
     {
-        // 1. FIX LEBAR KOLOM PERTAMA (MANUAL)
-        // AutoSize sering gagal pada kolom merged, jadi kita set manual
         $sheet->getColumnDimension('A')->setWidth(35); 
 
-        // 2. Styling Header (Baris 1 & 2)
         $sheet->getStyle('A1:Z2')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '92D050']], 
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER, 
                 'vertical' => Alignment::VERTICAL_CENTER,
-                'wrapText' => true // Agar teks panjang turun ke bawah
+                'wrapText' => true
             ],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'FFFFFF']]],
         ]);
 
         $lastRow = $sheet->getHighestRow();
 
-        // 3. Styling Kolom Kiri (Instansi Pemerintah)
         $sheet->getStyle('A3:A' . $lastRow)->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '92D050']],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'FFFFFF']]],
-            'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'horizontal' => Alignment::HORIZONTAL_LEFT], // Rata Kiri lebih rapi untuk nama satker
+            'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'horizontal' => Alignment::HORIZONTAL_LEFT],
         ]);
 
-        // 4. Styling Baris Total (Paling Bawah)
         $sheet->getStyle('A' . $lastRow . ':Z' . $lastRow)->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '92D050']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
 
-        // 5. Styling Data Tengah
         $sheet->getStyle('B3:Z' . ($lastRow - 1))->applyFromArray([
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'FFFFFF']]],

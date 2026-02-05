@@ -225,17 +225,22 @@ Route::middleware('auth')->group(function() {
     // =========================================================================
     Route::prefix('rehab')->name('rehab.')->group(function() {
         
-        // A. READ/VIEW ACCESS (Admin Pusat, Admin Satker, Admin Rehab, Operator Satker, Operator Rehab)
+        // A. READ/VIEW ACCESS
         Route::middleware(['role:admin,admin_satker,admin_rehab,operator_satker,operator_rehab'])->group(function() {
-            // Laporan Bulanan (Index/List)
             Route::get('/laporan', [RehabLaporanController::class, 'index'])->name('laporan.index');
             Route::get('/laporan/export', [RehabLaporanController::class, 'export'])->name('laporan.export');
         });
 
-        // B. WRITE/CREATE/EDIT ACCESS (Hanya Operator Satker & Operator Rehab)
-        // Admin Pusat/Satker bisa ditambahkan jika kebijakan membolehkan edit (opsional)
+        // B. WRITE ACCESS (Target & Laporan Harian)
         Route::middleware(['role:operator_satker,operator_rehab,admin,admin_satker'])->group(function() {
-            // Resource Laporan (Create, Store, Edit, Update, Destroy)
+            
+            // Route Simpan/Update Target
+            Route::post('/laporan/target', [RehabLaporanController::class, 'storeTarget'])->name('laporan.store_target');
+            
+            // Route Hapus Target (BARU)
+            Route::delete('/laporan/target/{id}', [RehabLaporanController::class, 'destroyTarget'])->name('laporan.destroy_target');
+
+            // Resource Laporan Harian
             Route::resource('laporan', RehabLaporanController::class)->except(['index', 'show']);
         });
     });

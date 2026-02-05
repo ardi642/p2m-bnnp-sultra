@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Rehab;
 
 use App\Http\Controllers\Controller;
-use App\Models\RehabLaporanBulanan;
+use App\Models\RehabLaporan;
+use App\Models\RehabTarget;
 use App\Models\SatuanKerja;
 use App\Models\TemporaryFile;
 use App\Models\DokumentasiKegiatan;
@@ -14,52 +15,52 @@ use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use App\Exports\RehabLaporanExport; 
-use Maatwebsite\Excel\Facades\Excel; 
+use App\Exports\RehabLaporanExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class RehabLaporanController extends Controller
 {
-    // --- 1. QUERY FILTER UTAMA (Index & Export pakai ini) ---
+    // --- QUERY FILTER UTAMA (Digunakan oleh Index & Export) ---
     private function getFilteredQuery(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
         
-        $query = RehabLaporanBulanan::with(['satuanKerja', 'dokumentasi']);
+        $query = RehabLaporan::with(['satuanKerja', 'dokumentasi']);
 
-        // Filter Satuan Kerja
+        // 1. Filter Satuan Kerja
         if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
-                $query->whereIn('rehab_laporan_bulanan.satuan_kerja_id', (array)$request->satuan_kerja_id);
+                $query->whereIn('rehab_laporan.satuan_kerja_id', (array)$request->satuan_kerja_id);
             }
         } else {
-            $query->where('rehab_laporan_bulanan.satuan_kerja_id', $user->getSatkerId());
+            // User biasa hanya melihat data satkernya sendiri
+            $query->where('rehab_laporan.satuan_kerja_id', $user->getSatkerId());
         }
 
-        // Filter Bulan
+        // 2. Filter Bulan
         if ($request->filled('bulan')) {
-            $query->whereIn(DB::raw('MONTH(rehab_laporan_bulanan.periode)'), (array)$request->bulan);
+            $query->whereIn(DB::raw('MONTH(rehab_laporan.tanggal)'), (array)$request->bulan);
         }
         
-        // Filter Tahun
+        // 3. Filter Tahun
         if ($request->filled('tahun')) {
-            $query->whereIn(DB::raw('YEAR(rehab_laporan_bulanan.periode)'), (array)$request->tahun);
-        } 
-        elseif (!$request->has('tahun')) {
-            // Jika tidak ada filter tahun sama sekali, default ke tahun ini
-            $query->whereYear('rehab_laporan_bulanan.periode', date('Y'));
+            $query->whereIn(DB::raw('YEAR(rehab_laporan.tanggal)'), (array)$request->tahun);
+        } elseif (!$request->has('tahun')) {
+            // Default tahun ini jika tidak ada filter
+            $query->whereYear('rehab_laporan.tanggal', date('Y'));
         }
 
-        // Sorting
-        $sortBy = $request->input('sort_by', 'periode');
+        // 4. Sorting
+        $sortBy = $request->input('sort_by', 'tanggal');
         $sortOrder = $request->input('sort_order', 'desc');
 
         if ($sortBy === 'satuan_kerja_id') {
-            $query->join('satuan_kerja', 'rehab_laporan_bulanan.satuan_kerja_id', '=', 'satuan_kerja.id')
+            $query->join('satuan_kerja', 'rehab_laporan.satuan_kerja_id', '=', 'satuan_kerja.id')
                   ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
-                  ->select('rehab_laporan_bulanan.*');
+                  ->select('rehab_laporan.*');
         } else {
-            $query->orderBy('rehab_laporan_bulanan.' . $sortBy, $sortOrder);
+            $query->orderBy('rehab_laporan.' . $sortBy, $sortOrder);
         }
 
         return $query;
@@ -67,156 +68,202 @@ class RehabLaporanController extends Controller
 
     public function index(Request $request)
     {
-        // Ambil tahun unik untuk DROPDOWN (Tetap ambil semua tahun yg ada di DB agar bisa dipilih)
-        $years = RehabLaporanBulanan::selectRaw('YEAR(periode) as year')
-            ->distinct()
-            ->orderBy('year', 'desc')
-            ->pluck('year');
-
-        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        // =================================================================
+        // 1. LOGIKA DROPDOWN TAHUN (Clean & Efisien)
+        // =================================================================
         
-        $perPage = $request->input('per_page', 10);
-        $data = $this->getFilteredQuery($request)->paginate($perPage)->withQueryString();
+        // A. Ambil tahun masa lalu dari DATA yang sudah ada (Laporan & Target)
+        $yearsLaporan = RehabLaporan::selectRaw('YEAR(tanggal) as year')->distinct()->pluck('year')->toArray();
+        $yearsTarget  = RehabTarget::select('tahun as year')->distinct()->pluck('year')->toArray();
 
-        return view('rehab.laporan.index', compact('data', 'satuanKerjas', 'years'));
+        // B. Buat Range Tahun Masa Depan (Hanya Tahun Ini + 1 Tahun ke Depan)
+        $futureYears = range(date('Y'), date('Y') + 1);
+
+        // C. GABUNGKAN & URUTKAN
+        $years = array_unique(array_merge($yearsLaporan, $yearsTarget, $futureYears));
+        rsort($years);
+
+        // =================================================================
+        
+        $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
+        $perPage = $request->input('per_page', 10);
+        
+        // 2. DATA LAPORAN HARIAN (Main Table)
+        $query = $this->getFilteredQuery($request);
+        $dataForSummary = $query->get(); 
+        $data = $query->paginate($perPage)->withQueryString();
+
+        // 3. LOGIC SUMMARY WIDGET (Rekapitulasi)
+        $summary = [];
+        if ($dataForSummary->isNotEmpty()) {
+            $grouped = $dataForSummary->groupBy(fn($item) => $item->tanggal->format('Y-m'));
+
+            foreach ($grouped as $key => $items) {
+                list($tahun, $bulan) = explode('-', $key);
+                
+                $targetQ = RehabTarget::where('bulan', $bulan)->where('tahun', $tahun);
+                
+                if ($user->hasRole('admin') && $request->filled('satuan_kerja_id')) {
+                    $targetQ->whereIn('satuan_kerja_id', (array)$request->satuan_kerja_id);
+                } elseif (!$user->hasRole('admin')) {
+                    $targetQ->where('satuan_kerja_id', $user->getSatkerId());
+                }
+
+                $targetRow = $targetQ->selectRaw('SUM(target_rawat_jalan) as t_rj, SUM(target_pasca_rehab) as t_pasca, SUM(target_skhpn) as t_skhpn')->first();
+
+                $summary[] = [
+                    'periode' => Carbon::createFromDate($tahun, $bulan, 1)->locale('id')->translatedFormat('F Y'),
+                    'target_rj'    => $targetRow->t_rj ?? 0,
+                    'real_rj'      => $items->sum('realisasi_rawat_jalan'),
+                    'target_pasca' => $targetRow->t_pasca ?? 0,
+                    'real_pasca'   => $items->sum('realisasi_pasca_rehab'),
+                    'target_skhpn' => $targetRow->t_skhpn ?? 0,
+                    'real_skhpn'   => $items->sum('realisasi_skhpn'),
+                ];
+            }
+        }
+
+        // 4. LIST TARGET (Untuk Modal Kelola Target)
+        $targetsQuery = RehabTarget::with('satuanKerja');
+
+        // A. Filter Satker
+        if ($user->hasRole('admin')) {
+            if ($request->filled('satuan_kerja_id')) {
+                $targetsQuery->whereIn('satuan_kerja_id', (array)$request->satuan_kerja_id);
+            }
+        } else {
+            $targetsQuery->where('satuan_kerja_id', $user->getSatkerId());
+        }
+
+        // B. Filter Tahun (Ikut filter dashboard agar relevan)
+        if ($request->filled('tahun')) {
+            $targetsQuery->whereIn('tahun', (array)$request->tahun);
+        } else {
+            // Default tahun ini
+            $targetsQuery->where('tahun', date('Y'));
+        }
+
+        // C. Filter Bulan (DIABAIKAN agar user bisa lihat target setahun penuh)
+
+        $allTargets = $targetsQuery->orderBy('tahun', 'desc')
+                                   ->orderBy('bulan', 'asc')
+                                   ->get();
+
+        // 5. Inject Status 'has_laporan' ke object target (Untuk Restrict Delete)
+        $allTargets->transform(function($target) {
+            $exists = RehabLaporan::where('satuan_kerja_id', $target->satuan_kerja_id)
+                ->whereYear('tanggal', $target->tahun)
+                ->whereMonth('tanggal', $target->bulan)
+                ->exists();
+            $target->has_laporan = $exists;
+            return $target;
+        });
+
+        return view('rehab.laporan.index', compact('data', 'satuanKerjas', 'years', 'summary', 'allTargets'));
     }
 
-    // --- 2. METHOD EXPORT (PERBAIKAN LOGIKA TAHUN) ---
-    public function export(Request $request)
+    // --- FITUR: SIMPAN TARGET BULANAN ---
+    public function storeTarget(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
+        $request->validate([
+            'satuan_kerja_id'    => $user->isAdmin() ? 'required' : 'nullable',
+            'bulan'              => 'required|integer|min:1|max:12',
+            'tahun'              => 'required|integer|min:2020',
+            'target_rawat_jalan' => 'required|integer|min:0',
+            'target_pasca_rehab' => 'required|integer|min:0',
+            'target_skhpn'       => 'required|integer|min:0',
+        ]);
 
-        // A. CEK HAK AKSES
-        $userSatker = ($user->pegawai && $user->pegawai->satuanKerja) ? $user->pegawai->satuanKerja : null;
-        $isSuperAdmin = $user->hasRole('admin') && !$userSatker;
-        $isBnnpSultra = false;
-        if ($userSatker) {
-            $namaSatker = strtoupper(trim($userSatker->satuan_kerja));
-            $isBnnpSultra = ($namaSatker === 'BNNP SULTRA');
-        }
+        $satkerId = $user->isAdmin() ? $request->satuan_kerja_id : $user->getSatkerId();
 
-        if (!$isSuperAdmin && !$isBnnpSultra) {
-            abort(403, 'Maaf, Anda tidak memiliki hak akses untuk mengunduh rekapitulasi laporan ini.');
-        }
+        RehabTarget::updateOrCreate(
+            [
+                'satuan_kerja_id' => $satkerId,
+                'bulan'           => $request->bulan,
+                'tahun'           => $request->tahun
+            ],
+            [
+                'target_rawat_jalan' => $request->target_rawat_jalan,
+                'target_pasca_rehab' => $request->target_pasca_rehab,
+                'target_skhpn'       => $request->target_skhpn,
+            ]
+        );
 
-        // B. TENTUKAN KATEGORI & KOLOM
-        $category = $request->query('kategori', 'rawat_jalan');
-        
-        $colTarget = match($category) {
-            'pasca_rehab' => 'target_pasca_rehab',
-            'skhpn'       => 'target_skhpn',
-            default       => 'target_rawat_jalan'
-        };
-        $colReal = match($category) {
-            'pasca_rehab' => 'realisasi_pasca_rehab',
-            'skhpn'       => 'realisasi_skhpn',
-            default       => 'realisasi_rawat_jalan'
-        };
-
-        // C. AMBIL DATA SESUAI FILTER
-        // Menggunakan getFilteredQuery() memastikan data yg diambil = data yg tampil di layar
-        $query = $this->getFilteredQuery($request);
-        $laporan = $query->get(); // Ambil semua (tanpa pagination)
-
-        // D. EKSTRAK TAHUN DARI HASIL FILTER (KUNCI PERBAIKAN)
-        // Kita hanya mengambil tahun yang muncul di variable $laporan.
-        // Jika filter tahun = 2026, maka $laporan hanya berisi data 2026.
-        // Otomatis $years hanya berisi [2026].
-        $years = $laporan->pluck('periode')
-            ->map(fn($d) => date('Y', strtotime($d)))
-            ->unique()
-            ->sort()
-            ->values()
-            ->toArray();
-
-        // E. HANDLING JIKA DATA KOSONG
-        // Jika hasil filter kosong (misal filter tahun 2026 tapi belum ada data),
-        // Kita tetap ingin menampilkan Header Kolom 2026 (kosong), bukan tabel tanpa header tahun.
-        if (empty($years) && $request->filled('tahun')) {
-            $years = array_map('intval', (array)$request->tahun); // Pakai tahun dari request
-            sort($years);
-        } elseif (empty($years)) {
-            // Jika kosong total dan tidak ada filter, default tahun ini
-            $years = [date('Y')]; 
-        }
-
-        // F. PIVOT DATA (GROUPING PER SATKER)
-        $satkers = SatuanKerja::orderBy('id')->get(); 
-        $exportData = [];
-
-        foreach ($satkers as $satker) {
-            $row = [
-                'satker_nama' => $satker->satuan_kerja,
-                'years' => []
-            ];
-
-            foreach ($years as $year) {
-                // Filter data $laporan (yang sudah difilter dari DB) untuk satker & tahun ini
-                $dataTahun = $laporan->filter(function($item) use ($satker, $year) {
-                    return $item->satuan_kerja_id == $satker->id && date('Y', strtotime($item->periode)) == $year;
-                });
-
-                $t = $dataTahun->sum($colTarget);
-                $r = $dataTahun->sum($colReal);
-                $p = $t > 0 ? ($r / $t) * 100 : 0;
-
-                $row['years'][$year] = [
-                    'target' => $t,
-                    'realisasi' => $r,
-                    'persen' => $p
-                ];
-            }
-            $exportData[] = $row;
-        }
-
-        $fileName = 'Laporan_' . strtoupper($category) . '_' . date('Ymd_His') . '.xlsx';
-        return Excel::download(new RehabLaporanExport($exportData, $years, $category), $fileName);
+        return back()->with('success', 'Target Bulanan berhasil disimpan.');
     }
 
+    // --- FITUR: HAPUS TARGET (Restrict Delete) ---
+    public function destroyTarget($id)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $target = RehabTarget::findOrFail($id);
+        
+        // Cek Hak Akses
+        if (!$user->isAdmin() && $target->satuan_kerja_id !== $user->getSatkerId()) {
+            abort(403);
+        }
+
+        // Cek apakah ada laporan harian di bulan & tahun target tersebut
+        $hasLaporan = RehabLaporan::where('satuan_kerja_id', $target->satuan_kerja_id)
+            ->whereYear('tanggal', $target->tahun)
+            ->whereMonth('tanggal', $target->bulan)
+            ->exists();
+
+        if ($hasLaporan) {
+            return back()->with('error', 'Gagal menghapus! Target ini sudah digunakan dalam laporan harian.');
+        }
+
+        $target->delete();
+        return back()->with('success', 'Target berhasil dihapus.');
+    }
+
+    // --- CREATE HARIAN ---
     public function create()
     {
         $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
         return view('rehab.laporan.create', compact('satuanKerjas'));
     }
 
+    // --- STORE HARIAN ---
     public function store(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $satkerId = $user->isAdmin() ? $request->satuan_kerja_id : $user->getSatkerId();
-        $periodeDate = $request->periode_input . '-01'; 
-
-        $exists = RehabLaporanBulanan::where('satuan_kerja_id', $satkerId)
-            ->where('periode', $periodeDate)
+        
+        // Cek Duplikasi Tanggal
+        $exists = RehabLaporan::where('satuan_kerja_id', $satkerId)
+            ->where('tanggal', $request->tanggal)
             ->exists();
 
         if ($exists) {
             throw ValidationException::withMessages([
-                'periode' => ['Laporan untuk periode tersebut sudah tersedia. Mohon cek kembali.']
+                'tanggal' => ['Laporan untuk tanggal tersebut sudah ada. Silakan edit data yang sudah ada.']
             ]);
         }
 
         $request->validate([
-            'periode_input'         => 'required', 
+            'tanggal'               => 'required|date', 
             'satuan_kerja_id'       => $user->isAdmin() ? 'required' : 'nullable',
-            'target_rawat_jalan'    => 'required|integer|min:0',
             'realisasi_rawat_jalan' => 'required|integer|min:0',
-            'target_pasca_rehab'    => 'required|integer|min:0',
             'realisasi_pasca_rehab' => 'required|integer|min:0',
-            'target_skhpn'          => 'required|integer|min:0',
             'realisasi_skhpn'       => 'required|integer|min:0',
             'dokumentasi'           => 'nullable|array'
         ]);
 
         DB::beginTransaction();
         try {
-            $data = $request->except(['dokumentasi', 'periode_input', 'satuan_kerja_id']);
+            $data = $request->except(['dokumentasi', 'satuan_kerja_id']);
             $data['satuan_kerja_id'] = $satkerId;
-            $data['periode'] = $periodeDate;
 
-            $laporan = RehabLaporanBulanan::create($data);
+            $laporan = RehabLaporan::create($data);
 
+            // Upload File
             if ($request->filled('dokumentasi')) {
                 foreach ($request->input('dokumentasi') as $folder) {
                     $tempFile = TemporaryFile::where('folder', $folder)->first();
@@ -242,7 +289,7 @@ class RehabLaporanController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('rehab.laporan.index')->with('success', 'Laporan berhasil disimpan.');
+            return redirect()->route('rehab.laporan.index')->with('success', 'Laporan Harian berhasil disimpan.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -252,7 +299,7 @@ class RehabLaporanController extends Controller
 
     public function edit($id)
     {
-        $laporan = RehabLaporanBulanan::with(['dokumentasi'])->findOrFail($id);
+        $laporan = RehabLaporan::with(['dokumentasi'])->findOrFail($id);
         /** @var \App\Models\User $user */
         $user = Auth::user();
         if (!$user->isAdmin() && $laporan->satuan_kerja_id !== $user->getSatkerId()) abort(403);
@@ -262,17 +309,14 @@ class RehabLaporanController extends Controller
 
     public function update(Request $request, $id)
     {
-        $laporan = RehabLaporanBulanan::findOrFail($id);
+        $laporan = RehabLaporan::findOrFail($id);
         /** @var \App\Models\User $user */
         $user = Auth::user();
         if (!$user->isAdmin() && $laporan->satuan_kerja_id !== $user->getSatkerId()) abort(403);
 
         $request->validate([
-            'target_rawat_jalan'    => 'required|integer|min:0',
             'realisasi_rawat_jalan' => 'required|integer|min:0',
-            'target_pasca_rehab'    => 'required|integer|min:0',
             'realisasi_pasca_rehab' => 'required|integer|min:0',
-            'target_skhpn'          => 'required|integer|min:0',
             'realisasi_skhpn'       => 'required|integer|min:0',
             'delete_files'          => 'nullable|array',
             'dokumentasi'           => 'nullable|array'
@@ -280,7 +324,7 @@ class RehabLaporanController extends Controller
 
         DB::beginTransaction();
         try {
-            $laporan->update($request->except(['dokumentasi', 'delete_files', 'periode_input', 'satuan_kerja_id']));
+            $laporan->update($request->only(['realisasi_rawat_jalan', 'realisasi_pasca_rehab', 'realisasi_skhpn']));
 
             if ($request->has('delete_files')) {
                 $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
@@ -325,7 +369,7 @@ class RehabLaporanController extends Controller
 
     public function destroy($id)
     {
-        $laporan = RehabLaporanBulanan::with('dokumentasi')->findOrFail($id);
+        $laporan = RehabLaporan::with('dokumentasi')->findOrFail($id);
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
@@ -355,6 +399,75 @@ class RehabLaporanController extends Controller
             } catch (\Exception $e) { }
         }
 
-        return back()->with('success', 'Data laporan berhasil dihapus.');
+        return back()->with('success', 'Data laporan harian berhasil dihapus.');
+    }
+
+    // --- EXPORT (Super Admin All, User Satker Sendiri) ---
+    public function export(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if ($user->hasRole('admin')) {
+            $satkers = SatuanKerja::orderBy('id')->get();
+        } else {
+            $satkers = SatuanKerja::where('id', $user->getSatkerId())->get();
+        }
+
+        $category = $request->query('kategori', 'rawat_jalan');
+        
+        $colReal = match($category) {
+            'pasca_rehab' => 'realisasi_pasca_rehab',
+            'skhpn'       => 'realisasi_skhpn',
+            default       => 'realisasi_rawat_jalan'
+        };
+        $colTarget = match($category) {
+            'pasca_rehab' => 'target_pasca_rehab',
+            'skhpn'       => 'target_skhpn',
+            default       => 'target_rawat_jalan'
+        };
+
+        $query = $this->getFilteredQuery($request);
+        $laporanHarian = $query->get();
+
+        $years = $laporanHarian->pluck('tanggal')
+            ->map(fn($d) => $d->format('Y'))
+            ->unique()->sort()->values()->toArray();
+
+        if (empty($years)) {
+            $years = $request->filled('tahun') ? array_map('intval', (array)$request->tahun) : [date('Y')];
+            sort($years);
+        }
+
+        $exportData = [];
+
+        foreach ($satkers as $satker) {
+            $row = [
+                'satker_nama' => $satker->satuan_kerja,
+                'years' => []
+            ];
+
+            foreach ($years as $year) {
+                $realisasiTotal = $laporanHarian->filter(function($item) use ($satker, $year) {
+                    return $item->satuan_kerja_id == $satker->id && $item->tanggal->format('Y') == $year;
+                })->sum($colReal);
+
+                $targetTotal = RehabTarget::where('satuan_kerja_id', $satker->id)
+                    ->where('tahun', $year)
+                    ->sum($colTarget);
+
+                $p = $targetTotal > 0 ? ($realisasiTotal / $targetTotal) * 100 : 0;
+
+                $row['years'][$year] = [
+                    'target' => $targetTotal,
+                    'realisasi' => $realisasiTotal,
+                    'persen' => $p
+                ];
+            }
+            $exportData[] = $row;
+        }
+
+        $fileName = 'Laporan_Rehab_' . strtoupper($category) . '_' . date('Ymd_His') . '.xlsx';
+        return Excel::download(new RehabLaporanExport($exportData, $years, $category), $fileName);
     }
 }

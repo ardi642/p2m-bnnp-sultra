@@ -40,6 +40,7 @@
                     ['route' => 'p2m.tes-urine.index', 'label' => 'Tes Urine', 'url' => 'p2m/tes-urine*'],
                     ['route' => 'p2m.desa-bersinar.index', 'label' => 'Desa Bersinar', 'url' => 'p2m/desa-bersinar*'],
                     ['route' => 'p2m.safari-religi.index', 'label' => 'Safari Religi', 'url' => 'p2m/safari-religi*'],
+                    ['route' => 'p2m.pelatihan.index', 'label' => 'Pelatihan Soft Skill', 'url' => 'p2m/pelatihan*'],
                 ] as $menu)
                     <a href="{{ route($menu['route']) }}" class="nav-link {{ Request::is($menu['url']) ? 'active' : '' }}">
                         {{ $menu['label'] }}

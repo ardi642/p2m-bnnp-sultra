@@ -15,6 +15,7 @@ use App\Http\Controllers\P2m\KieController;
 use App\Http\Controllers\P2m\LingkunganController;
 use App\Models\P2mSosialisasi;
 use App\Http\Controllers\P2m\CfdController;
+use App\Http\Controllers\P2m\PelatihanController;
 use App\Http\Controllers\P2m\DesaBersinarController;
 use App\Models\p2mcfd;
 
@@ -155,6 +156,9 @@ Route::middleware('auth')->group(function() {
             // Safari Religi
             Route::get('/safari-religi', [SafariReligiController::class, 'index'])->name("safari-religi.index");
             Route::get('/safari-religi/export', [SafariReligiController::class, 'export'])->name('safari-religi.export');
+            // Safari Religi
+            Route::get('/pelatihan', [PelatihanController::class, 'index'])->name("pelatihan.index");
+            Route::get('/pelatihan/export', [PelatihanController::class, 'export'])->name('pelatihan.export');
         });
 
         // B. WRITE/CREATE/EDIT ACCESS (Hanya Operator P2M & Operator Satker)
@@ -182,6 +186,8 @@ Route::middleware('auth')->group(function() {
             Route::resource('desa-bersinar', DesaBersinarController::class)->except(['index', 'show']);
             // Safari Religi CRUD
             Route::resource('safari-religi', SafariReligiController::class)->except(['index', 'show']);
+            // Pelatihan CRUD
+            Route::resource('pelatihan', PelatihanController::class)->except(['index', 'show']);
         });
     });
 

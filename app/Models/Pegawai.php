@@ -93,4 +93,17 @@ class Pegawai extends Model
             'id'
         )->withTimestamps();
     }
+
+
+     public function p2mPelatihan(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            P2mPelatihan::class,
+            'pegawai_p2m_pelatihan',
+            'pegawai_nip',
+            'p2m_pelatihan_id',
+            'nip',
+            'id'
+        )->withTimestamps();
+    }
 }

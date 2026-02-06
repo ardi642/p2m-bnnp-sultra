@@ -23,6 +23,7 @@
                             <option {{ Route::is('p2m.desa-bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desa-bersinar.create') }}">Desa Bersinar</option>
                             <option {{ Route::is('p2m.safari-religi.*') ? 'selected' : '' }} data-url="{{ route('p2m.safari-religi.create') }}">Safari Religi</option>
                             <option {{ Route::is('p2m.pelatihan.*') ? 'selected' : '' }} data-url="{{ route('p2m.pelatihan.create') }}">Pelatihan Soft Skill</option>
+                            <option {{ Route::is('p2m.keluarga.*') ? 'selected' : '' }} data-url="{{ route('p2m.keluarga.create') }}">Ketahanan Keluarga</option>
                         </select>
                     </div>
 

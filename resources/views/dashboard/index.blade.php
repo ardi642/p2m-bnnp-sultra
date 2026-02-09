@@ -175,6 +175,8 @@
                                 <option disabled>──────────</option>
                                 <option value="desa_bersinar">Desa Bersinar (Terbentuk)</option>
                                 <option value="lingkungan_bersinar">Lingkungan Bersinar (Terbentuk)</option>
+                                <option value="pelatihan">Pelatihan Soft Skill</option>
+                                <option value="keluarga">Ketahanan Keluarga</option>
                             </select>
                             <select x-model="chartFilter.year" class="form-select border-secondary fw-bold text-primary fs-6" style="width: 100px;">
                                 @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach

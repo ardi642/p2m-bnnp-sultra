@@ -345,7 +345,7 @@ class DesaKelurahanBersinarController extends Controller
 
         try {
             $pegawaiNips = $validasi['pegawai_nips'];
-            $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
+            $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files', 'lampiran', 'dokumentasi_links', 'lampiran_links'])->toArray();
 
             if ($user->hasRole(['operator_satker', 'operator_p2m'])) { unset($dataUpdate['satuan_kerja_id']); }
 
@@ -399,7 +399,6 @@ class DesaKelurahanBersinarController extends Controller
                 if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
             Log::error('Update error: ' . $e->getMessage());
-            dd($e);
             abort(500, 'Server Error.');
         }
     }

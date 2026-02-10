@@ -13,12 +13,12 @@
             {{-- BAGIAN KIRI: Judul & Deskripsi --}}
             <div>
                 <h1 class="h3 mb-1 fw-bold text-dark">Kegiatan P2M</h1>
-                <p class="text-muted mb-0">Master Data Sosialisasi Tatap Muka/Konvensional</p>
+                <p class="text-muted mb-0">Master Data Informasi dan Edukasi</p>
             </div>
 
             {{-- BAGIAN KANAN: Tombol Tambah Data --}}
             @if (auth()->user()->hasRole(['operator_satker', 'operator_p2m']))
-                <a href="{{ route('p2m.sosialisasi.create') }}" class="btn btn-primary btn-lg fs-6 px-4 rounded-pill shadow-sm d-flex align-items-center gap-2">
+                <a href="{{ route('p2m.informasi-edukasi.create') }}" class="btn btn-primary btn-lg fs-6 px-4 rounded-pill shadow-sm d-flex align-items-center gap-2">
                     <i class="bi bi-plus-lg"></i>
                     <span>Tambah Data</span>
                 </a>
@@ -73,7 +73,7 @@
                 <div class="card border-0 shadow-sm"> 
                     <div class="card-header bg-white py-3 border-bottom">
                         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-center gap-2">
-                            <h5 class="card-title mb-0 fw-bold text-secondary"><i class="bi bi-table me-2"></i>Data Sosialisasi Tatap Muka/Konvensional</h5>
+                            <h5 class="card-title mb-0 fw-bold text-secondary"><i class="bi bi-table me-2"></i>Data Informasi dan Edukasi</h5>
                             
                             {{-- Tombol Filter (Pakai Alpine toggleFilter) --}}
                             <button type="button" @click="toggleFilter" 
@@ -91,7 +91,7 @@
                     <div class="card-body p-0 p-lg-4">
                         
                         {{-- FORM FILTER --}}
-                        <form action="{{ route('p2m.sosialisasi.index') }}" method="GET">
+                        <form action="{{ route('p2m.informasi-edukasi.index') }}" method="GET">
                             <button type="submit" style="display: none;" aria-hidden="true"></button>
                             <input type="hidden" name="sort_by" value="{{ request('sort_by') }}">
                             <input type="hidden" name="sort_order" value="{{ request('sort_order') }}">
@@ -183,7 +183,7 @@
                                         </div>
 
                                         <div class="col-12 text-end pt-3 border-top mt-4 text-start">
-                                            <a href="{{ route('p2m.sosialisasi.index') }}" class="btn btn-link text-decoration-none text-muted btn-sm me-2">Reset</a>
+                                            <a href="{{ route('p2m.informasi-edukasi.index') }}" class="btn btn-link text-decoration-none text-muted btn-sm me-2">Reset</a>
                                             <button type="submit" class="btn btn-primary px-4 shadow-sm"><i class="bi bi-funnel-fill me-1"></i> Terapkan</button>
                                         </div>
                                     </div>
@@ -192,7 +192,7 @@
 
                             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-end align-items-lg-center mb-3 px-3 px-lg-0">
                                 <div class="mb-2 mb-lg-0">
-                                    <button type="submit" formaction="{{ route('p2m.sosialisasi.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 px-3 shadow-none">
+                                    <button type="submit" formaction="{{ route('p2m.informasi-edukasi.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 px-3 shadow-none">
                                         <i class="bi bi-file-earmark-excel"></i> <span>Export Excel</span>
                                     </button>
                                 </div>
@@ -232,10 +232,10 @@
                                     </tr>
                                 </thead>
                                 <tbody class="border-top-0">
-                                    @forelse ($sosialisasis as $data)
+                                    @forelse ($kegiatans as $data)
                                         {{-- Row Utama --}}
                                         <tr class="text-center align-middle" :class="isExpanded({{ $data->id }}) ? 'bg-light' : ''">
-                                            <td class="fw-bold text-secondary ps-3">{{ $sosialisasis->firstItem() + $loop->index }}</td>
+                                            <td class="fw-bold text-secondary ps-3">{{ $kegiatans->firstItem() + $loop->index }}</td>
                                             <td class="text-start"><span class="fw-semibold text-dark">{{ $data->satuanKerja->satuan_kerja ?? '-' }}</span></td>
                                             <td><span class="badge rounded-pill {{ $data->anggaran_pelaksanaan == 'DIPA' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' }}">{{ $data->anggaran_pelaksanaan }}</span></td>
                                             
@@ -278,9 +278,9 @@
                                                         <i class="bi" :class="isExpanded({{ $data->id }}) ? 'bi-chevron-up text-primary' : 'bi-eye text-secondary'"></i>
                                                     </button>
                                                     @if (auth()->user()->hasRole(['operator_satker', 'operator_p2m']))
-                                                        <a href="{{ route('p2m.sosialisasi.edit', $data->id) }}" class="btn btn-light border text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                                        <a href="{{ route('p2m.informasi-edukasi.edit', $data->id) }}" class="btn btn-light border text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
                                                         <button type="button" class="btn btn-light border text-danger" onclick="confirmDelete({{ $data->id }})" title="Hapus"><i class="bi bi-trash"></i></button>
-                                                        <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.sosialisasi.destroy', $data->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
+                                                        <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.informasi-edukasi.destroy', $data->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
                                                     @endif
                                                 </div>
                                             </td>
@@ -463,7 +463,7 @@
                                     </select>
                                     <span class="text-muted small">Data / halaman</span>
                                 </div>
-                                <div>{{ $sosialisasis->withQueryString()->links() }}</div>
+                                <div>{{ $kegiatans->withQueryString()->links() }}</div>
                             </div>
                         </div>
 

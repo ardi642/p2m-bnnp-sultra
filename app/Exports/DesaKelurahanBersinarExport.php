@@ -11,7 +11,7 @@ use Maatwebsite\Excel\Concerns\WithChunkReading;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
-class DesaBersinarExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithChunkReading
+class DesaKelurahanBersinarExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithChunkReading
 {
     protected $query;
 
@@ -33,7 +33,7 @@ class DesaBersinarExport implements FromQuery, WithHeadings, WithMapping, Should
     public function headings(): array
     {
         return [
-            'Satuan Kerja', 'Anggaran', 'Kabupaten/Kota', 'Desa', 'Kelurahan', 'Tanggal Pencanangan',
+            'Satuan Kerja', 'Anggaran', 'Kabupaten/Kota', 'Desa/Kelurahan', 'Tanggal Pencanangan',
             'Penanggung Jawab', 'No HP PJ', 'Jml Penggiat', 'Keberadaan IBM', 'Dibuat Pada'
         ];
     }
@@ -54,8 +54,7 @@ class DesaBersinarExport implements FromQuery, WithHeadings, WithMapping, Should
             $row->satuanKerja->satuan_kerja ?? '-',
             $row->anggaran_pembentukan,
             $row->kabupatenKota->nama ?? '-',
-            $row->nama_desa,
-            $row->nama_kelurahan,
+            $row->nama_desa_kelurahan,
             $row->tanggal_pencanangan->locale('id')->translatedFormat('d F Y'),
             implode("\n", $listPegawai),
             $row->no_hp_penanggung_jawab ?? '-',

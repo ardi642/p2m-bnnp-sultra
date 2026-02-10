@@ -21,7 +21,7 @@ return new class extends Migration
                     ->onDelete('cascade');
             $table->enum('anggaran_pelaksanaan', ['DIPA', 'NON DIPA']);
             $table->text('nama_kegiatan');
-            $table->enum('sasaran_kegiatan', ['lingkungan pendidikan', 'lingkungan kerja', 'lingkungan masyarakat', 'lingkungan swasta']);
+            $table->enum('sasaran_kegiatan', ['lingkungan pendidikan', 'lingkungan pemerintah', 'lingkungan masyarakat', 'lingkungan swasta']);
             $table->date('tanggal_pelaksanaan');
             $table->text('tempat_kegiatan');
             $table->integer('jumlah_peserta');

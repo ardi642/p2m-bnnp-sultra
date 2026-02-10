@@ -16,7 +16,7 @@ use App\Http\Controllers\P2m\LingkunganController;
 use App\Models\P2mSosialisasi;
 use App\Http\Controllers\P2m\CfdController;
 use App\Http\Controllers\P2m\PelatihanController;
-use App\Http\Controllers\P2m\DesaBersinarController;
+use App\Http\Controllers\P2m\DesaKelurahanBersinarController;
 use App\Models\p2mcfd;
 
 use App\Http\Controllers\P2m\ElektronikController;
@@ -33,7 +33,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Rehab\RehabLaporanController;
 use App\Http\Controllers\TemporaryFileController;
 use App\Http\Controllers\DokumenController;
-
+use App\Http\Controllers\P2m\InformasiEdukasiController;
 use App\Livewire\Dashboard\Index;
 use App\Models\Dokumen;
 use App\Models\DokumentasiKegiatan;
@@ -131,6 +131,10 @@ Route::middleware('auth')->group(function() {
         // A. READ/VIEW ACCESS (Admin Pusat, Admin Satker, Admin P2M, Operator P2M, Operator Satker)
         // Tambahkan 'admin_p2m' disini
         Route::middleware(['role:admin,admin_satker,admin_p2m,operator_satker,operator_p2m'])->group(function() {
+            // Informasi & Edukasi
+            Route::get('/informasi-edukasi', [InformasiEdukasiController::class, 'index'])->name("informasi-edukasi.index");
+            Route::get('/informasi-edukasi/export', [InformasiEdukasiController::class, 'export'])->name('informasi-edukasi.export');
+
             // Sosialisasi
             Route::get('/sosialisasi', [SosialisasiController::class, 'index'])->name("sosialisasi.index");
             Route::get('/sosialisasi/export', [SosialisasiController::class, 'export'])->name('sosialisasi.export');
@@ -159,8 +163,8 @@ Route::middleware('auth')->group(function() {
             Route::get('/tes-urine', [TesUrineController::class, 'index'])->name("tes-urine.index");
             Route::get('/tes-urine/export', [TesUrineController::class, 'export'])->name('tes-urine.export');
             // Desa Bersinar
-            Route::get('/desa-bersinar', [DesaBersinarController::class, 'index'])->name('desa-bersinar.index');
-            Route::get('/desa-bersinar/export', [DesaBersinarController::class, 'export'])->name('desa-bersinar.export');
+            Route::get('/desa-kelurahan-bersinar', [DesaKelurahanBersinarController::class, 'index'])->name('desa-kelurahan-bersinar.index');
+            Route::get('/desa-kelurahan-bersinar/export', [DesaKelurahanBersinarController::class, 'export'])->name('desa-kelurahan-bersinar.export');
             // Safari Religi
             Route::get('/safari-religi', [SafariReligiController::class, 'index'])->name("safari-religi.index");
             Route::get('/safari-religi/export', [SafariReligiController::class, 'export'])->name('safari-religi.export');
@@ -175,6 +179,9 @@ Route::middleware('auth')->group(function() {
         // B. WRITE/CREATE/EDIT ACCESS (Hanya Operator P2M & Operator Satker)
         // Admin P2M biasanya hanya memantau, tapi jika boleh input, tambahkan 'admin_p2m' disini
         Route::middleware(['role:operator_satker,operator_p2m'])->group(function() {
+            
+            // Informasi & Edukasi CRUD
+            Route::resource('informasi-edukasi', InformasiEdukasiController::class)->except(['index', 'show']);
             // Sosialisasi CRUD
             Route::resource('sosialisasi', SosialisasiController::class)->except(['index', 'show']);
             // Upacara CRUD
@@ -194,7 +201,7 @@ Route::middleware('auth')->group(function() {
             // Tes Urine CRUD
             Route::resource('tes-urine', TesUrineController::class)->except(['index', 'show']);
             // Desa Bersinar CRUD
-            Route::resource('desa-bersinar', DesaBersinarController::class)->except(['index', 'show']);
+            Route::resource('desa-kelurahan-bersinar', DesaKelurahanBersinarController::class)->except(['index', 'show']);
             // Safari Religi CRUD
             Route::resource('safari-religi', SafariReligiController::class)->except(['index', 'show']);
             // Pelatihan CRUD

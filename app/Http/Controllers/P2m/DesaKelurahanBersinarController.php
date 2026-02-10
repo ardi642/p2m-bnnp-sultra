@@ -3,23 +3,26 @@
 namespace App\Http\Controllers\P2m;
 
 use App\Http\Controllers\Controller;
-use App\Models\P2mDesaBersinar;
+use App\Models\P2mDesaKelurahanBersinar;
 use App\Models\SatuanKerja;
 use App\Models\Pegawai;
 use App\Models\KabupatenKota;
 use App\Models\TemporaryFile;
 use App\Models\DokumentasiKegiatan;
 use App\Helpers\SearchHelper;
-use App\Exports\DesaBersinarExport;
+use App\Exports\DesaKelurahanBersinarExport;
+use App\Models\Dokumen;
+use App\Services\DokumenService;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
 
-class DesaBersinarController extends Controller
+class DesaKelurahanBersinarController extends Controller
 {
     // --- BUILD QUERY FILTER ---
     private function getFilteredQuery(Request $request)
@@ -29,7 +32,7 @@ class DesaBersinarController extends Controller
         
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
-        $query = P2mDesaBersinar::with('pegawai.satuanKerja', 'satuanKerja', 'kabupatenKota');
+        $query = P2mDesaKelurahanBersinar::with('pegawai.satuanKerja', 'satuanKerja', 'kabupatenKota');
 
         // 1. Filter Satker
         if ($user->hasRole('admin')) {
@@ -113,8 +116,8 @@ class DesaBersinarController extends Controller
         $allowSort = [
             'created_at', 
             'tanggal_pencanangan', 
-            'nama_desa', 
-            'nama_kelurahan', 
+            'nama_desa_kelurahan', 
+            'anggaran_pembentukan',
             'jumlah_penggiat', 
             'satuan_kerja',
             'keberadaan_ibm'
@@ -122,9 +125,9 @@ class DesaBersinarController extends Controller
 
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {
-                $query->join('satuan_kerja', 'p2m_desa_bersinar.satuan_kerja_id', '=', 'satuan_kerja.id')
+                $query->join('satuan_kerja', 'p2m_desa_kelurahan_bersinar.satuan_kerja_id', '=', 'satuan_kerja.id')
                         ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
-                        ->select('p2m_desa_bersinar.*');
+                        ->select('p2m_desa_kelurahan_bersinar.*');
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }
@@ -151,7 +154,7 @@ class DesaBersinarController extends Controller
             $satuanKerjas = [];
         }
 
-        $yearQuery = P2mDesaBersinar::selectRaw('YEAR(tanggal_pencanangan) as year');
+        $yearQuery = P2mDesaKelurahanBersinar::selectRaw('YEAR(tanggal_pencanangan) as year');
         if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
@@ -162,18 +165,18 @@ class DesaBersinarController extends Controller
         $statsQuery = clone $query;
         $totalKegiatan = $statsQuery->count();
         
-        $query->with('dokumentasi');
+        $query->with('dokumen');
         $perPage = in_array($request->per_page, [10, 25, 50, 100]) ? $request->per_page : 10;
         $desas = $query->paginate($perPage)->withQueryString();
 
-        return view('p2m.desa-bersinar.index', compact('desas', 'satuanKerjas', 'years', 'pegawais', 'user', 'kabupatens', 'totalKegiatan'));
+        return view('p2m.desa-kelurahan-bersinar.index', compact('desas', 'satuanKerjas', 'years', 'pegawais', 'user', 'kabupatens', 'totalKegiatan'));
     }
 
     // --- EXPORT ---
     public function export(Request $request) 
     {
         $query = $this->getFilteredQuery($request);
-        return Excel::download(new DesaBersinarExport($query), 'Laporan_P2M_Desa_Bersinar.xlsx');
+        return Excel::download(new DesaKelurahanBersinarExport($query), 'Laporan_P2M_Desa_Bersinar.xlsx');
     }
 
     // --- CREATE ---
@@ -191,11 +194,11 @@ class DesaBersinarController extends Controller
             $pegawais = Pegawai::with('satuanKerja')->where('satuan_kerja_id', $user->getSatkerId())->orderBy('nama', 'asc')->get();
         }
 
-        return view('p2m.desa-bersinar.create', compact('satuanKerjas', 'pegawais', 'kabupatens'));
+        return view('p2m.desa-kelurahan-bersinar.create', compact('satuanKerjas', 'pegawais', 'kabupatens'));
     }
 
     // --- STORE ---
-    public function store(Request $request) 
+    public function store(Request $request, DokumenService $dokumenService) 
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -203,17 +206,22 @@ class DesaBersinarController extends Controller
         // Validasi: nama_kelurahan required
         $rules = [
             'anggaran_pembentukan' => 'required',
-            'nama_desa' => 'required',
-            'nama_kelurahan' => 'required', // PERBAIKAN: Wajib
+            'nama_desa_kelurahan' => 'required',
             'kabupaten_kota_id' => 'required|exists:kabupaten_kota,id',
             'tanggal_pencanangan' => 'required|date',
             'jumlah_penggiat' => 'required|numeric',
             'keberadaan_ibm' => 'required',
             'pegawai_nips' => 'required|array',
             'pegawai_nips.*' => 'exists:pegawai,nip',
-            'dokumentasi' => 'nullable|array',
-            'dokumentasi.*' => 'required',
             'no_hp_penanggung_jawab' => 'nullable|string|max:20',
+            'dokumentasi'          => 'nullable|array', 
+            'lampiran'             => 'nullable|array',
+            'dokumentasi_links'    => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+            'lampiran_links'       => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ];
 
         if ($user->isAdmin()) {
@@ -221,7 +229,7 @@ class DesaBersinarController extends Controller
         }
 
         $validasi = $request->validate($rules);
-        $filesMoved = [];
+        $uploadedPaths = []; 
 
         DB::beginTransaction();
 
@@ -233,7 +241,7 @@ class DesaBersinarController extends Controller
                 $dataInput['satuan_kerja_id'] = $user->getSatkerId();
             }
 
-            $desa = P2mDesaBersinar::create($dataInput);
+            $desa = P2mDesaKelurahanBersinar::create($dataInput);
 
             $listPegawai = Pegawai::whereIn('nip', $pegawaiNips)->get();
             $attachData = [];
@@ -243,20 +251,31 @@ class DesaBersinarController extends Controller
             $desa->pegawai()->attach($attachData);
 
             if ($request->filled('dokumentasi')) {
-                foreach ($request->input('dokumentasi') as $folder) {
-                    $this->moveFile($folder, $desa, $filesMoved);
-                }
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $desa, 'dokumentasi', $uploadedPaths);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $desa, 'lampiran', $uploadedPaths);
+            }
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $desa, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $desa, 'lampiran');
             }
 
             DB::commit();
+        return redirect()->route('p2m.desa-kelurahan-bersinar.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data');
+
 
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->rollbackFiles($filesMoved);
-            return back()->with('error', 'store')->with('message', 'Gagal menyimpan data: ' . $e->getMessage())->withInput();
+            foreach ($uploadedPaths as $path) {
+                Storage::disk(config('filesystems.default'))->delete($path);
+            }
+            Log::error('Gagal simpan: ' . $e->getMessage());
+            abort(500, 'Server Error.');
         }
 
-        return redirect()->route('p2m.desa-bersinar.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data desa bersinar');
     }
 
     // --- EDIT ---
@@ -264,7 +283,7 @@ class DesaBersinarController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $desa = P2mDesaBersinar::with('pegawai')->findOrFail($id);
+        $desa = P2mDesaKelurahanBersinar::with('pegawai')->findOrFail($id);
         $kabupatens = KabupatenKota::orderBy('nama', 'asc')->get();
 
         if ($user->hasRole(['operator_satker', 'operator_p2m']) && $desa->satuan_kerja_id !== $user->getSatkerId()) {
@@ -284,22 +303,21 @@ class DesaBersinarController extends Controller
 
         $selectedPegawaiNips = $desa->pegawai->pluck('nip')->toArray();
 
-        return view('p2m.desa-bersinar.edit', compact('desa', 'satuanKerjas', 'pegawais', 'kabupatens', 'selectedPegawaiNips'));
+        return view('p2m.desa-kelurahan-bersinar.edit', compact('desa', 'satuanKerjas', 'pegawais', 'kabupatens', 'selectedPegawaiNips'));
     }
 
     // --- UPDATE ---
-    public function update(Request $request, $id) 
+    public function update(Request $request, DokumenService $dokumenService, $id) 
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $desa = P2mDesaBersinar::findOrFail($id);
+        $desa = P2mDesaKelurahanBersinar::findOrFail($id);
 
         if ($user->hasRole(['operator_satker', 'operator_p2m']) && $desa->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
 
         $rules = [
             'anggaran_pembentukan' => 'required',
-            'nama_desa' => 'required',
-            'nama_kelurahan' => 'required', // PERBAIKAN: Wajib
+            'nama_desa_kelurahan' => 'required',
             'kabupaten_kota_id' => 'required|exists:kabupaten_kota,id',
             'tanggal_pencanangan' => 'required|date',
             'jumlah_penggiat' => 'required|numeric',
@@ -307,8 +325,15 @@ class DesaBersinarController extends Controller
             'pegawai_nips' => 'required|array',
             'pegawai_nips.*' => 'exists:pegawai,nip',
             'delete_files' => 'nullable|array',
-            'dokumentasi' => 'nullable|array',
             'no_hp_penanggung_jawab' => 'nullable|string|max:20',
+            'dokumentasi'          => 'nullable|array', 
+            'lampiran'             => 'nullable|array',
+            'dokumentasi_links'    => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+            'lampiran_links'       => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ];
         if ($user->isAdmin()) { $rules['satuan_kerja_id'] = 'required'; }
 
@@ -326,7 +351,7 @@ class DesaBersinarController extends Controller
 
             $desa->update($dataUpdate);
 
-            $oldPivotData = DB::table('pegawai_p2m_desa_bersinar')->where('p2m_desa_bersinar_id', $id)->get()->keyBy('pegawai_nip');
+            $oldPivotData = DB::table('pegawai_p2m_desa_kelurahan_bersinar')->where('p2m_desa_kelurahan_bersinar_id', $id)->get()->keyBy('pegawai_nip');
             $masterPegawais = Pegawai::whereIn('nip', $pegawaiNips)->get()->keyBy('nip');
             $syncData = [];
             
@@ -340,87 +365,79 @@ class DesaBersinarController extends Controller
             $desa->pegawai()->sync($syncData);
 
             if ($request->has('delete_files')) {
-                $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
+                $filesToRemove = Dokumen::whereIn('id', $request->delete_files)->get();
                 foreach ($filesToRemove as $file) {
-                    $filesToDelete[] = $file->path_file;
+                    if (!$file->is_link) $filesToDelete[] = $file->path_file; 
                     $file->delete();
                 }
             }
 
             if ($request->filled('dokumentasi')) {
-                foreach ($request->input('dokumentasi') as $folder) {
-                    $this->moveFile($folder, $desa, $newFilesMoved);
-                }
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $desa, 'dokumentasi', $newFilesMoved);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $desa, 'lampiran', $newFilesMoved);
+            }
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $desa, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $desa, 'lampiran');
             }
 
             DB::commit();
 
             foreach ($filesToDelete as $path) {
-                if (Storage::disk('public')->exists($path)) { Storage::disk('public')->delete($path); }
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
 
-            return redirect()->route('p2m.desa-bersinar.index')->with('success', 'update')->with('message', 'Data berhasil diperbarui');
+            return redirect()->route('p2m.desa-kelurahan-bersinar.index')->with('success', 'update')->with('message', 'Data berhasil diperbarui');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            $this->rollbackFiles($newFilesMoved);
-            return back()->with('error', 'update')->with('message', 'Gagal update: ' . $e->getMessage())->withInput();
+            foreach ($newFilesMoved as $path) {
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            }
+            Log::error('Update error: ' . $e->getMessage());
+            dd($e);
+            abort(500, 'Server Error.');
         }
     }
 
     // --- DESTROY ---
     public function destroy($id) 
     {
-        $desa = P2mDesaBersinar::findOrFail($id);
+        $kegiatan = P2mDesaKelurahanBersinar::findOrFail($id);
+        
         $filesToDelete = [];
-        foreach ($desa->dokumentasi()->cursor() as $doc) { $filesToDelete[] = $doc->path_file; }
+        
+        // Loop dokumen, tapi filter isinya
+        foreach ($kegiatan->dokumen()->cursor() as $doc) {
+            // Cek 1: Pastikan bukan Link (karena link tidak punya file fisik)
+            // Cek 2: Pastikan path_file TIDAK NULL dan TIDAK KOSONG
+            if (!$doc->is_link && !empty($doc->path_file)) {
+                $filesToDelete[] = $doc->path_file;
+            }
+        }
 
         DB::beginTransaction();
         try {
-            $desa->delete();
-            DB::commit();
+            $kegiatan->delete(); 
+            DB::commit(); 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'destroy')->with('message', 'Gagal hapus: ' . $e->getMessage());
+            return back()->with('error', 'destroy')->with('message', 'Gagal menghapus data: ' . $e->getMessage());
         }
 
+        // Hapus file fisik
         foreach ($filesToDelete as $path) {
-            try { if (Storage::disk('public')->exists($path)) { Storage::disk('public')->delete($path); } } catch (\Exception $e) {}
-        }
-
-        return back()->with('success', 'destroy')->with('message', 'Data berhasil dihapus.');
-    }
-
-    // --- HELPER ---
-    private function moveFile($folder, $model, &$filesTracker) {
-        $tempFile = TemporaryFile::where('folder', $folder)->first();
-        if ($tempFile) {
-            $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-            $mimeType = Storage::mimeType($sourcePath);
-            $size = Storage::size($sourcePath);
-            $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-            $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
-            $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
-            $destinationPath = 'dokumentasi/' . date('Y') . '/' . $cleanFileName;
-
-            if (Storage::exists($sourcePath)) {
-                Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
-                $filesTracker[] = $destinationPath;
-                $model->dokumentasi()->create([
-                    'nama_file_asli' => $tempFile->filename,
-                    'path_file' => $destinationPath,
-                    'tipe_file' => $mimeType,
-                    'ukuran_file' => $size,
-                ]);
-                Storage::deleteDirectory('public/tmp/' . $folder);
-                $tempFile->delete();
+            // Double check: Pastikan $path adalah string (bukan null) sebelum akses Storage
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
             }
         }
+
+        return redirect()->back()->with('success', 'destroy')->with('message', 'Data dan file berhasil dihapus.');
     }
 
-    private function rollbackFiles($paths) {
-        foreach ($paths as $path) {
-            if (Storage::disk('public')->exists($path)) { Storage::disk('public')->delete($path); }
-        }
-    }
 }

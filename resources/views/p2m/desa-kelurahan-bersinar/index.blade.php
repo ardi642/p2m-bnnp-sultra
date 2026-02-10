@@ -121,7 +121,7 @@
                                             </div>
                                         @endif
 
-                                        <div class="col-lg-{{ $user->isAdmin() ? '6' : '12' }}">
+                                        <div class="col-12 col-lg-3">
                                             <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Kabupaten / Kota</label>
                                             <div class="shadow-sm bg-white rounded">
                                                 <select id="select-kabkota" name="kabupaten_kota_id[]" multiple placeholder="Pilih Kabupaten/Kota..." autocomplete="off">
@@ -153,7 +153,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-6 col-lg-2">
+                                        <div class="col-6 col-lg-3">
                                             <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Tahun</label>
                                             <div class="shadow-sm bg-white rounded">
                                                 <select id="select-tahun" name="tahun[]" multiple placeholder="Tahun..." autocomplete="off">
@@ -164,7 +164,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-12 col-lg-4">
+                                        <div class="col-12 col-lg-6">
                                             <label class="form-label fw-bold small text-secondary text-uppercase mb-1 d-block">Penanggung Jawab</label>
                                             <div class="d-flex align-items-stretch shadow-sm bg-white rounded border" x-data="{ logic: '{{ request('pegawai_logic', 'OR') }}' }">
                                                 <button type="button" class="btn rounded-0 rounded-start border-end d-flex align-items-center justify-content-center fw-bold px-3" style="width: 70px; flex-shrink: 0;" :class="logic === 'AND' ? 'btn-danger text-white' : 'btn-light text-secondary'" @click="logic = logic === 'OR' ? 'AND' : 'OR'">

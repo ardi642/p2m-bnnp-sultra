@@ -5,12 +5,24 @@
 <main class="admin-main" x-data="p2mIndex">
     <div class="container-fluid p-4 p-lg-5">
         
-        {{-- Header --}}
+        {{-- ==================================================================== --}}
+        {{-- HEADER: JUDUL (KIRI) & TOMBOL TAMBAH (KANAN) --}}
+        {{-- ==================================================================== --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
+            
+            {{-- BAGIAN KIRI: Judul & Deskripsi --}}
             <div>
                 <h1 class="h3 mb-1 fw-bold text-dark">Kegiatan P2M</h1>
                 <p class="text-muted mb-0">Master Data Sosialisasi Tatap Muka/Konvensional</p>
             </div>
+
+            {{-- BAGIAN KANAN: Tombol Tambah Data --}}
+            @if (auth()->user()->hasRole(['operator_satker', 'operator_p2m']))
+                <a href="{{ route('p2m.sosialisasi.create') }}" class="btn btn-primary btn-lg fs-6 px-4 rounded-pill shadow-sm d-flex align-items-center gap-2">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Tambah Data</span>
+                </a>
+            @endif
         </div>
 
         {{-- ALERT NOTIFIKASI --}}
@@ -34,8 +46,6 @@
             </div>
         @endif
         
-        @include('p2m.partials.select-p2m-index')
-
         {{-- LOGIKA PHP FILTER & SORTING --}}
         @php
             $allFilters = request()->only(['satuan_kerja_id', 'bulan', 'tahun', 'anggaran_pelaksanaan', 'sasaran_kegiatan', 'search', 'pegawai_nips']);
@@ -89,7 +99,6 @@
                             {{-- PANEL FILTER (Alpine x-show) --}}
                             <div x-show="showFilter" x-transition class="mb-4 px-3 px-lg-0 pt-3 pt-lg-0">
                                 <div class="bg-body-tertiary p-4 rounded-3 border">
-                                    {{-- ... ISI FORM TETAP SAMA PERSIS ... --}}
                                     <div class="row g-3 text-start">
                                         <div class="{{ $user->isAdmin() ? 'col-lg-8' : 'col-12' }}">
                                             <label class="form-label fw-bold small text-secondary text-uppercase">Kata Kunci</label>
@@ -214,7 +223,9 @@
                                         <th class="py-3 bg-light text-start">{!! $sortLink('nama_kegiatan', 'Nama Kegiatan') !!}</th>
                                         <th class="py-3 bg-light">{!! $sortLink('sasaran_kegiatan', 'Sasaran') !!}</th>
                                         <th class="py-3 bg-light">{!! $sortLink('tanggal_pelaksanaan', 'Tanggal') !!}</th>
+                                        
                                         <th class="py-3 bg-light text-start">Pegawai</th>
+                                        
                                         <th class="py-3 bg-light">{!! $sortLink('jumlah_peserta', 'Peserta') !!}</th>
                                         <th class="py-3 bg-light">{!! $sortLink('created_at', 'Dibuat') !!}</th>
                                         <th class="py-3 bg-light pe-3">Aksi</th>
@@ -222,13 +233,12 @@
                                 </thead>
                                 <tbody class="border-top-0">
                                     @forelse ($sosialisasis as $data)
-                                        {{-- Row Utama (Toggle Expand pakai Alpine) --}}
+                                        {{-- Row Utama --}}
                                         <tr class="text-center align-middle" :class="isExpanded({{ $data->id }}) ? 'bg-light' : ''">
                                             <td class="fw-bold text-secondary ps-3">{{ $sosialisasis->firstItem() + $loop->index }}</td>
                                             <td class="text-start"><span class="fw-semibold text-dark">{{ $data->satuanKerja->satuan_kerja ?? '-' }}</span></td>
                                             <td><span class="badge rounded-pill {{ $data->anggaran_pelaksanaan == 'DIPA' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' }}">{{ $data->anggaran_pelaksanaan }}</span></td>
                                             
-                                            {{-- Link Expand --}}
                                             <td class="text-start"><a href="#" class="text-decoration-none fw-bold text-dark" @click.prevent="toggleExpand({{ $data->id }})">{{ $data->nama_kegiatan }}</a></td>
                                             
                                             <td>
@@ -237,12 +247,26 @@
                                             </td>
                                             <td class="small text-muted text-nowrap">{{ $data->tanggal_pelaksanaan->locale('id')->translatedFormat('d M Y') }}</td>
                                             
-                                            {{-- KEMBALI KE ORIGINAL: Menampilkan Semua Pegawai (Tanpa Limit) --}}
+                                            {{-- KOLOM PEGAWAI (DENGAN LIMIT 10 + FLEX WRAP) --}}
                                             <td class="text-start">
-                                                <div class="d-flex flex-wrap gap-1" style="max-width: 300px;">
-                                                    @foreach($data->pegawai->sortBy('nama') as $pegawai)
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @php
+                                                        $allPegawai = $data->pegawai->sortBy('nama');
+                                                        $count = $allPegawai->count();
+                                                        $limit = 10;
+                                                        $displayedPegawai = $allPegawai->take($limit);
+                                                        $remaining = $count - $limit;
+                                                    @endphp
+
+                                                    @foreach($displayedPegawai as $pegawai)
                                                         <span class="badge bg-white border text-secondary fw-normal shadow-sm">{{ $pegawai->nama }}</span>
                                                     @endforeach
+
+                                                    @if($remaining > 0)
+                                                        <a href="#" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 text-decoration-none" @click.prevent="toggleExpand({{ $data->id }})">
+                                                            +{{ $remaining }} lainnya
+                                                        </a>
+                                                    @endif
                                                 </div>
                                             </td>
 
@@ -262,16 +286,14 @@
                                             </td>
                                         </tr>
 
-                                        {{-- TR DETAIL (DENGAN ALPINE JS "fileDownloader") --}}
+                                        {{-- TR DETAIL --}}
                                         <tr x-show="isExpanded({{ $data->id }})" x-transition>
                                             <td colspan="11" class="p-0 border-0">
-                                                {{-- Scope 'fileDownloader' hanya ada di detail ini --}}
                                                 <div class="bg-body-tertiary p-4 border-bottom shadow-inner text-start" x-data="fileDownloader">
                                                     <div class="card border-0 shadow-sm">
                                                         <div class="card-body">
                                                             <h6 class="card-title fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-info-circle me-2"></i>Detail Lengkap</h6>
                                                             
-                                                            {{-- TAMPILAN TEXT DETAIL (SAMA SEPERTI ASLINYA) --}}
                                                             <div class="row g-4 text-start mb-4">
                                                                 <div class="col-lg-6">
                                                                     <dl class="row mb-0 small text-start">
@@ -291,8 +313,10 @@
                                                                     </div>
                                                                     <div class="mb-4 text-start">
                                                                         <span class="fw-bold text-secondary small d-block mb-2 text-start">List Pegawai Terlibat:</span>
+                                                                        
+                                                                        {{-- LIST DETAIL: KEMBALI KE LIST VERTIKAL (UL/LI) --}}
                                                                         <ul class="list-unstyled mb-0 small text-start">
-                                                                            @foreach($data->pegawai->sortBy('nama') as $pegawai)
+                                                                            @foreach($allPegawai as $pegawai)
                                                                                 @php $isPindah = $pegawai->satuan_kerja_id != $data->satuan_kerja_id; @endphp
                                                                                 <li class="mb-2 text-start">
                                                                                     <i class="bi bi-person-check-fill me-2 text-success"></i><span class="text-dark">{{ $pegawai->nama }}</span> <span class="text-muted">({{ $pegawai->nip }})</span>
@@ -304,7 +328,6 @@
                                                                 </div>
                                                             </div>
 
-                                                            {{-- FORM DOWNLOAD ZIP (DENGAN ALPINE JS) --}}
                                                             <form action="{{ route('dokumen.zip.selected') }}" method="POST" x-ref="formZip">
                                                                 @csrf
                                                                 <div class="col-12 mt-4 text-start">
@@ -313,40 +336,44 @@
                                                                         @php
                                                                             $fotos = $data->dokumen->where('kategori', 'dokumentasi');
                                                                             $lampirans = $data->dokumen->where('kategori', 'lampiran');
-                                                                            // Persiapkan array ID untuk Alpine Toggle All
-                                                                            $fotoIds = $fotos->pluck('id')->values()->toArray();
-                                                                            $lampiranIds = $lampirans->pluck('id')->values()->toArray();
+                                                                            $fotoIds = $fotos->where('is_link', false)->pluck('id')->values()->toArray();
+                                                                            $lampiranIds = $lampirans->where('is_link', false)->pluck('id')->values()->toArray();
                                                                         @endphp
-                                                                
-                                                                        {{-- KOLOM 1: DOKUMENTASI (FOTO) --}}
+                                                                        
                                                                         <div class="col-lg-6">
                                                                             <div class="card h-100 border bg-light shadow-none">
                                                                                 <div class="card-header bg-transparent border-bottom fw-bold text-primary d-flex justify-content-between align-items-center">
                                                                                     <div class="form-check">
-                                                                                        {{-- Master Checkbox --}}
-                                                                                        <input class="form-check-input cursor-pointer" type="checkbox" 
-                                                                                               @change="toggleAll({{ json_encode($fotoIds) }})"
-                                                                                               :checked="isAllSelected({{ json_encode($fotoIds) }})">
+                                                                                        @if(count($fotoIds) > 0)
+                                                                                            <input class="form-check-input cursor-pointer" type="checkbox" @change="toggleAll({{ json_encode($fotoIds) }})" :checked="isAllSelected({{ json_encode($fotoIds) }})">
+                                                                                        @endif
                                                                                         <label class="form-check-label cursor-pointer select-none"><i class="bi bi-images me-2"></i>Dokumentasi</label>
                                                                                     </div>
                                                                                     <span class="badge bg-primary rounded-pill">{{ $fotos->count() }}</span>
                                                                                 </div>
-                                                                                <div class="card-body p-2" style="max-height: 250px; overflow-y: auto;">
+                                                                                <div class="card-body p-2" style="max-height: 30vh; min-height: 100px; overflow-y: auto;">
                                                                                     @forelse($fotos as $doc)
-                                                                                        <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all"
-                                                                                             :class="isSelected({{ $doc->id }}) ? 'border-primary bg-primary bg-opacity-10' : ''">
-                                                                                            <div class="form-check me-2 d-flex align-items-center">
-                                                                                                <input class="form-check-input shadow-none cursor-pointer" type="checkbox" name="ids[]" value="{{ $doc->id }}" x-model="selected">
-                                                                                            </div>
-                                                                                            <div class="flex-grow-1 text-truncate small cursor-pointer" @click="toggle({{ $doc->id }})">
+                                                                                        <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-primary bg-primary bg-opacity-10' : ''">
+                                                                                            @if(!$doc->is_link)
+                                                                                                <div class="form-check me-2 d-flex align-items-center">
+                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                                </div>
+                                                                                            @endif
+                                                                                            <div class="flex-grow-1 text-truncate small cursor-pointer" @if(!$doc->is_link) @click="toggle({{ $doc->id }})" @endif>
                                                                                                 <div class="d-flex align-items-center">
-                                                                                                    <div class="flex-shrink-0 me-2 text-primary bg-primary bg-opacity-10 p-1 rounded"><i class="bi bi-file-image"></i></div>
+                                                                                                    <div class="flex-shrink-0 me-2 text-primary bg-primary bg-opacity-10 p-1 rounded">
+                                                                                                        @if($doc->is_link) <i class="bi bi-link-45deg"></i> @else <i class="bi bi-file-image"></i> @endif
+                                                                                                    </div>
                                                                                                     <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
                                                                                                 </div>
                                                                                             </div>
                                                                                             <div class="d-flex gap-1 flex-shrink-0 ms-2">
-                                                                                                <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-info"><i class="bi bi-eye"></i></a>
-                                                                                                <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-primary"><i class="bi bi-download"></i></a>
+                                                                                                @if(!$doc->is_link)
+                                                                                                    <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                                                                                    <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-primary"><i class="bi bi-download"></i></a>
+                                                                                                @else
+                                                                                                    <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-xs btn-outline-info w-100"><i class="bi bi-box-arrow-up-right me-1"></i>Buka</a>
+                                                                                                @endif
                                                                                             </div>
                                                                                         </div>
                                                                                     @empty
@@ -355,30 +382,31 @@
                                                                                 </div>
                                                                             </div>
                                                                         </div>
-                                                                
-                                                                        {{-- KOLOM 2: LAMPIRAN --}}
+                                                                        
                                                                         <div class="col-lg-6">
                                                                             <div class="card h-100 border bg-light shadow-none">
                                                                                 <div class="card-header bg-transparent border-bottom fw-bold text-danger d-flex justify-content-between align-items-center">
                                                                                     <div class="form-check">
-                                                                                        <input class="form-check-input cursor-pointer" type="checkbox" 
-                                                                                               @change="toggleAll({{ json_encode($lampiranIds) }})"
-                                                                                               :checked="isAllSelected({{ json_encode($lampiranIds) }})">
+                                                                                        @if(count($lampiranIds) > 0)
+                                                                                            <input class="form-check-input cursor-pointer" type="checkbox" @change="toggleAll({{ json_encode($lampiranIds) }})" :checked="isAllSelected({{ json_encode($lampiranIds) }})">
+                                                                                        @endif
                                                                                         <label class="form-check-label cursor-pointer select-none"><i class="bi bi-paperclip me-2"></i>Lampiran</label>
                                                                                     </div>
                                                                                     <span class="badge bg-danger rounded-pill">{{ $lampirans->count() }}</span>
                                                                                 </div>
-                                                                                <div class="card-body p-2" style="max-height: 250px; overflow-y: auto;">
+                                                                                <div class="card-body p-2" style="max-height: 40vh; min-height: 100px; overflow-y: auto;">
                                                                                     @forelse($lampirans as $doc)
-                                                                                        <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all"
-                                                                                             :class="isSelected({{ $doc->id }}) ? 'border-danger bg-danger bg-opacity-10' : ''">
-                                                                                            <div class="form-check me-2 d-flex align-items-center">
-                                                                                                <input class="form-check-input shadow-none cursor-pointer" type="checkbox" name="ids[]" value="{{ $doc->id }}" x-model="selected">
-                                                                                            </div>
-                                                                                            <div class="flex-grow-1 text-truncate small cursor-pointer" @click="toggle({{ $doc->id }})">
+                                                                                        <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-danger bg-danger bg-opacity-10' : ''">
+                                                                                            @if(!$doc->is_link)
+                                                                                                <div class="form-check me-2 d-flex align-items-center">
+                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                                </div>
+                                                                                            @endif
+                                                                                            <div class="flex-grow-1 text-truncate small cursor-pointer" @if(!$doc->is_link) @click="toggle({{ $doc->id }})" @endif>
                                                                                                 <div class="d-flex align-items-center">
                                                                                                     <div class="flex-shrink-0 me-2 text-danger bg-danger bg-opacity-10 p-1 rounded">
-                                                                                                        @if(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf"></i>
+                                                                                                        @if($doc->is_link) <i class="bi bi-link-45deg"></i>
+                                                                                                        @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf"></i>
                                                                                                         @elseif(Str::contains($doc->tipe_file, ['word', 'office'])) <i class="bi bi-file-word"></i>
                                                                                                         @else <i class="bi bi-file-earmark-text"></i> @endif
                                                                                                     </div>
@@ -386,10 +414,12 @@
                                                                                                 </div>
                                                                                             </div>
                                                                                             <div class="d-flex gap-1 flex-shrink-0 ms-2">
-                                                                                                @if(Str::contains($doc->tipe_file, 'pdf'))
-                                                                                                <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                                                                                @if(!$doc->is_link)
+                                                                                                    <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                                                                                    <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-danger"><i class="bi bi-download"></i></a>
+                                                                                                @else
+                                                                                                    <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-xs btn-outline-info w-100"><i class="bi bi-box-arrow-up-right me-1"></i>Buka</a>
                                                                                                 @endif
-                                                                                                <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-danger"><i class="bi bi-download"></i></a>
                                                                                             </div>
                                                                                         </div>
                                                                                     @empty
@@ -398,15 +428,16 @@
                                                                                 </div>
                                                                             </div>
                                                                         </div>
+                                                                    </div>
 
-                                                                        @if($data->dokumen->count() > 0)
+                                                                    @php $hasPhysicalFiles = $data->dokumen->where('is_link', false)->count() > 0; @endphp
+                                                                    @if($hasPhysicalFiles)
                                                                         <div class="col-12 text-end border-top pt-3">
                                                                             <button type="button" @click="submitDownload" class="btn btn-dark btn-sm px-4 shadow-sm" :disabled="selected.length === 0">
                                                                                 <i class="bi bi-file-earmark-zip-fill me-2"></i>Download File Terpilih (.ZIP)
                                                                             </button>
                                                                         </div>
-                                                                        @endif
-                                                                    </div>
+                                                                    @endif
                                                                 </div>
                                                             </form>
                                                         </div>

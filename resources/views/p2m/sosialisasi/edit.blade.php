@@ -109,7 +109,7 @@
 
 
                                 {{-- ==================================================== --}}
-                                {{-- SECTION 3: PERSONIL & DOKUMENTASI (JUDUL DIGANTI) --}}
+                                {{-- SECTION 3: TIM PELAKSANA & KELENGKAPAN --}}
                                 {{-- ==================================================== --}}
                                 <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">
                                     Tim Pelaksana & Kelengkapan
@@ -144,7 +144,6 @@
                                     </div>
 
                                     {{-- AREA PENGELOLAAN FILE --}}
-                                    {{-- Perubahan: Menggunakan mt-5 agar jarak lebih lebar --}}
                                     <div class="col-12 mt-5">
                                         
                                         {{-- 1. KOTAK KHUSUS DOKUMENTASI LAMA --}}
@@ -155,7 +154,6 @@
                                         @if($oldFotos->count() > 0)
                                             <div class="card bg-light border border-dashed mb-4">
                                                 <div class="card-body">
-                                                    {{-- Hapus tulisan (Database) --}}
                                                     <h6 class="fw-bold text-primary mb-3">
                                                         <i class="bi bi-images me-2"></i>Dokumentasi Tersimpan
                                                     </h6>
@@ -166,18 +164,37 @@
                                                             @php $isMarkedDeleted = old('delete_files') && in_array($doc->id, old('delete_files')); @endphp
                                                             <div class="col-6 col-md-4 col-lg-3 file-item" id="file-card-{{ $doc->id }}">
                                                                 <div class="card h-100 shadow-sm border border-secondary-subtle position-relative overflow-hidden file-card-inner transition-all {{ $isMarkedDeleted ? 'border-danger-subtle-thick' : '' }}">
+                                                                    
                                                                     <div class="delete-overlay position-absolute top-0 start-0 w-100 h-100 {{ $isMarkedDeleted ? 'd-flex' : 'd-none' }} flex-column justify-content-center align-items-center text-center" style="background-color: rgba(255, 255, 255, 0.9); z-index: 5;">
                                                                         <div class="text-danger mb-1"><i class="bi bi-trash3-fill fs-1"></i></div>
                                                                         <span class="text-danger fw-bold small text-uppercase">Akan Dihapus</span>
                                                                     </div>
+
+                                                                    {{-- PREVIEW AREA --}}
                                                                     <div class="ratio ratio-16x9 bg-secondary bg-opacity-10 border-bottom d-flex align-items-center justify-content-center overflow-hidden">
-                                                                        @if(Str::contains($doc->tipe_file, 'image')) <img src="{{ Storage::url($doc->path_file) }}" class="object-fit-cover w-100 h-100">
-                                                                        @else <div class="text-primary"><i class="bi bi-file-earmark-text-fill display-4"></i></div> @endif
+                                                                        @if($doc->is_link)
+                                                                            <div class="text-info"><i class="bi bi-link-45deg display-4"></i></div>
+                                                                        @elseif(Str::contains($doc->tipe_file, 'image'))
+                                                                            <img src="{{ Storage::url($doc->path_file) }}" class="object-fit-cover w-100 h-100">
+                                                                        @else
+                                                                            <div class="text-primary"><i class="bi bi-file-earmark-text-fill display-4"></i></div>
+                                                                        @endif
                                                                     </div>
+
                                                                     <div class="card-body p-2 text-center d-flex flex-column justify-content-between">
-                                                                        <div class="mb-2"><div class="small text-truncate fw-bold" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</div></div>
+                                                                        <div class="mb-2">
+                                                                            <div class="small text-truncate fw-bold" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</div>
+                                                                            @if($doc->is_link)
+                                                                                <div class="text-muted small fst-italic text-truncate"><a href="{{ $doc->path_url }}" target="_blank">{{ $doc->path_url }}</a></div>
+                                                                            @endif
+                                                                        </div>
+                                                                        
                                                                         <div class="d-flex gap-1 justify-content-center position-relative" style="z-index: 10;">
-                                                                            <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-outline-primary btn-sm w-100 py-0" title="Unduh"><i class="bi bi-download"></i></a>
+                                                                            @if(!$doc->is_link)
+                                                                                <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-outline-primary btn-sm w-100 py-0" title="Unduh"><i class="bi bi-download"></i></a>
+                                                                            @else
+                                                                                <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-outline-info btn-sm w-100 py-0" title="Buka"><i class="bi bi-box-arrow-up-right"></i></a>
+                                                                            @endif
                                                                             <button type="button" id="btn-delete-{{ $doc->id }}" class="btn btn-sm w-100 py-0 {{ $isMarkedDeleted ? 'btn-secondary' : 'btn-outline-danger' }}" onclick="markForDeletion({{ $doc->id }})">@if($isMarkedDeleted) Batal @else Hapus @endif</button>
                                                                         </div>
                                                                     </div>
@@ -198,7 +215,6 @@
                                         @if($oldLampirans->count() > 0)
                                             <div class="card bg-light border border-dashed mb-4">
                                                 <div class="card-body">
-                                                    {{-- Hapus tulisan (Database) --}}
                                                     <h6 class="fw-bold text-danger mb-3">
                                                         <i class="bi bi-paperclip me-2"></i>Lampiran Tersimpan
                                                     </h6>
@@ -209,19 +225,39 @@
                                                             @php $isMarkedDeleted = old('delete_files') && in_array($doc->id, old('delete_files')); @endphp
                                                             <div class="col-6 col-md-4 col-lg-3 file-item" id="file-card-{{ $doc->id }}">
                                                                 <div class="card h-100 shadow-sm border border-secondary-subtle position-relative overflow-hidden file-card-inner transition-all {{ $isMarkedDeleted ? 'border-danger-subtle-thick' : '' }}">
+                                                                    
                                                                     <div class="delete-overlay position-absolute top-0 start-0 w-100 h-100 {{ $isMarkedDeleted ? 'd-flex' : 'd-none' }} flex-column justify-content-center align-items-center text-center" style="background-color: rgba(255, 255, 255, 0.9); z-index: 5;">
                                                                         <div class="text-danger mb-1"><i class="bi bi-trash3-fill fs-1"></i></div>
                                                                         <span class="text-danger fw-bold small text-uppercase">Akan Dihapus</span>
                                                                     </div>
+
+                                                                    {{-- PREVIEW AREA --}}
                                                                     <div class="ratio ratio-16x9 bg-secondary bg-opacity-10 border-bottom d-flex align-items-center justify-content-center overflow-hidden">
-                                                                        @if(Str::contains($doc->tipe_file, 'image')) <img src="{{ Storage::url($doc->path_file) }}" class="object-fit-cover w-100 h-100">
-                                                                        @elseif(Str::contains($doc->tipe_file, 'pdf')) <div class="text-danger"><i class="bi bi-file-earmark-pdf-fill display-4"></i></div>
-                                                                        @else <div class="text-secondary"><i class="bi bi-file-earmark-text-fill display-4"></i></div> @endif
+                                                                        @if($doc->is_link)
+                                                                            <div class="text-info"><i class="bi bi-link-45deg display-4"></i></div>
+                                                                        @elseif(Str::contains($doc->tipe_file, 'image'))
+                                                                            <img src="{{ Storage::url($doc->path_file) }}" class="object-fit-cover w-100 h-100">
+                                                                        @elseif(Str::contains($doc->tipe_file, 'pdf'))
+                                                                            <div class="text-danger"><i class="bi bi-file-earmark-pdf-fill display-4"></i></div>
+                                                                        @else
+                                                                            <div class="text-secondary"><i class="bi bi-file-earmark-text-fill display-4"></i></div>
+                                                                        @endif
                                                                     </div>
+
                                                                     <div class="card-body p-2 text-center d-flex flex-column justify-content-between">
-                                                                        <div class="mb-2"><div class="small text-truncate fw-bold" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</div></div>
+                                                                        <div class="mb-2">
+                                                                            <div class="small text-truncate fw-bold" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</div>
+                                                                            @if($doc->is_link)
+                                                                                <div class="text-muted small fst-italic text-truncate"><a href="{{ $doc->path_url }}" target="_blank">{{ $doc->path_url }}</a></div>
+                                                                            @endif
+                                                                        </div>
+                                                                        
                                                                         <div class="d-flex gap-1 justify-content-center position-relative" style="z-index: 10;">
-                                                                            <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-outline-primary btn-sm w-100 py-0" title="Unduh"><i class="bi bi-download"></i></a>
+                                                                            @if(!$doc->is_link)
+                                                                                <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-outline-primary btn-sm w-100 py-0" title="Unduh"><i class="bi bi-download"></i></a>
+                                                                            @else
+                                                                                <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-outline-info btn-sm w-100 py-0" title="Buka"><i class="bi bi-box-arrow-up-right"></i></a>
+                                                                            @endif
                                                                             <button type="button" id="btn-delete-{{ $doc->id }}" class="btn btn-sm w-100 py-0 {{ $isMarkedDeleted ? 'btn-secondary' : 'btn-outline-danger' }}" onclick="markForDeletion({{ $doc->id }})">@if($isMarkedDeleted) Batal @else Hapus @endif</button>
                                                                         </div>
                                                                     </div>
@@ -244,35 +280,87 @@
 
 
                                         {{-- ========================================== --}}
-                                        {{-- BAGIAN 3: UPLOAD FILE BARU (KIRI KANAN) --}}
+                                        {{-- BAGIAN 3: UPLOAD FILE & LINK BARU (HYBRID) --}}
                                         {{-- ========================================== --}}
                                         <div class="bg-light p-4 rounded-3 border border-dashed">
                                             <label class="form-label fw-bold h6 mb-3 text-dark d-block border-bottom pb-2">
-                                                <i class="bi bi-cloud-arrow-up me-2"></i>Upload File Baru (Opsional)
+                                                <i class="bi bi-cloud-arrow-up me-2"></i>Upload File & Link Baru (Opsional)
                                             </label>
                                             
                                             <div class="row g-3">
                                                 {{-- KIRI: DOKUMENTASI BARU --}}
                                                 <div class="col-12 col-md-6">
-                                                    <div class="bg-white p-3 rounded border h-100">
+                                                    <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
                                                         <label class="form-label fw-bold small text-primary mb-1">
                                                             <i class="bi bi-folder2-open me-2"></i>Dokumentasi Baru
                                                         </label>
-                                                        {{-- Helper Text Umum --}}
-                                                        <p class="text-muted small mb-2" style="font-size: 0.75rem">Upload dokumentasi. Maksimal 10MB.</p>
-                                                        <input type="file" id="fp-dokumentasi" name="dokumentasi[]" multiple>
+                                                        
+                                                        {{-- 1. File Upload --}}
+                                                        <div class="mb-3">
+                                                            <p class="text-muted small mb-2" style="font-size: 0.75rem">Upload dokumentasi. Maksimal 10MB.</p>
+                                                            <input type="file" id="fp-dokumentasi" name="dokumentasi[]" multiple>
+                                                        </div>
+
+                                                        <hr class="border-secondary-subtle my-3">
+
+                                                        {{-- 2. Link Input (Alpine) --}}
+                                                        <div x-data="linkManager( {{ \Illuminate\Support\Js::from(array_values(old('dokumentasi_links', []))) }} )">
+                                                            <label class="form-label fw-bold small text-primary mb-2">
+                                                                <i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link
+                                                            </label>
+                                                            
+                                                            <template x-for="(link, index) in links" :key="index">
+                                                                <div class="input-group mb-2 input-group-sm">
+                                                                    <input type="text" class="form-control" :name="`dokumentasi_links[${index}][nama]`" placeholder="Nama Tautan / File" x-model="link.nama" required>
+                                                                    <input type="url" class="form-control" :name="`dokumentasi_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
+                                                                    <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
+                                                                </div>
+                                                            </template>
+
+                                                            @error('dokumentasi_links.*') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+
+                                                            <button type="button" class="btn btn-xs btn-outline-primary dashed-border w-100 mt-1" @click="addLink()">
+                                                                <i class="bi bi-plus-circle me-1"></i> Tambah Link
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
 
                                                 {{-- KANAN: LAMPIRAN BARU --}}
                                                 <div class="col-12 col-md-6">
-                                                    <div class="bg-white p-3 rounded border h-100">
+                                                    <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
                                                         <label class="form-label fw-bold small text-danger mb-1">
                                                             <i class="bi bi-paperclip me-2"></i>Lampiran Pendukung Baru
                                                         </label>
-                                                        {{-- Helper Text Umum --}}
-                                                        <p class="text-muted small mb-2" style="font-size: 0.75rem">Upload file pendukung. Maksimal 10MB.</p>
-                                                        <input type="file" id="fp-lampiran" name="lampiran[]" multiple>
+                                                        
+                                                        {{-- 1. File Upload --}}
+                                                        <div class="mb-3">
+                                                            <p class="text-muted small mb-2" style="font-size: 0.75rem">Upload file pendukung. Maksimal 10MB.</p>
+                                                            <input type="file" id="fp-lampiran" name="lampiran[]" multiple>
+                                                        </div>
+
+                                                        <hr class="border-secondary-subtle my-3">
+
+                                                        {{-- 2. Link Input (Alpine) --}}
+                                                        <div x-data="linkManager( {{ \Illuminate\Support\Js::from(array_values(old('lampiran_links', []))) }} )">
+                                                            <label class="form-label fw-bold small text-danger mb-2">
+                                                                <i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link
+                                                            </label>
+                                                            
+                                                            <template x-for="(link, index) in links" :key="index">
+                                                                <div class="input-group mb-2 input-group-sm">
+                                                                    <input type="text" class="form-control" :name="`lampiran_links[${index}][nama]`" placeholder="Nama Tautan / File" x-model="link.nama" required>
+                                                                    <input type="url" class="form-control" :name="`lampiran_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
+                                                                    <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
+                                                                </div>
+                                                            </template>
+
+                                                            @error('lampiran_links.*') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+
+                                                            <button type="button" class="btn btn-xs btn-outline-danger dashed-border w-100 mt-1" @click="addLink()">
+                                                                <i class="bi bi-plus-circle me-1"></i> Tambah Link
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -281,8 +369,7 @@
                                     </div>
                                 </div> 
 
-                                {{-- BUTTONS --}}
-                                <div class="d-flex flex-column-reverse flex-lg-row justify-content-end gap-2 pt-3 border-top">
+                                <div class="d-flex flex-column-reverse flex-lg-row justify-content-end gap-2 pt-3 border-top mt-4">
                                     <button type="button" onclick="window.location.reload()" class="btn btn-light border text-secondary px-4">
                                         <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                                     </button>
@@ -303,6 +390,7 @@
 @push('styles')
     @vite(['resources/css/filepond.css'])
     <style>
+        .dashed-border { border-style: dashed !important; border-width: 1px !important; }
         .ts-control { border: 1px solid #dee2e6; padding: 0.5rem 0.75rem; border-radius: 0.375rem; box-shadow: none; }
         .ts-control.focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
         .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; }
@@ -369,7 +457,20 @@
         }
     });
 
-    // 3. LOGIC HAPUS FILE LAMA
+    // 3. ALPINE JS LINK MANAGER
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('linkManager', (initialData = []) => ({
+            links: Array.isArray(initialData) ? initialData : [], 
+            addLink() {
+                this.links.push({ nama: '', url: '' });
+            },
+            removeLink(index) {
+                this.links.splice(index, 1);
+            }
+        }));
+    });
+
+    // 4. LOGIC HAPUS FILE LAMA
     window.markForDeletion = function(id) {
         const cardInner = document.querySelector('#file-card-' + id + ' .file-card-inner');
         const overlay = cardInner.querySelector('.delete-overlay');

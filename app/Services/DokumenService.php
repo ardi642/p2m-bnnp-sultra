@@ -8,6 +8,9 @@ use Illuminate\Support\Str;
 
 class DokumenService
 {
+    /**
+     * Memindahkan File Fisik dari Temp ke Permanent
+     */
     public function moveToPermanent(array $tempFolders, $model, string $kategori, array &$movedFilesLog): void
     {
         $sourceDisk = 'public'; 
@@ -21,7 +24,6 @@ class DokumenService
             $tempFile = TemporaryFile::where('folder', $folder)->first();
 
             if ($tempFile) {
-                // KEMBALIKAN KE 'public/tmp' AGAR SESUAI DENGAN CONTROLLER
                 $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
 
                 if (Storage::disk($sourceDisk)->exists($sourcePath)) {
@@ -29,11 +31,9 @@ class DokumenService
                     $ext      = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
                     $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
                     
-                    // Ambil Metadata
                     $mimeType = Storage::disk($sourceDisk)->mimeType($sourcePath); 
-                    $size     = Storage::disk($sourceDisk)->size($sourcePath);     
+                    $size     = Storage::disk($sourceDisk)->size($sourcePath);      
 
-                    // Generate UUID
                     $cleanFileName   = $kategori . '-' . (string) Str::uuid() . '.' . $ext;
                     $destinationPath = $basePath . '/' . $cleanFileName;
 
@@ -45,14 +45,16 @@ class DokumenService
                     
                     $movedFilesLog[] = $destinationPath; 
 
-                    // Simpan Database
+                    // Simpan Database (File Fisik)
                     $model->dokumen()->create([
                         'kategori'       => $kategori,
                         'nama_file_asli' => $tempFile->filename,
                         'path_file'      => $destinationPath,
                         'tipe_file'      => $mimeType,
                         'ukuran_file'    => $size,
-                        'disk'           => $targetDisk
+                        'disk'           => $targetDisk,
+                        'is_link'        => false, // Ini File
+                        'path_url'       => null
                     ]);
 
                     // Cleanup
@@ -63,44 +65,62 @@ class DokumenService
         }
     }
 
+    /**
+     * Menyimpan Link Eksternal ke Database
+     */
+    public function saveLinks(array $linksData, $model, string $kategori): void
+    {
+        // Struktur input array: [ ['nama' => 'Label', 'url' => 'https://...'], ... ]
+        foreach ($linksData as $link) {
+            if (!empty($link['nama']) && !empty($link['url'])) {
+                $model->dokumen()->create([
+                    'kategori'       => $kategori,
+                    'nama_file_asli' => $link['nama'], // Label Link
+                    'path_url'       => $link['url'],  // URL Link
+                    'is_link'        => true,          // Penanda Link
+                    'path_file'      => null,
+                    'tipe_file'      => null,
+                    'ukuran_file'    => null,
+                    'disk'           => null
+                ]);
+            }
+        }
+    }
 
     /**
-     * Membuat ZIP dari sekumpulan object Dokumen (Collection).
-     * Bisa dari checkbox, bisa dari kategori, bebas.
+     * Generate ZIP (Hanya untuk File Fisik, Link diabaikan)
      */
     public function generateZipFromFiles($files, ?string $customZipName = null): ?string
     {
         set_time_limit(300);
         ini_set('memory_limit', '512M');
 
-        if ($files->isEmpty()) return null;
+        // Filter: Hanya ambil yang BUKAN Link
+        $physicalFiles = $files->where('is_link', false);
 
-        // 1. Tentukan Nama ZIP
+        if ($physicalFiles->isEmpty()) return null;
+
         if (!$customZipName) {
-            // Default: download-selected- tanggal_jam.zip
             $timestamp = date('d-m-Y_H-i');
             $customZipName = "download-selected-{$timestamp}.zip";
         }
         
-        // Buat folder tmp
         if (!file_exists(public_path('tmp'))) {
             mkdir(public_path('tmp'), 0755, true);
         }
         $zipPath = public_path("tmp/{$customZipName}");
         $tempFilesToDelete = []; 
 
-        // 2. Proses ZIP (Logic sama persis: Stream & Hemat RAM)
         $zip = new \ZipArchive;
         if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === TRUE) {
             
             $usedNames = [];
 
-            foreach ($files as $file) {
+            foreach ($physicalFiles as $file) {
                 $disk = $file->disk ?? 'public';
                 
                 if (\Illuminate\Support\Facades\Storage::disk($disk)->exists($file->path_file)) {
                     
-                    // Anti Bentrok Nama
                     $filename = $file->nama_file_asli;
                     $base = pathinfo($filename, PATHINFO_FILENAME);
                     $ext = pathinfo($filename, PATHINFO_EXTENSION);
@@ -110,7 +130,6 @@ class DokumenService
                     }
                     $usedNames[] = $filename;
 
-                    // Masukkan ke ZIP (Stream / Local)
                     if ($disk == 'public' || $disk == 'local') {
                         $absPath = \Illuminate\Support\Facades\Storage::disk($disk)->path($file->path_file);
                         $zip->addFile($absPath, $filename);
@@ -137,5 +156,4 @@ class DokumenService
 
         return $zipPath;
     }
-
 }

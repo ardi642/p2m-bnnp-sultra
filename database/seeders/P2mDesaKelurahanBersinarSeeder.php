@@ -3,14 +3,14 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\P2mDesaBersinar;
+use App\Models\P2mDesaKelurahanBersinar;
 use App\Models\Pegawai;
 
-class P2mDesaBersinarSeeder extends Seeder
+class P2mDesaKelurahanBersinarSeeder extends Seeder
 {
     public function run(): void
     {
-        P2mDesaBersinar::factory(50)->create()->each(function ($kegiatan) {
+        P2mDesaKelurahanBersinar::factory(50)->create()->each(function ($kegiatan) {
             $listPegawai = Pegawai::where('satuan_kerja_id', $kegiatan->satuan_kerja_id)
                 ->inRandomOrder()
                 ->take(rand(1, 3))

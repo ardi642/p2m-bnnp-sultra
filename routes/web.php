@@ -15,7 +15,7 @@ use App\Http\Controllers\P2m\KieController;
 use App\Http\Controllers\P2m\LingkunganController;
 use App\Models\P2mSosialisasi;
 use App\Http\Controllers\P2m\CfdController;
-use App\Http\Controllers\P2m\DesaBersinarController;
+use App\Http\Controllers\P2m\DesaKelurahanBersinarController;
 use App\Models\p2mcfd;
 
 use App\Http\Controllers\P2m\ElektronikController;
@@ -161,8 +161,8 @@ Route::middleware('auth')->group(function() {
             Route::get('/tes-urine', [TesUrineController::class, 'index'])->name("tes-urine.index");
             Route::get('/tes-urine/export', [TesUrineController::class, 'export'])->name('tes-urine.export');
             // Desa Bersinar
-            Route::get('/desa-bersinar', [DesaBersinarController::class, 'index'])->name('desa-bersinar.index');
-            Route::get('/desa-bersinar/export', [DesaBersinarController::class, 'export'])->name('desa-bersinar.export');
+            Route::get('/desa-kelurahan-bersinar', [DesaKelurahanBersinarController::class, 'index'])->name('desa-kelurahan-bersinar.index');
+            Route::get('/desa-kelurahan-bersinar/export', [DesaKelurahanBersinarController::class, 'export'])->name('desa-kelurahan-bersinar.export');
             // Safari Religi
             Route::get('/safari-religi', [SafariReligiController::class, 'index'])->name("safari-religi.index");
             Route::get('/safari-religi/export', [SafariReligiController::class, 'export'])->name('safari-religi.export');
@@ -193,7 +193,7 @@ Route::middleware('auth')->group(function() {
             // Tes Urine CRUD
             Route::resource('tes-urine', TesUrineController::class)->except(['index', 'show']);
             // Desa Bersinar CRUD
-            Route::resource('desa-bersinar', DesaBersinarController::class)->except(['index', 'show']);
+            Route::resource('desa-kelurahan-bersinar', DesaKelurahanBersinarController::class)->except(['index', 'show']);
             // Safari Religi CRUD
             Route::resource('safari-religi', SafariReligiController::class)->except(['index', 'show']);
         });

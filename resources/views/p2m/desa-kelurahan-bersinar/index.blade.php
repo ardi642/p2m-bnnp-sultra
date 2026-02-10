@@ -345,20 +345,22 @@
                                                                                     </div>
                                                                                     <span class="badge bg-primary rounded-pill">{{ $fotos->count() }}</span>
                                                                                 </div>
-                                                                                <div class="card-body p-2" style="max-height: 40vh; min-height: 100px; overflow-y: auto;">
+                                                                                <div class="card-body p-2" style="max-height: 30vh; min-height: 100px; overflow-y: auto;">
                                                                                     @forelse($fotos as $doc)
                                                                                         <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-primary bg-primary bg-opacity-10' : ''">
                                                                                             @if(!$doc->is_link)
                                                                                                 <div class="form-check me-2 d-flex align-items-center">
-                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="chk-doc-{{ $doc->id }}" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" name="ids[]" value="{{ $doc->id }}" x-model="selected">
                                                                                                 </div>
                                                                                             @endif
-                                                                                            <label for="chk-doc-{{ $doc->id }}" class="flex-grow-1 text-truncate small cursor-pointer d-flex align-items-center m-0">
-                                                                                                <div class="flex-shrink-0 me-2 text-primary bg-primary bg-opacity-10 p-1 rounded">
-                                                                                                    @if($doc->is_link) <i class="bi bi-link-45deg"></i> @else <i class="bi bi-file-image"></i> @endif
+                                                                                            <div class="flex-grow-1 text-truncate small cursor-pointer" @if(!$doc->is_link) @click="toggle({{ $doc->id }})" @endif>
+                                                                                                <div class="d-flex align-items-center">
+                                                                                                    <div class="flex-shrink-0 me-2 text-primary bg-primary bg-opacity-10 p-1 rounded">
+                                                                                                        @if($doc->is_link) <i class="bi bi-link-45deg"></i> @else <i class="bi bi-file-image"></i> @endif
+                                                                                                    </div>
+                                                                                                    <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
                                                                                                 </div>
-                                                                                                <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
-                                                                                            </label>
+                                                                                            </div>
                                                                                             <div class="d-flex gap-1 flex-shrink-0 ms-2">
                                                                                                 @if(!$doc->is_link)
                                                                                                     <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
@@ -391,18 +393,20 @@
                                                                                         <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-danger bg-danger bg-opacity-10' : ''">
                                                                                             @if(!$doc->is_link)
                                                                                                 <div class="form-check me-2 d-flex align-items-center">
-                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="chk-lamp-{{ $doc->id }}" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" name="ids[]" value="{{ $doc->id }}" x-model="selected">
                                                                                                 </div>
                                                                                             @endif
-                                                                                            <label for="chk-lamp-{{ $doc->id }}" class="flex-grow-1 text-truncate small cursor-pointer d-flex align-items-center m-0">
-                                                                                                <div class="flex-shrink-0 me-2 text-danger bg-danger bg-opacity-10 p-1 rounded">
-                                                                                                    @if($doc->is_link) <i class="bi bi-link-45deg"></i>
-                                                                                                    @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf"></i>
-                                                                                                    @elseif(Str::contains($doc->tipe_file, ['word', 'office'])) <i class="bi bi-file-word"></i>
-                                                                                                    @else <i class="bi bi-file-earmark-text"></i> @endif
+                                                                                            <div class="flex-grow-1 text-truncate small cursor-pointer" @if(!$doc->is_link) @click="toggle({{ $doc->id }})" @endif>
+                                                                                                <div class="d-flex align-items-center">
+                                                                                                    <div class="flex-shrink-0 me-2 text-danger bg-danger bg-opacity-10 p-1 rounded">
+                                                                                                        @if($doc->is_link) <i class="bi bi-link-45deg"></i>
+                                                                                                        @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf"></i>
+                                                                                                        @elseif(Str::contains($doc->tipe_file, ['word', 'office'])) <i class="bi bi-file-word"></i>
+                                                                                                        @else <i class="bi bi-file-earmark-text"></i> @endif
+                                                                                                    </div>
+                                                                                                    <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
                                                                                                 </div>
-                                                                                                <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
-                                                                                            </label>
+                                                                                            </div>
                                                                                             <div class="d-flex gap-1 flex-shrink-0 ms-2">
                                                                                                 @if(!$doc->is_link)
                                                                                                     <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
@@ -430,6 +434,7 @@
                                                                     @endif
                                                                 </div>
                                                             </form>
+
                                                         </div>
                                                     </div>
                                                 </div>
@@ -512,7 +517,14 @@
                 return this.selected.includes(id.toString()) || this.selected.includes(id);
             },
 
-            // NOTE: Toggle dihapus karena diganti x-model + Label
+            toggle(id) {
+                const strId = id.toString();
+                if (this.selected.includes(strId)) {
+                    this.selected = this.selected.filter(i => i !== strId);
+                } else {
+                    this.selected.push(strId);
+                }
+            },
 
             toggleAll(ids) {
                 const stringIds = ids.map(String);

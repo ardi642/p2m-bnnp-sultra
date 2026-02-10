@@ -77,7 +77,7 @@
                                 <i class="bi bi-info-circle-fill me-2 mt-1 fs-6"></i>
                                 <div>
                                     <strong>Kesulitan Akses?</strong><br>
-                                    Jika Anda tidak menerima email atau lupa email yang terdaftar, silakan hubungi <strong>Admin Pusat</strong> atau <strong>Admin Satker</strong> Anda untuk melakukan reset password manual.
+                                    Jika Anda tidak menerima email atau lupa email yang terdaftar, silakan hubungi <strong>Admin Pusat</strong> atau <strong>Admin Satker</strong> Anda untuk melakukan reset password manual atau mengubah email.
                                 </div>
                             </div>
 

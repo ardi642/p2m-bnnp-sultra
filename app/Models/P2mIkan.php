@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasDokumen;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ use App\Traits\HasDokumentasi;
 class P2mIkan extends Model
 {
     use HasFactory;
-    use HasDokumentasi;
+    use HasDokumen;
     protected $table = 'p2m_ikan';
 
     protected $casts = [
@@ -30,7 +31,7 @@ class P2mIkan extends Model
         static::deleting(function ($kegiatan) {
             // Hapus record database anak-anaknya.
             // Tidak pakai cursor disini karena ->delete() langsung eksekusi query SQL (Cepat & Ringan)
-            $kegiatan->dokumentasi()->delete(); 
+            $kegiatan->dokumen()->delete(); 
         });
     }
 

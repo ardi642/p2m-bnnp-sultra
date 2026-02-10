@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('p2m_ikan_tables', function (Blueprint $table) {
+        Schema::create('p2m_ikan', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('satuan_kerja_id');
             $table->foreign('satuan_kerja_id')
@@ -34,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('p2m_ikan_tables');
+        Schema::dropIfExists('p2m_ikan');
     }
 };

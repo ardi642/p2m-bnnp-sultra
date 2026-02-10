@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pegawai_p2m_ikan_tables', function (Blueprint $table) {
+        Schema::create('pegawai_p2m_ikan', function (Blueprint $table) {
             $table->id();
             // 1. Relasi ke Kegiatan (Masih pakai ID/Integer standar)
-            $table->foreignId('p2m_asistensi_relawan_id')
-                ->constrained('p2m_asistensi_relawan')
+            $table->foreignId('p2m_ikan_id')
+                ->constrained('p2m_ikan')
                 ->onDelete('cascade');
 
             // 2. Relasi ke Pegawai (HARUS STRING karena NIP adalah String)
@@ -38,7 +38,7 @@ return new class extends Migration
 
             $table->timestamps();
             // Opsional: Mencegah duplikasi (satu pegawai tidak bisa input 2x di kegiatan yang sama)
-            $table->unique(['p2m_asistensi_relawan_id', 'pegawai_nip'], 'unique_kegiatan_pegawai');
+            $table->unique(['p2m_ikan_id', 'pegawai_nip'], 'unique_kegiatan_pegawai');
         });
     }
 

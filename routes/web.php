@@ -30,7 +30,10 @@ use App\Http\Controllers\P2m\TesUrineController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Rehab\RehabLaporanController;
 use App\Http\Controllers\TemporaryFileController;
+use App\Http\Controllers\DokumenController;
+
 use App\Livewire\Dashboard\Index;
+use App\Models\Dokumen;
 use App\Models\DokumentasiKegiatan;
 use App\Models\p2mOnline;
 
@@ -62,14 +65,18 @@ Route::middleware('auth')->group(function() {
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-    // Utility Routes (Download, Temp Upload, Profile)
-    Route::get('/dokumentasi/{id}/download', function ($id) {
-        $file = \App\Models\DokumentasiKegiatan::findOrFail($id);
-        if (!Storage::disk('public')->exists($file->path_file)) {
-            abort(404, 'File fisik tidak ditemukan.');
-        }
-        return response()->download(Storage::disk('public')->path($file->path_file), $file->nama_file_asli);
-    })->name('dokumentasi.download');
+    // Group Route Dokumen
+    Route::prefix('dokumen')->name('dokumen.')->group(function () {
+        
+        // 1. Download Satuan (GET)
+        Route::get('/{id}/download', [DokumenController::class, 'download'])
+            ->name('download');
+
+        // 2. Download ZIP Selected (POST)
+        // Menggunakan POST karena array ID bisa jadi sangat banyak
+        Route::post('/zip/selected', [DokumenController::class, 'downloadZipSelected'])
+            ->name('zip.selected');
+    });
 
     Route::post('/upload-temp', [App\Http\Controllers\TemporaryFileController::class, 'upload'])->name('upload.temp');
     Route::delete('/revert-temp', [App\Http\Controllers\TemporaryFileController::class, 'revert'])->name('revert.temp');

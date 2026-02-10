@@ -5,55 +5,62 @@ namespace App\Http\Controllers;
 use App\Models\TemporaryFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class TemporaryFileController extends Controller
 {
     public function upload(Request $request)
     {
+        $file = null;
+
+        // 1. CEK INPUT: Cari file di input 'dokumentasi' ATAU 'lampiran'
         if ($request->hasFile('dokumentasi')) {
             $file = $request->file('dokumentasi');
-
-            // 1. SOLUSI ARRAY: Ambil file pertama jika input array
-            if (is_array($file)) {
-                $file = $file[0];
-            }
-
-            // 2. VALIDASI KEAMANAN: Cek validitas file
-            if (!$file->isValid()) {
-                return response()->json(['error' => 'File rusak atau tidak valid.'], 500);
-            }
-
-            try {
-                // 3. PROSES SIMPAN
-                $filename = $file->getClientOriginalName();
-                $folder = uniqid() . '-' . now()->timestamp;
-                
-                // Simpan ke storage sementara
-                $file->storeAs('public/tmp/' . $folder, $filename);
-                
-                // Catat di database sementara
-                TemporaryFile::create([
-                    'folder' => $folder,
-                    'filename' => $filename
-                ]);
-
-                // PENTING: Return plain text folder ID agar FilePond bisa menangkapnya
-                return $folder; 
-
-            } catch (\Exception $e) {
-                // Tangkap error server (misal permission folder, disk penuh)
-                return response()->json(['error' => 'Gagal menyimpan file: ' . $e->getMessage()], 500);
-            }
+        } elseif ($request->hasFile('lampiran')) {
+            $file = $request->file('lampiran');
         }
-        
-        // --- PERBAIKAN DI SINI ---
-        // Jangan return '', tapi return JSON error dengan status code 400
-        return response()->json(['error' => 'Tidak ada file yang ditemukan dalam request.'], 400);
+
+        // Jika tidak ada file di kedua input tersebut
+        if (!$file) {
+            return response()->json(['error' => 'Tidak ada file yang ditemukan dalam request.'], 400);
+        }
+
+        // 2. SOLUSI ARRAY: FilePond sering mengirim array meskipun single file
+        if (is_array($file)) {
+            $file = $file[0];
+        }
+
+        // 3. VALIDASI KEAMANAN: Cek validitas file fisik
+        if (!$file->isValid()) {
+            return response()->json(['error' => 'File rusak atau tidak valid.'], 500);
+        }
+
+        try {
+            // 4. PROSES SIMPAN
+            $filename = $file->getClientOriginalName();
+            $folder = (string) Str::uuid(); // Generate Folder ID Unik
+            
+            // Simpan file fisik ke folder temporary
+            $file->storeAs('public/tmp/' . $folder, $filename);
+            
+            // Simpan record ke database (Cukup folder & filename)
+            TemporaryFile::create([
+                'folder' => $folder,
+                'filename' => $filename
+            ]);
+
+            // PENTING: Return Folder ID (Plain Text) agar FilePond bisa menangkapnya
+            return $folder;
+
+        } catch (\Exception $e) {
+            // Tangkap error server (misal permission folder, disk penuh)
+            return response()->json(['error' => 'Gagal menyimpan file: ' . $e->getMessage()], 500);
+        }
     }
 
     public function revert(Request $request)
     {
-        // User klik tombol 'X' (Batal)
+        // User klik tombol 'X' (Batal) - FilePond mengirim ID folder sebagai body text
         $folder = $request->getContent();
         
         if ($folder) {
@@ -62,7 +69,6 @@ class TemporaryFileController extends Controller
             TemporaryFile::where('folder', $folder)->delete();
         }
         
-        // Return kosong status 200 agar FilePond tahu penghapusan berhasil
         return response('');
     }
 
@@ -72,6 +78,7 @@ class TemporaryFileController extends Controller
         
         if ($folder) {
             $tempFile = TemporaryFile::where('folder', $folder)->first();
+            
             if($tempFile) {
                 $path = 'public/tmp/' . $folder . '/' . $tempFile->filename;
                 
@@ -86,7 +93,7 @@ class TemporaryFileController extends Controller
             }
         }
         
-        // Return 404 jika file preview tidak ditemukan (agar FilePond tidak loading terus)
+        // Return 404 jika file preview tidak ditemukan
         return response()->json(['error' => 'File tidak ditemukan'], 404);
     }
 }

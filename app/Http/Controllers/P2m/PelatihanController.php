@@ -10,10 +10,12 @@ use Illuminate\View\View;
 use Illuminate\Http\Request;
 use App\Exports\PelatihanExport;
 use App\Helpers\SearchHelper;
-use App\Models\DokumentasiKegiatan;
+use App\Models\Dokumen;
 use App\Models\TemporaryFile;
+use App\Services\DokumenService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
@@ -156,7 +158,7 @@ class PelatihanController extends Controller
         $totalPeserta = $statsQuery->sum('jumlah_peserta');
 
         // PENTING: Eager load dokumentasi
-        $query->with('dokumentasi');
+        $query->with('dokumen');
 
         $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : 10;
         $pelatihans = $query->paginate($perPage)->withQueryString();
@@ -183,8 +185,8 @@ class PelatihanController extends Controller
         return view('p2m.pelatihan.create', compact('satuanKerjas', 'pegawais'));
     }
 
-    // --- REFACTOR STORE MENJADI SAMA SEPERTI UPACARA ---
-    public function store(Request $request) {
+    // --- STORE METHOD (UPDATED) ---
+    public function store(Request $request, DokumenService $dokumenService) {
         
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -197,9 +199,21 @@ class PelatihanController extends Controller
             'tempat_kegiatan'      => 'required',
             'jumlah_peserta'       => 'required|numeric',
             'pegawai_nips'         => 'required|array',
-            'pegawai_nips.*'       => 'exists:pegawai,nip',
+           
+             // Validasi File Upload
             'dokumentasi'          => 'nullable|array', 
-            'dokumentasi.*'        => 'required',
+            'lampiran'             => 'nullable|array',
+
+            // Validasi Link (Array of Objects)
+            'dokumentasi_links'        => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+
+            'lampiran_links'        => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
+            'dokumentasi'          => 'nullable|array', 
+           
         ];
 
         if ($user->isAdmin()) {
@@ -208,14 +222,14 @@ class PelatihanController extends Controller
 
         $validasi = $request->validate($rules);
         
+        $uploadedPaths = []; 
       
-        // Array pelacak file agar bisa dihapus jika transaksi gagal
-        $filesMoved = []; 
+      
 
         DB::beginTransaction(); 
 
         try {
-            $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
+              $dataKegiatan = collect($validasi)->except(['dokumentasi', 'lampiran', 'pegawai_nips', 'dokumentasi_links', 'lampiran_links'])->toArray();
 
             if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
@@ -234,25 +248,35 @@ class PelatihanController extends Controller
             }
             $kegiatan->pegawai()->attach($attachData);
 
-            // 3. Proses File (Panggil Helper Private)
+            // 3. Handle Upload File
             if ($request->filled('dokumentasi')) {
-                // Pass $filesMoved by reference (&) agar bisa diisi di dalam fungsi
-                $this->processFiles($request->input('dokumentasi'), $kegiatan, $filesMoved);
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $kegiatan, 'dokumentasi', $uploadedPaths);
             }
+             if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $kegiatan, 'lampiran', $uploadedPaths);
+            }
+
+            // 4. Handle Link Eksternal
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $kegiatan, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $kegiatan, 'lampiran');
+            }
+
 
             DB::commit(); 
+            return redirect()->route('p2m.pelatihan.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data.');
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            dd($e);
-            // Jika gagal, hapus file fisik yang sudah terlanjur dipindah
-            foreach ($filesMoved as $path) {
-                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+           DB::rollBack();
+            foreach ($uploadedPaths as $path) {
+                Storage::disk(config('filesystems.default'))->delete($path);
             }
-            return back()->with('error', 'store')->with('message', 'Gagal: ' . $e->getMessage())->withInput();
+            Log::error('Gagal simpan: ' . $e->getMessage());
+            abort(500, 'Server Error.');
         }
 
-        return redirect()->route('p2m.pelatihan.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data.');
     }
 
     public function edit($id): View 
@@ -281,13 +305,17 @@ class PelatihanController extends Controller
         return view('p2m.pelatihan.edit', compact('kegiatan', 'satuanKerjas', 'pegawais', 'selectedPegawaiNips'));
     }
 
-    public function update(Request $request, $id) 
+      // --- UPDATE METHOD (UPDATED) ---
+    public function update(Request $request, DokumenService $dokumenService, $id) 
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $kegiatan = P2mPelatihan::findOrFail($id);
-
-        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) abort(403);
+        
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+            abort(403);
+        }
+      
 
         $rules = [
             'anggaran_pelaksanaan' => 'required',
@@ -297,9 +325,19 @@ class PelatihanController extends Controller
             'tempat_kegiatan'      => 'required',
             'jumlah_peserta'       => 'required|numeric',
             'pegawai_nips'         => 'required|array',
-            'pegawai_nips.*'       => 'exists:pegawai,nip',
+        
+            // Validasi File & Link
             'delete_files'         => 'nullable|array', 
             'dokumentasi'          => 'nullable|array',
+            'lampiran'             => 'nullable|array',
+            
+            'dokumentasi_links'        => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+
+            'lampiran_links'        => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ];
 
         if ($user->isAdmin()) $rules['satuan_kerja_id'] = 'required';
@@ -311,7 +349,7 @@ class PelatihanController extends Controller
         DB::beginTransaction();
 
         try {
-            $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
+            $dataUpdate = collect($validasi)->except(['dokumentasi', 'lampiran', 'pegawai_nips', 'delete_files', 'dokumentasi_links', 'lampiran_links'])->toArray();
             if ($user->hasRole(['operator_satker', 'operator_p2m'])) unset($dataUpdate['satuan_kerja_id']);
 
             $kegiatan->update($dataUpdate);
@@ -320,55 +358,69 @@ class PelatihanController extends Controller
             $oldPivotData = DB::table('pegawai_p2m_pelatihan')->where('p2m_pelatihan_id', $id)->get()->keyBy('pegawai_nip');
             $masterPegawais = Pegawai::whereIn('nip', $validasi['pegawai_nips'])->get()->keyBy('nip');
             $syncData = [];
-
             foreach ($validasi['pegawai_nips'] as $nip) {
-                $satkerToSave = (isset($oldPivotData[$nip]) && $oldPivotData[$nip]->saved_satuan_kerja_id) 
-                    ? $oldPivotData[$nip]->saved_satuan_kerja_id 
-                    : ($masterPegawais[$nip]->satuan_kerja_id ?? null);
-                
+               $satkerToSave = (isset($oldPivotData[$nip]) && $oldPivotData[$nip]->saved_satuan_kerja_id) ? $oldPivotData[$nip]->saved_satuan_kerja_id : ($masterPegawais[$nip]->satuan_kerja_id ?? null);
                 $syncData[$nip] = ['saved_satuan_kerja_id' => $satkerToSave];
             }
             $kegiatan->pegawai()->sync($syncData);
 
-            // Hapus File Lama
+            
+            // Hapus Dokumen Lama (File atau Link)
             if ($request->has('delete_files')) {
-                $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
+                $filesToRemove = Dokumen::whereIn('id', $request->delete_files)->get();
                 foreach ($filesToRemove as $file) {
-                    $filesToDelete[] = $file->path_file;
+                    if (!$file->is_link) $filesToDelete[] = $file->path_file; // Hanya hapus fisik jika bukan link
                     $file->delete();
                 }
             }
 
             // Upload File Baru
             if ($request->filled('dokumentasi')) {
-                $this->processFiles($request->input('dokumentasi'), $kegiatan, $newFilesMoved);
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $kegiatan, 'dokumentasi', $newFilesMoved);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $kegiatan, 'lampiran', $newFilesMoved);
+            }
+
+            // Simpan Link Baru
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $kegiatan, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $kegiatan, 'lampiran');
             }
 
             DB::commit();
 
-            // Hapus Fisik File Lama
             foreach ($filesToDelete as $path) {
                 if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
 
-            return redirect()->route('p2m.pelatihan.index')->with('success', 'update')->with('message', 'Data berhasil diperbarui');
+            return redirect()->route('p2m.pelatihan.index')->with('success', 'update')->with('message', 'Data diperbarui');
 
         } catch (\Exception $e) {
             DB::rollBack();
             foreach ($newFilesMoved as $path) {
                 if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
-            return back()->with('error', 'update')->with('message', 'Gagal: ' . $e->getMessage())->withInput();
+            Log::error('Update error: ' . $e->getMessage());
+            return back()->with('error', 'update')->withInput();
         }
     }
 
-    public function destroy($id) 
+   public function destroy($id) 
     {
         $kegiatan = P2mPelatihan::findOrFail($id);
         
         $filesToDelete = [];
-        foreach ($kegiatan->dokumentasi()->cursor() as $doc) {
-            $filesToDelete[] = $doc->path_file;
+        
+        // Loop dokumen, tapi filter isinya
+        foreach ($kegiatan->dokumen()->cursor() as $doc) {
+            // Cek 1: Pastikan bukan Link (karena link tidak punya file fisik)
+            // Cek 2: Pastikan path_file TIDAK NULL dan TIDAK KOSONG
+            if (!$doc->is_link && !empty($doc->path_file)) {
+                $filesToDelete[] = $doc->path_file;
+            }
         }
 
         DB::beginTransaction();
@@ -379,9 +431,12 @@ class PelatihanController extends Controller
             DB::rollBack();
             return back()->with('error', 'destroy')->with('message', 'Gagal menghapus data: ' . $e->getMessage());
         }
-
+        // Hapus file fisik
         foreach ($filesToDelete as $path) {
-            if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            // Double check: Pastikan $path adalah string (bukan null) sebelum akses Storage
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
         }
 
         return redirect()->back()->with('success', 'destroy')->with('message', 'Data dan file berhasil dihapus.');
@@ -393,43 +448,5 @@ class PelatihanController extends Controller
         return Excel::download(new PelatihanExport($query), 'Laporan_P2M_Pelatihan.xlsx');
     }
 
-    // --- HELPER PROCESS FILES (SAMA SEPERTI UPACARA) ---
-    private function processFiles($tempFolders, $kegiatan, &$movedFilesLog) {
-        foreach ($tempFolders as $folder) {
-            $tempFile = TemporaryFile::where('folder', $folder)->first();
-            if ($tempFile) {
-                $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                
-                // Pastikan file ada sebelum diproses
-                if (Storage::exists($sourcePath)) {
-                    $mimeType = Storage::mimeType($sourcePath);
-                    $size = Storage::size($sourcePath);
-                    $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                    $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
-                    
-                    // Generate nama unik
-                    $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
-                    $destinationPath = 'dokumentasi/' . date('Y') . '/' . $cleanFileName;
 
-                    // Pindahkan file
-                    Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
-                    
-                    // Catat file yang berhasil dipindah (untuk rollback)
-                    $movedFilesLog[] = $destinationPath;
-
-                    // Simpan ke DB
-                    $kegiatan->dokumentasi()->create([
-                        'nama_file_asli' => $tempFile->filename,
-                        'path_file'      => $destinationPath,
-                        'tipe_file'      => $mimeType,
-                        'ukuran_file'    => $size,
-                    ]);
-
-                    // Bersihkan folder temp
-                    Storage::deleteDirectory('public/tmp/' . $folder);
-                    $tempFile->delete();
-                }
-            }
-        }
-    }
 }

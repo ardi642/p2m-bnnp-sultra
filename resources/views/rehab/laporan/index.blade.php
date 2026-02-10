@@ -56,7 +56,7 @@
             
             <div class="d-flex gap-2">
                 {{-- 1. TOMBOL UNIFIED: KELOLA TARGET --}}
-                @if(auth()->user()->hasRole(['operator_satker', 'operator_rehab', 'admin']))
+                @if(auth()->user()->hasRole(['operator_satker', 'operator_rehab']))
                     <button type="button" 
                             class="btn btn-outline-primary shadow-sm d-flex align-items-center gap-2" 
                             data-bs-toggle="modal" 

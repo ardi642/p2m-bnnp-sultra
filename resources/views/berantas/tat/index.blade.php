@@ -436,7 +436,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="8" class="text-center py-5 text-muted fst-italic border-bottom">Belum ada data TAT yang diinput.</td></tr>
+                                        <tr><td colspan="8" class="text-center py-5 text-muted fst-italic border-bottom">Tidak ada data TAT.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

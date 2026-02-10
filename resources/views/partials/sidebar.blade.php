@@ -28,7 +28,9 @@
                     <span>Bidang P2M</span>
                 </div>
 
-                @foreach([
+                 @foreach([
+                    ['route' => 'p2m.ikan.index', 'label' => 'IKAN', 'url' => 'p2m/ikan*'],
+                    ['route' => 'p2m.asistensi-relawan.index', 'label' => 'Asistensi Relawan', 'url' => 'p2m/asistensi-relawan*'],
                     ['route' => 'p2m.sosialisasi.index', 'label' => 'Sosialisasi', 'url' => 'p2m/sosialisasi*'],
                     ['route' => 'p2m.upacara.index', 'label' => 'Upacara', 'url' => 'p2m/upacara*'],
                     ['route' => 'p2m.kie.index', 'label' => 'KIE', 'url' => 'p2m/kie*'],

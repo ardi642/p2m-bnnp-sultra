@@ -9,20 +9,17 @@ use App\Http\Controllers\Berantas\TatController;
 use App\Http\Controllers\Berantas\UngkapKasusController;
 use App\Http\Controllers\Berantas\RegisterBarangBuktiController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\P2m\AsistensiRelawanController;
 use App\Http\Controllers\P2m\SosialisasiController;
 use App\Http\Controllers\P2m\UpacaraController;
 use App\Http\Controllers\P2m\KieController;
-use App\Http\Controllers\P2m\LingkunganController;
-use App\Models\P2mSosialisasi;
+use App\Http\Controllers\P2m\IkanController;
 use App\Http\Controllers\P2m\CfdController;
 use App\Http\Controllers\P2m\DesaBersinarController;
-use App\Models\p2mcfd;
 
 use App\Http\Controllers\P2m\ElektronikController;
 use App\Http\Controllers\P2m\LingkunganBersinarController;
-use App\Http\Controllers\P2m\MediaNonElektronikController;
 use App\Http\Controllers\P2m\NonElektronikController;
-use App\Models\p2mElektronik;
 
 use App\Http\Controllers\P2m\OnlineController;
 use App\Http\Controllers\P2m\SafariReligiController;
@@ -122,6 +119,12 @@ Route::middleware('auth')->group(function() {
         // A. READ/VIEW ACCESS (Admin Pusat, Admin Satker, Admin P2M, Operator P2M, Operator Satker)
         // Tambahkan 'admin_p2m' disini
         Route::middleware(['role:admin,admin_satker,admin_p2m,operator_satker,operator_p2m'])->group(function() {
+            // IKAN
+            Route::get('/ikan', [IkanController::class, 'index'])->name("ikan.index");
+            Route::get('/ikan/export', [IkanController::class, 'export'])->name('ikan.export');            
+            // Asistensi Relawan
+            Route::get('/asistensi-relawan', [AsistensiRelawanController::class, 'index'])->name("asistensi-relawan.index");
+            Route::get('/asistensi-relawan/export', [AsistensiRelawanController::class, 'export'])->name('asistensi-relawan.export');    
             // Sosialisasi
             Route::get('/sosialisasi', [SosialisasiController::class, 'index'])->name("sosialisasi.index");
             Route::get('/sosialisasi/export', [SosialisasiController::class, 'export'])->name('sosialisasi.export');
@@ -160,6 +163,10 @@ Route::middleware('auth')->group(function() {
         // B. WRITE/CREATE/EDIT ACCESS (Hanya Operator P2M & Operator Satker)
         // Admin P2M biasanya hanya memantau, tapi jika boleh input, tambahkan 'admin_p2m' disini
         Route::middleware(['role:operator_satker,operator_p2m'])->group(function() {
+            // IKAN
+            Route::resource('ikan', IkanController::class)->except(['index', 'show']);       
+            // Asistensi Relawan
+            Route::resource('asistensi-relawan', AsistensiRelawanController::class)->except(['index', 'show']);    
             // Sosialisasi CRUD
             Route::resource('sosialisasi', SosialisasiController::class)->except(['index', 'show']);
             // Upacara CRUD

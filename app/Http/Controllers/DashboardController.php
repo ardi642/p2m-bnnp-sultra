@@ -316,6 +316,8 @@ class DashboardController extends Controller
         };
 
         $listOrang = [
+            'Integrasi Kurikulum Anti Narkotika (IKAN)' => $sum('p2m_ikan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
+            'Asistensi Relawan' => $sum('p2m_asistensi_relawan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
             'Sosialisasi Tatap Muka' => $sum('p2m_sosialisasi', 'jumlah_peserta', 'tanggal_pelaksanaan'),
             'Tes Urine' => ['val' => $sum('p2m_tes_urine', 'jumlah_peserta', 'tanggal_pelaksanaan'), 'positif' => $sum('p2m_tes_urine', 'jumlah_positif', 'tanggal_pelaksanaan'), 'is_tes_urine' => true],
             'Pembina Upacara' => $sum('p2m_upacara', 'jumlah_peserta_upacara', 'tanggal_pelaksanaan'),
@@ -340,6 +342,8 @@ class DashboardController extends Controller
         $totalWilayah = array_sum($listWilayah);
 
         $allActivities = [
+            'IKAN' => $count('p2m_ikan', 'tanggal_pelaksanaan'),    
+            'Asistensi Relawan' => $count('p2m_asistensi_relawan', 'tanggal_pelaksanaan'),
             'Sosialisasi' => $count('p2m_sosialisasi', 'tanggal_pelaksanaan'),
             'Upacara' => $count('p2m_upacara', 'tanggal_pelaksanaan'),
             'Tes Urine' => $count('p2m_tes_urine', 'tanggal_pelaksanaan'),
@@ -467,6 +471,10 @@ class DashboardController extends Controller
 
     private function getTableConfig($type) {
         switch ($type) {
+            case 'ikan': 
+                return ['table' => 'p2m_ikan', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];    
+            case 'asistensi_relawan': 
+                return ['table' => 'p2m_asistensi_relawan', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];    
             case 'sosialisasi': 
                 return ['table' => 'p2m_sosialisasi', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];
             case 'tes_urine':   

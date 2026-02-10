@@ -12,6 +12,8 @@
                 <div class="w-100" style="max-width: 500px;">
                     <select class="form-select border-secondary-subtle form-select-lg fs-6" id="p2m-select" aria-label="Pilih Kegiatan">
                         <option {{ Route::is('p2m.index') ? 'selected' : '' }} data-url="{{ route('p2m.index') }}">-- Pilih Jenis Kegiatan --</option>
+                        <option {{ Route::is('p2m.ikan.*') ? 'selected' : '' }} data-url="{{ route('p2m.ikan.index') }}">Integrasi Kurikulum Anti Narkotika (IKAN)</option>
+                        <option {{ Route::is('p2m.asistensi-relawan.*') ? 'selected' : '' }} data-url="{{ route('p2m.asistensi-relawan.index') }}">Asistensi Relawan</option>
                         <option {{ Route::is('p2m.sosialisasi.*') ? 'selected' : '' }} data-url="{{ route('p2m.sosialisasi.index') }}">Sosialisasi Tatap Muka/Konvensional</option>
                         <option {{ Route::is('p2m.upacara.*') ? 'selected' : '' }} data-url="{{ route('p2m.upacara.index') }}">Sosialisasi Pembina Upacara</option>
                         <option {{ Route::is('p2m.kie.*') ? 'selected' : '' }} data-url="{{ route('p2m.kie.index') }}">KIE Keliling</option>

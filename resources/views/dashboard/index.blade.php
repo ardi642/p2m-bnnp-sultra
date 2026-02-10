@@ -162,6 +162,8 @@
                         </div>
                         <div class="d-flex gap-2">
                             <select x-model="chartFilter.type" class="form-select border-secondary fw-bold text-dark fs-6" style="width: 280px;">
+                                <option value="ikan">Integrasi Kurikulum Anti Narkotika (IKAN)</option>
+                                <option value="asistensi_relawan">Asistensi Relawan</option>
                                 <option value="sosialisasi">Sosialisasi Tatap Muka</option>
                                 <option value="tes_urine">Tes Urine (Deteksi Dini)</option>
                                 <option value="upacara">Pembina Upacara</option>

@@ -13,12 +13,12 @@
             {{-- BAGIAN KIRI: Judul & Deskripsi --}}
             <div>
                 <h1 class="h3 mb-1 fw-bold text-dark">Kegiatan P2M</h1>
-                <p class="text-muted mb-0">Master Data Sosialisasi Tatap Muka/Konvensional</p>
+                <p class="text-muted mb-0">Master Data Desa / Kelurahan Bersinar</p>
             </div>
 
             {{-- BAGIAN KANAN: Tombol Tambah Data --}}
             @if (auth()->user()->hasRole(['operator_satker', 'operator_p2m']))
-                <a href="{{ route('p2m.sosialisasi.create') }}" class="btn btn-primary btn-lg fs-6 px-4 rounded-pill shadow-sm d-flex align-items-center gap-2">
+                <a href="{{ route('p2m.desa-kelurahan-bersinar.create') }}" class="btn btn-primary btn-lg fs-6 px-4 rounded-pill shadow-sm d-flex align-items-center gap-2">
                     <i class="bi bi-plus-lg"></i>
                     <span>Tambah Data</span>
                 </a>
@@ -48,9 +48,9 @@
         
         {{-- LOGIKA PHP FILTER & SORTING --}}
         @php
-            $allFilters = request()->only(['satuan_kerja_id', 'bulan', 'tahun', 'anggaran_pelaksanaan', 'sasaran_kegiatan', 'search', 'pegawai_nips']);
+            $allFilters = request()->only(['satuan_kerja_id', 'bulan', 'tahun', 'anggaran_pembentukan', 'kabupaten_kota_id', 'search', 'pegawai_nips']);
             if (empty($allFilters['tahun'])) { $allFilters['tahun'] = [date('Y')]; }
-            $activeFilters = collect($allFilters)->filter(function($value) { return !empty($value); })->count(); 
+            $activeFilters = collect($allFilters)->filter(function($value) { return !empty($value); })->count();
             
             // Helper Sorting Link
             $sortLink = function($col, $label) {
@@ -73,9 +73,9 @@
                 <div class="card border-0 shadow-sm"> 
                     <div class="card-header bg-white py-3 border-bottom">
                         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-center gap-2">
-                            <h5 class="card-title mb-0 fw-bold text-secondary"><i class="bi bi-table me-2"></i>Data Sosialisasi Tatap Muka/Konvensional</h5>
+                            <h5 class="card-title mb-0 fw-bold text-secondary"><i class="bi bi-table me-2"></i>Data Desa Bersinar / Lingkungan</h5>
                             
-                            {{-- Tombol Filter (Pakai Alpine toggleFilter) --}}
+                            {{-- Tombol Filter --}}
                             <button type="button" @click="toggleFilter" 
                                 class="btn btn-sm transition-all d-flex align-items-center gap-2"
                                 :class="showFilter ? 'btn-light text-secondary border' : 'btn-primary shadow-sm'">
@@ -91,25 +91,25 @@
                     <div class="card-body p-0 p-lg-4">
                         
                         {{-- FORM FILTER --}}
-                        <form action="{{ route('p2m.sosialisasi.index') }}" method="GET">
+                        <form action="{{ route('p2m.desa-kelurahan-bersinar.index') }}" method="GET">
                             <button type="submit" style="display: none;" aria-hidden="true"></button>
                             <input type="hidden" name="sort_by" value="{{ request('sort_by') }}">
                             <input type="hidden" name="sort_order" value="{{ request('sort_order') }}">
 
-                            {{-- PANEL FILTER (Alpine x-show) --}}
+                            {{-- PANEL FILTER --}}
                             <div x-show="showFilter" x-transition class="mb-4 px-3 px-lg-0 pt-3 pt-lg-0">
                                 <div class="bg-body-tertiary p-4 rounded-3 border">
                                     <div class="row g-3 text-start">
-                                        <div class="{{ $user->isAdmin() ? 'col-lg-8' : 'col-12' }}">
+                                        <div class="col-12">
                                             <label class="form-label fw-bold small text-secondary text-uppercase">Kata Kunci</label>
                                             <div class="input-group shadow-sm">
                                                 <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                                <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Cari Kegiatan, Tempat, dll..." value="{{ request('search') }}">
+                                                <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Cari Desa, Penggiat, Penanggung Jawab..." value="{{ request('search') }}">
                                             </div>
                                         </div>
 
                                         @if ($user->isAdmin())
-                                            <div class="col-lg-4">
+                                            <div class="col-lg-6">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Satuan Kerja</label>
                                                 <div class="shadow-sm bg-white rounded">
                                                     <select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satuan Kerja..." autocomplete="off">
@@ -121,30 +121,29 @@
                                             </div>
                                         @endif
 
-                                        <div class="col-12 col-lg-3">
-                                            <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Anggaran</label>
+                                        <div class="col-lg-{{ $user->isAdmin() ? '6' : '12' }}">
+                                            <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Kabupaten / Kota</label>
                                             <div class="shadow-sm bg-white rounded">
-                                                <select id="select-anggaran" name="anggaran_pelaksanaan[]" multiple placeholder="Pilih Anggaran..." autocomplete="off">
-                                                    <option value="DIPA" {{ in_array('DIPA', request('anggaran_pelaksanaan', [])) ? 'selected' : '' }}>DIPA</option>
-                                                    <option value="NON DIPA" {{ in_array('NON DIPA', request('anggaran_pelaksanaan', [])) ? 'selected' : '' }}>NON DIPA</option>
+                                                <select id="select-kabkota" name="kabupaten_kota_id[]" multiple placeholder="Pilih Kabupaten/Kota..." autocomplete="off">
+                                                    @foreach($kabupatens as $kab)
+                                                        <option value="{{ $kab->id }}" {{ in_array($kab->id, request('kabupaten_kota_id', [])) ? 'selected' : '' }}>{{ $kab->nama }}</option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                         </div>
 
                                         <div class="col-12 col-lg-3">
-                                            <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Sasaran</label>
+                                            <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Anggaran</label>
                                             <div class="shadow-sm bg-white rounded">
-                                                <select id="select-sasaran" name="sasaran_kegiatan[]" multiple placeholder="Pilih Sasaran..." autocomplete="off">
-                                                    <option value="lingkungan pemerintah" {{ in_array('lingkungan pemerintah', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Pemerintah</option>
-                                                    <option value="lingkungan pendidikan" {{ in_array('lingkungan pendidikan', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Pendidikan</option>
-                                                    <option value="lingkungan masyarakat" {{ in_array('lingkungan masyarakat', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Masyarakat</option>
-                                                    <option value="lingkungan swasta" {{ in_array('lingkungan swasta', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Swasta</option>
+                                                <select id="select-anggaran" name="anggaran_pembentukan[]" multiple placeholder="Pilih Anggaran..." autocomplete="off">
+                                                    <option value="DIPA" {{ in_array('DIPA', request('anggaran_pembentukan', [])) ? 'selected' : '' }}>DIPA</option>
+                                                    <option value="NON DIPA" {{ in_array('NON DIPA', request('anggaran_pembentukan', [])) ? 'selected' : '' }}>NON DIPA</option>
                                                 </select>
                                             </div>
                                         </div>
 
                                         <div class="col-6 col-lg-3">
-                                            <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Bulan</label>
+                                            <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Bulan Pencanangan</label>
                                             <div class="shadow-sm bg-white rounded">
                                                 <select id="select-bulan" name="bulan[]" multiple placeholder="Bulan..." autocomplete="off">
                                                     @foreach(range(1, 12) as $m)
@@ -154,7 +153,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-6 col-lg-3 text-start">
+                                        <div class="col-6 col-lg-2">
                                             <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Tahun</label>
                                             <div class="shadow-sm bg-white rounded">
                                                 <select id="select-tahun" name="tahun[]" multiple placeholder="Tahun..." autocomplete="off">
@@ -165,8 +164,8 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-12 col-lg-6">
-                                            <label class="form-label fw-bold small text-secondary text-uppercase mb-1 d-block">Pegawai</label>
+                                        <div class="col-12 col-lg-4">
+                                            <label class="form-label fw-bold small text-secondary text-uppercase mb-1 d-block">Penanggung Jawab</label>
                                             <div class="d-flex align-items-stretch shadow-sm bg-white rounded border" x-data="{ logic: '{{ request('pegawai_logic', 'OR') }}' }">
                                                 <button type="button" class="btn rounded-0 rounded-start border-end d-flex align-items-center justify-content-center fw-bold px-3" style="width: 70px; flex-shrink: 0;" :class="logic === 'AND' ? 'btn-danger text-white' : 'btn-light text-secondary'" @click="logic = logic === 'OR' ? 'AND' : 'OR'">
                                                     <span x-text="logic"></span>
@@ -183,7 +182,7 @@
                                         </div>
 
                                         <div class="col-12 text-end pt-3 border-top mt-4 text-start">
-                                            <a href="{{ route('p2m.sosialisasi.index') }}" class="btn btn-link text-decoration-none text-muted btn-sm me-2">Reset</a>
+                                            <a href="{{ route('p2m.desa-kelurahan-bersinar.index') }}" class="btn btn-link text-decoration-none text-muted btn-sm me-2">Reset</a>
                                             <button type="submit" class="btn btn-primary px-4 shadow-sm"><i class="bi bi-funnel-fill me-1"></i> Terapkan</button>
                                         </div>
                                     </div>
@@ -192,20 +191,15 @@
 
                             <div class="d-flex flex-column flex-lg-row justify-content-between align-items-end align-items-lg-center mb-3 px-3 px-lg-0">
                                 <div class="mb-2 mb-lg-0">
-                                    <button type="submit" formaction="{{ route('p2m.sosialisasi.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 px-3 shadow-none">
+                                    <button type="submit" formaction="{{ route('p2m.desa-kelurahan-bersinar.export') }}" class="btn btn-success btn-sm text-white d-flex align-items-center gap-2 px-3 shadow-none">
                                         <i class="bi bi-file-earmark-excel"></i> <span>Export Excel</span>
                                     </button>
                                 </div>
                                 <div class="d-flex gap-2">
                                     <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
                                         <i class="bi bi-info-circle text-muted me-2" style="font-size: 0.85rem;"></i>
-                                        <span class="text-muted" style="font-size: 0.9rem;">Total kegiatan : </span>
+                                        <span class="text-muted" style="font-size: 0.9rem;">Total Desa Bersinar : </span>
                                         <span class="text-dark ms-1" style="font-size: 0.9rem;">{{ number_format($totalKegiatan, 0, ',', '.') }}</span>
-                                    </div>
-                                    <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
-                                        <i class="bi bi-people text-muted me-2" style="font-size: 0.85rem;"></i>
-                                        <span class="text-muted" style="font-size: 0.9rem;">Total peserta : </span>
-                                        <span class="text-dark ms-1" style="font-size: 0.9rem;">{{ number_format($totalPeserta, 0, ',', '.') }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -219,35 +213,34 @@
                                     <tr class="text-center align-middle small text-uppercase text-secondary text-nowrap">
                                         <th class="py-3 bg-light ps-3">No</th>
                                         <th class="py-3 bg-light text-start">{!! $sortLink('satuan_kerja', 'Satuan Kerja') !!}</th>
-                                        <th class="py-3 bg-light">{!! $sortLink('anggaran_pelaksanaan', 'Anggaran') !!}</th>
-                                        <th class="py-3 bg-light text-start">{!! $sortLink('nama_kegiatan', 'Nama Kegiatan') !!}</th>
-                                        <th class="py-3 bg-light">{!! $sortLink('sasaran_kegiatan', 'Sasaran') !!}</th>
-                                        <th class="py-3 bg-light">{!! $sortLink('tanggal_pelaksanaan', 'Tanggal') !!}</th>
+                                        <th class="py-3 bg-light">{!! $sortLink('anggaran_pembentukan', 'Anggaran') !!}</th>
+                                        <th class="py-3 bg-light text-start">{!! $sortLink('nama_desa_kelurahan', 'Desa / Kelurahan') !!}</th>
+                                        <th class="py-3 bg-light text-start">Kabupaten/Kota</th>
+                                        <th class="py-3 bg-light">{!! $sortLink('tanggal_pencanangan', 'Tgl Pencanangan') !!}</th>
                                         
-                                        <th class="py-3 bg-light text-start">Pegawai</th>
+                                        {{-- KOLOM PEGAWAI (Fixed Width) --}}
+                                        <th class="py-3 bg-light text-start" style="min-width: 250px;">PJ (Pegawai)</th>
                                         
-                                        <th class="py-3 bg-light">{!! $sortLink('jumlah_peserta', 'Peserta') !!}</th>
-                                        <th class="py-3 bg-light">{!! $sortLink('created_at', 'Dibuat') !!}</th>
+                                        <th class="py-3 bg-light">{!! $sortLink('jumlah_penggiat', 'Penggiat') !!}</th>
+                                        <th class="py-3 bg-light">{!! $sortLink('keberadaan_ibm', 'IBM') !!}</th>
+                                        <th class="py-3 bg-light">{!! $sortLink('created_at', 'Dibuat Pada') !!}</th>
                                         <th class="py-3 bg-light pe-3">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="border-top-0">
-                                    @forelse ($sosialisasis as $data)
+                                    @forelse ($desas as $data)
                                         {{-- Row Utama --}}
                                         <tr class="text-center align-middle" :class="isExpanded({{ $data->id }}) ? 'bg-light' : ''">
-                                            <td class="fw-bold text-secondary ps-3">{{ $sosialisasis->firstItem() + $loop->index }}</td>
+                                            <td class="fw-bold text-secondary ps-3">{{ $desas->firstItem() + $loop->index }}</td>
                                             <td class="text-start"><span class="fw-semibold text-dark">{{ $data->satuanKerja->satuan_kerja ?? '-' }}</span></td>
-                                            <td><span class="badge rounded-pill {{ $data->anggaran_pelaksanaan == 'DIPA' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' }}">{{ $data->anggaran_pelaksanaan }}</span></td>
+                                            <td><span class="badge rounded-pill {{ $data->anggaran_pembentukan == 'DIPA' ? 'bg-success bg-opacity-10 text-success border border-success border-opacity-25' : 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' }}">{{ $data->anggaran_pembentukan }}</span></td>
                                             
-                                            <td class="text-start"><a href="#" class="text-decoration-none fw-bold text-dark" @click.prevent="toggleExpand({{ $data->id }})">{{ $data->nama_kegiatan }}</a></td>
+                                            <td class="text-start fw-bold text-dark"><a href="#" class="text-decoration-none fw-bold text-dark" @click.prevent="toggleExpand({{ $data->id }})">{{ $data->nama_desa_kelurahan }}</a></td>
                                             
-                                            <td>
-                                                @php $sasaranClass = match($data->sasaran_kegiatan) { 'lingkungan pendidikan' => 'bg-warning', 'lingkungan pemerintah' => 'bg-primary', 'lingkungan masyarakat' => 'bg-success', 'lingkungan swasta' => 'bg-info' }; @endphp
-                                                <span class="badge rounded-pill {{ $sasaranClass }} bg-opacity-10 {{ str_replace('bg-', 'text-', $sasaranClass) }} border {{ str_replace('bg-', 'border-', $sasaranClass) }} border-opacity-25 text-capitalize text-nowrap">{{ $data->sasaran_kegiatan }}</span>
-                                            </td>
-                                            <td class="small text-muted text-nowrap">{{ $data->tanggal_pelaksanaan->locale('id')->translatedFormat('d M Y') }}</td>
+                                            <td class="text-start">{{ $data->kabupatenKota->nama ?? '-' }}</td>
+                                            <td class="small text-muted text-nowrap">{{ $data->tanggal_pencanangan->locale('id')->translatedFormat('d M Y') }}</td>
                                             
-                                            {{-- KOLOM PEGAWAI (DENGAN LIMIT 10 + FLEX WRAP) --}}
+                                            {{-- KOLOM PEGAWAI (LIMIT 10) --}}
                                             <td class="text-start">
                                                 <div class="d-flex flex-wrap gap-1">
                                                     @php
@@ -270,17 +263,18 @@
                                                 </div>
                                             </td>
 
-                                            <td><span class="fw-bold">{{ $data->jumlah_peserta }}</span></td>
-                                            <td class="small text-muted text-nowrap text-center">{{ $data->created_at->locale('id')->translatedFormat('d M Y') }}</td>
+                                            <td>{{ $data->jumlah_penggiat }}</td>
+                                            <td><span class="badge {{ $data->keberadaan_ibm == 'Ada' ? 'bg-primary' : 'bg-secondary' }}">{{ $data->keberadaan_ibm }}</span></td>
+                                            <td class="small text-muted text-nowrap">{{ $data->created_at->locale('id')->translatedFormat('d M Y') }}</td>
                                             <td class="pe-3">
                                                 <div class="btn-group btn-group-sm shadow-sm">
                                                     <button type="button" class="btn btn-light border text-secondary" @click="toggleExpand({{ $data->id }})">
                                                         <i class="bi" :class="isExpanded({{ $data->id }}) ? 'bi-chevron-up text-primary' : 'bi-eye text-secondary'"></i>
                                                     </button>
                                                     @if (auth()->user()->hasRole(['operator_satker', 'operator_p2m']))
-                                                        <a href="{{ route('p2m.sosialisasi.edit', $data->id) }}" class="btn btn-light border text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                                        <a href="{{ route('p2m.desa-kelurahan-bersinar.edit', $data->id) }}" class="btn btn-light border text-primary" title="Edit"><i class="bi bi-pencil-square"></i></a>
                                                         <button type="button" class="btn btn-light border text-danger" onclick="confirmDelete({{ $data->id }})" title="Hapus"><i class="bi bi-trash"></i></button>
-                                                        <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.sosialisasi.destroy', $data->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
+                                                        <form id="delete-form-{{ $data->id }}" action="{{ route('p2m.desa-kelurahan-bersinar.destroy', $data->id) }}" method="POST" class="d-none">@csrf @method('DELETE')</form>
                                                     @endif
                                                 </div>
                                             </td>
@@ -288,42 +282,42 @@
 
                                         {{-- TR DETAIL --}}
                                         <tr x-show="isExpanded({{ $data->id }})" x-transition>
-                                            <td colspan="11" class="p-0 border-0">
+                                            <td colspan="12" class="p-0 border-0">
                                                 <div class="bg-body-tertiary p-4 border-bottom shadow-inner text-start" x-data="fileDownloader">
                                                     <div class="card border-0 shadow-sm">
                                                         <div class="card-body">
                                                             <h6 class="card-title fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-info-circle me-2"></i>Detail Lengkap</h6>
                                                             
-                                                            <div class="row g-4 text-start mb-4">
+                                                            <div class="row g-4 text-start">
                                                                 <div class="col-lg-6">
-                                                                    <dl class="row mb-0 small text-start">
-                                                                        <dt class="col-sm-4 text-secondary mb-2">Kegiatan</dt><dd class="col-sm-8 text-dark">{{ $data->nama_kegiatan }}</dd>
-                                                                        <dt class="col-sm-4 text-secondary mb-2">Satuan Kerja</dt><dd class="col-sm-8 text-dark">{{ $data->satuanKerja->satuan_kerja ?? '-' }}</dd>
-                                                                        <dt class="col-sm-4 text-secondary mb-2">Anggaran</dt><dd class="col-sm-8"><span class="badge bg-light text-dark border">{{ $data->anggaran_pelaksanaan }}</span></dd>
-                                                                        <dt class="col-sm-4 text-secondary mb-2">Sasaran</dt><dd class="col-sm-8 text-capitalize text-dark">{{ $data->sasaran_kegiatan }}</dd>
-                                                                        <dt class="col-sm-4 text-secondary mb-2">Tempat</dt><dd class="col-sm-8 text-dark">{{ $data->tempat_kegiatan }}</dd>
-                                                                        <dt class="col-sm-4 text-secondary mb-2">Tanggal</dt><dd class="col-sm-8 text-dark">{{ $data->tanggal_pelaksanaan->locale('id')->translatedFormat('l, d F Y') }}</dd>
-                                                                        <dt class="col-sm-4 text-secondary mb-2">Peserta</dt><dd class="col-sm-8 text-dark">{{ $data->jumlah_peserta }} Orang</dd>
+                                                                    <dl class="row mb-0 small">
+                                                                        <dt class="col-sm-4 text-secondary mb-2">Desa / Kelurahan</dt><dd class="col-sm-8 text-dark fw-bold">{{ $data->nama_desa_kelurahan }}</dd>
+                                                                        <dt class="col-sm-4 text-secondary mb-2">Kabupaten/Kota</dt><dd class="col-sm-8 text-dark">{{ $data->kabupatenKota->nama ?? '-' }}</dd>
+                                                                        <dt class="col-sm-4 text-secondary mb-2">No. HP Penanggung Jawab</dt><dd class="col-sm-8 text-dark">{{ $data->no_hp_penanggung_jawab ?? '-' }}</dd>
+                                                                        <dt class="col-sm-4 text-secondary mb-2">Penanggung Jawab (BNN)</dt>
+                                                                        <dd class="col-sm-8">
+                                                                            <ul class="list-unstyled mb-0">
+                                                                                @foreach($allPegawai as $pegawai)
+                                                                                    @php $isPindah = $pegawai->satuan_kerja_id != $data->satuan_kerja_id; @endphp
+                                                                                    <li class="mb-2">
+                                                                                        <i class="bi bi-person-check-fill me-2 text-success"></i><span class="text-dark">{{ $pegawai->nama }}</span> <span class="text-muted">({{ $pegawai->nip }})</span>
+                                                                                        @if($isPindah) <br><small class="text-danger fw-bold fst-italic ms-4"><i class="bi bi-arrow-return-right me-1"></i>Pindah ke: {{ $pegawai->satuanKerja->satuan_kerja ?? 'Luar Satker' }}</small> @endif
+                                                                                    </li>
+                                                                                @endforeach
+                                                                            </ul>
+                                                                        </dd>
                                                                     </dl>
                                                                 </div>
                                                                 <div class="col-lg-6">
-                                                                    <div class="row small mb-3 text-start">
-                                                                        <div class="col-md-6 mb-2 text-start"><span class="text-secondary d-block">Dibuat Pada</span><span class="text-dark">{{ $data->created_at->locale('id')->translatedFormat('l, d F Y H:i') }}</span></div>
-                                                                        <div class="col-md-6 mb-2 text-start"><span class="text-secondary d-block">Terakhir Diubah</span><span class="text-dark">{{ $data->updated_at->locale('id')->translatedFormat('l, d F Y H:i') }}</span></div>
-                                                                    </div>
-                                                                    <div class="mb-4 text-start">
-                                                                        <span class="fw-bold text-secondary small d-block mb-2 text-start">List Pegawai Terlibat:</span>
-                                                                        
-                                                                        {{-- LIST DETAIL: KEMBALI KE LIST VERTIKAL (UL/LI) --}}
-                                                                        <ul class="list-unstyled mb-0 small text-start">
-                                                                            @foreach($allPegawai as $pegawai)
-                                                                                @php $isPindah = $pegawai->satuan_kerja_id != $data->satuan_kerja_id; @endphp
-                                                                                <li class="mb-2 text-start">
-                                                                                    <i class="bi bi-person-check-fill me-2 text-success"></i><span class="text-dark">{{ $pegawai->nama }}</span> <span class="text-muted">({{ $pegawai->nip }})</span>
-                                                                                    @if($isPindah)<br><small class="text-danger fw-bold fst-italic ms-4"><i class="bi bi-arrow-return-right me-1"></i>Pindah ke: {{ $pegawai->satuanKerja->satuan_kerja ?? 'Luar Satker' }}</small>@endif
-                                                                                </li>
-                                                                            @endforeach
-                                                                        </ul>
+                                                                    <div class="row small mb-3">
+                                                                        <div class="col-md-6 mb-2">
+                                                                            <span class="text-secondary d-block">Dibuat Pada</span>
+                                                                            <span class="text-dark fw-bold">{{ $data->created_at->locale('id')->translatedFormat('l, d F Y H:i') }}</span>
+                                                                        </div>
+                                                                        <div class="col-md-6 mb-2">
+                                                                            <span class="text-secondary d-block">Terakhir Diubah</span>
+                                                                            <span class="text-dark fw-bold">{{ $data->updated_at->locale('id')->translatedFormat('l, d F Y H:i') }}</span>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -351,22 +345,20 @@
                                                                                     </div>
                                                                                     <span class="badge bg-primary rounded-pill">{{ $fotos->count() }}</span>
                                                                                 </div>
-                                                                                <div class="card-body p-2" style="max-height: 30vh; min-height: 100px; overflow-y: auto;">
+                                                                                <div class="card-body p-2" style="max-height: 40vh; min-height: 100px; overflow-y: auto;">
                                                                                     @forelse($fotos as $doc)
                                                                                         <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-primary bg-primary bg-opacity-10' : ''">
                                                                                             @if(!$doc->is_link)
                                                                                                 <div class="form-check me-2 d-flex align-items-center">
-                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="chk-doc-{{ $doc->id }}" name="ids[]" value="{{ $doc->id }}" x-model="selected">
                                                                                                 </div>
                                                                                             @endif
-                                                                                            <div class="flex-grow-1 text-truncate small cursor-pointer" @if(!$doc->is_link) @click="toggle({{ $doc->id }})" @endif>
-                                                                                                <div class="d-flex align-items-center">
-                                                                                                    <div class="flex-shrink-0 me-2 text-primary bg-primary bg-opacity-10 p-1 rounded">
-                                                                                                        @if($doc->is_link) <i class="bi bi-link-45deg"></i> @else <i class="bi bi-file-image"></i> @endif
-                                                                                                    </div>
-                                                                                                    <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
+                                                                                            <label for="chk-doc-{{ $doc->id }}" class="flex-grow-1 text-truncate small cursor-pointer d-flex align-items-center m-0">
+                                                                                                <div class="flex-shrink-0 me-2 text-primary bg-primary bg-opacity-10 p-1 rounded">
+                                                                                                    @if($doc->is_link) <i class="bi bi-link-45deg"></i> @else <i class="bi bi-file-image"></i> @endif
                                                                                                 </div>
-                                                                                            </div>
+                                                                                                <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
+                                                                                            </label>
                                                                                             <div class="d-flex gap-1 flex-shrink-0 ms-2">
                                                                                                 @if(!$doc->is_link)
                                                                                                     <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
@@ -399,20 +391,18 @@
                                                                                         <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-danger bg-danger bg-opacity-10' : ''">
                                                                                             @if(!$doc->is_link)
                                                                                                 <div class="form-check me-2 d-flex align-items-center">
-                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="chk-lamp-{{ $doc->id }}" name="ids[]" value="{{ $doc->id }}" x-model="selected">
                                                                                                 </div>
                                                                                             @endif
-                                                                                            <div class="flex-grow-1 text-truncate small cursor-pointer" @if(!$doc->is_link) @click="toggle({{ $doc->id }})" @endif>
-                                                                                                <div class="d-flex align-items-center">
-                                                                                                    <div class="flex-shrink-0 me-2 text-danger bg-danger bg-opacity-10 p-1 rounded">
-                                                                                                        @if($doc->is_link) <i class="bi bi-link-45deg"></i>
-                                                                                                        @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf"></i>
-                                                                                                        @elseif(Str::contains($doc->tipe_file, ['word', 'office'])) <i class="bi bi-file-word"></i>
-                                                                                                        @else <i class="bi bi-file-earmark-text"></i> @endif
-                                                                                                    </div>
-                                                                                                    <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
+                                                                                            <label for="chk-lamp-{{ $doc->id }}" class="flex-grow-1 text-truncate small cursor-pointer d-flex align-items-center m-0">
+                                                                                                <div class="flex-shrink-0 me-2 text-danger bg-danger bg-opacity-10 p-1 rounded">
+                                                                                                    @if($doc->is_link) <i class="bi bi-link-45deg"></i>
+                                                                                                    @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf"></i>
+                                                                                                    @elseif(Str::contains($doc->tipe_file, ['word', 'office'])) <i class="bi bi-file-word"></i>
+                                                                                                    @else <i class="bi bi-file-earmark-text"></i> @endif
                                                                                                 </div>
-                                                                                            </div>
+                                                                                                <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
+                                                                                            </label>
                                                                                             <div class="d-flex gap-1 flex-shrink-0 ms-2">
                                                                                                 @if(!$doc->is_link)
                                                                                                     <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
@@ -446,7 +436,7 @@
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="11" class="text-center py-5 text-muted fst-italic border-bottom">Tidak ada data kegiatan.</td></tr>
+                                        <tr><td colspan="11" class="text-center py-5 text-muted fst-italic border-bottom">Tidak ada data desa / kelurahan bersinar.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>
@@ -463,7 +453,7 @@
                                     </select>
                                     <span class="text-muted small">Data / halaman</span>
                                 </div>
-                                <div>{{ $sosialisasis->withQueryString()->links() }}</div>
+                                <div>{{ $desas->withQueryString()->links() }}</div>
                             </div>
                         </div>
 
@@ -476,10 +466,10 @@
 @endsection
 
 @push('styles')
+
 <style>
     .ts-dropdown, .ts-dropdown.single { z-index: 2000 !important; }
     .ts-control { border: none !important; box-shadow: none !important; padding-top: 0.5rem; padding-bottom: 0.5rem; background-color: transparent !important; min-height: 40px; }
-    .ts-wrapper.focus .ts-control { box-shadow: none !important; }
     .custom-table-scroll { max-height: 70vh; overflow-y: auto; position: relative; border: 1px solid #dee2e6; border-radius: 6px; }
     .custom-table-scroll thead th { position: sticky !important; top: 0 !important; z-index: 10; background-color: #f8f9fa !important; box-shadow: inset 0 -1px 0 #dee2e6; }
     .btn-xs { padding: 1px 5px; font-size: 0.75rem; }
@@ -490,6 +480,7 @@
 
 @push('scripts')
 <script type="module">
+
     document.addEventListener('alpine:init', () => {
         // 2. Data Global 'p2mIndex' (Filter & Expand)
         Alpine.data('p2mIndex', () => ({
@@ -521,14 +512,7 @@
                 return this.selected.includes(id.toString()) || this.selected.includes(id);
             },
 
-            toggle(id) {
-                const strId = id.toString();
-                if (this.selected.includes(strId)) {
-                    this.selected = this.selected.filter(i => i !== strId);
-                } else {
-                    this.selected.push(strId);
-                }
-            },
+            // NOTE: Toggle dihapus karena diganti x-model + Label
 
             toggleAll(ids) {
                 const stringIds = ids.map(String);
@@ -561,7 +545,7 @@
     document.addEventListener("DOMContentLoaded", function() {
         if(typeof TomSelect !== 'undefined'){
             const configTomSelect = { plugins: ['remove_button', 'clear_button'], persist: false, create: false, maxOptions: null };
-            const ids = ['select-satker', 'select-bulan', 'select-anggaran', 'select-sasaran', 'select-tahun', 'select-pegawai'];
+            const ids = ['select-satker', 'select-bulan', 'select-anggaran', 'select-sasaran', 'select-tahun', 'select-pegawai', 'select-kabkota'];
             ids.forEach(id => { if(document.getElementById(id)) new TomSelect('#' + id, configTomSelect); });
         }
     });

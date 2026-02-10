@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Traits\HasDokumentasi; 
+use App\Traits\HasDokumen; 
 
-class P2mDesaBersinar extends Model
+class P2mDesaKelurahanBersinar extends Model
 {
-    use HasFactory, HasDokumentasi;
+    use HasFactory, HasDokumen;
 
-    protected $table = 'p2m_desa_bersinar';
+    protected $table = 'p2m_desa_kelurahan_bersinar';
     protected $guarded = ['id'];
 
     protected $casts = [
@@ -23,7 +23,7 @@ class P2mDesaBersinar extends Model
     {
         parent::boot();
         static::deleting(function ($kegiatan) {
-            $kegiatan->dokumentasi()->delete();
+            $kegiatan->dokumen()->delete();
         });
     }
 
@@ -41,8 +41,8 @@ class P2mDesaBersinar extends Model
     {
         return $this->belongsToMany(
             Pegawai::class, 
-            'pegawai_p2m_desa_bersinar', 
-            'p2m_desa_bersinar_id', 
+            'pegawai_p2m_desa_kelurahan_bersinar', 
+            'p2m_desa_kelurahan_bersinar_id', 
             'pegawai_nip', 
             'id', 
             'nip'

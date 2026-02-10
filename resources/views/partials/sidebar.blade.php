@@ -29,7 +29,7 @@
                 </div>
 
                 @foreach([
-                    ['route' => 'p2m.sosialisasi.index', 'label' => 'Sosialisasi', 'url' => 'p2m/sosialisasi*'],
+                    ['route' => 'p2m.informasi-edukasi.index', 'label' => 'Informasi dan Edukasi', 'url' => 'p2m/informasi-edukasi*'],
                     ['route' => 'p2m.upacara.index', 'label' => 'Upacara', 'url' => 'p2m/upacara*'],
                     ['route' => 'p2m.kie.index', 'label' => 'KIE', 'url' => 'p2m/kie*'],
                     ['route' => 'p2m.lingkungan-bersinar.index', 'label' => 'Lingkungan Bersinar', 'url' => 'p2m/lingkungan-bersinar*'],

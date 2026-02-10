@@ -3,20 +3,20 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\P2mSosialisasi;
+use App\Models\P2mInformasiEdukasi;
 use App\Models\SatuanKerja;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\P2mSosialisasi>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\P2mInformasiEdukasi>
  */
-class P2mSosialisasiFactory extends Factory
+class P2mInformasiEdukasiFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
      * @var string
      */
-    protected $model = P2mSosialisasi::class;
+    protected $model = P2mInformasiEdukasi::class;
 
     /**
      * Define the model's default state.

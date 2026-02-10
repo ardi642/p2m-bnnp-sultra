@@ -26,7 +26,7 @@ class DatabaseSeeder extends Seeder
         // p2mOnline::factory(50)->create();
 
         $this->call([
-            P2mSosialisasiSeeder::class,
+            P2mInformasiEdukasiSeeder::class,
             P2mUpacaraSeeder::class,
             P2mKieSeeder::class,
             P2mLingkunganBersinarSeeder::class,

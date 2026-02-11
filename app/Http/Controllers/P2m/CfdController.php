@@ -10,13 +10,15 @@ use Illuminate\View\View;
 use Illuminate\Http\Request;
 use App\Exports\CfdExport; // Export Baru
 use App\Helpers\SearchHelper;
-use App\Models\DokumentasiKegiatan;
+use App\Models\Dokumen;
 use App\Models\TemporaryFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+use App\Services\DokumenService;
 
 class CfdController extends Controller
 {
@@ -143,7 +145,7 @@ class CfdController extends Controller
         $totalKegiatan = $statsQuery->count();
         $totalPeserta = $statsQuery->sum('jumlah_peserta');
 
-        $query->with('dokumentasi');
+        $query->with('dokumen');
 
         $perPage = $request->input('per_page', 10);
         if (!in_array($perPage, [10, 25, 50, 100])) { $perPage = 10; }
@@ -177,7 +179,7 @@ class CfdController extends Controller
         return view('p2m.cfd.create', compact('satuanKerjas', 'pegawais'));
     }
 
-    public function store(Request $request) {
+     public function store(Request $request, DokumenService $dokumenService) {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
@@ -188,9 +190,19 @@ class CfdController extends Controller
             'tempat_kegiatan'     => 'required',
             'jumlah_peserta'      => 'required|numeric',
             'pegawai_nips'   => 'required|array',
-            'pegawai_nips.*' => 'exists:pegawai,nip',
-            'dokumentasi'    => 'nullable|array',
-            'dokumentasi.*'  => 'required',
+
+              // Validasi File Upload
+            'dokumentasi'          => 'nullable|array', 
+            'lampiran'             => 'nullable|array',
+
+            // Validasi Link (Array of Objects)
+            'dokumentasi_links'        => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+
+            'lampiran_links'        => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ];
 
         if ($user->isAdmin()) {
@@ -198,12 +210,12 @@ class CfdController extends Controller
         }
 
         $validasi = $request->validate($rules);
-        $filesMoved = [];
+        $uploadedPaths = []; 
 
         DB::beginTransaction();
 
         try {
-            $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
+            $dataKegiatan = collect($validasi)->except(['dokumentasi', 'lampiran', 'pegawai_nips', 'dokumentasi_links', 'lampiran_links'])->toArray();
             $pegawaiNips  = $validasi['pegawai_nips'];
 
             if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
@@ -220,51 +232,35 @@ class CfdController extends Controller
             }
             $kegiatan->pegawai()->attach($attachData);
 
-            // Upload File (Logic Reusable sama persis dengan Sosialisasi)
-            if ($request->filled('dokumentasi')) {
-                $tempFolders = $request->input('dokumentasi');
-                foreach ($tempFolders as $folder) {
-                    $tempFile = TemporaryFile::where('folder', $folder)->first();
-                    if ($tempFile) {
-                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        $mimeType = Storage::mimeType($sourcePath); 
-                        $size = Storage::size($sourcePath);
-                        $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                        $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
-                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
-                        $destinationPath = 'dokumentasi/' . date('Y') . '/' . $cleanFileName;
-
-                        if (Storage::exists($sourcePath)) {
-                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
-                            $filesMoved[] = $destinationPath;
-
-                            $kegiatan->dokumentasi()->create([
-                                'nama_file_asli' => $tempFile->filename,
-                                'path_file'      => $destinationPath,    
-                                'tipe_file'      => $mimeType,           
-                                'ukuran_file'    => $size,               
-                            ]);
-
-                            Storage::deleteDirectory('public/tmp/' . $folder);
-                            $tempFile->delete();
-                        }
-                    }
-                }
+              if ($request->filled('dokumentasi')) {
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $kegiatan, 'dokumentasi', $uploadedPaths);
             }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $kegiatan, 'lampiran', $uploadedPaths);
+            }
+
+            // 4. Handle Link Eksternal
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $kegiatan, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $kegiatan, 'lampiran');
+            }
+
+      
 
             DB::commit(); 
-
-        } catch (\Exception $e) {
+            return redirect()->route('p2m.cfd.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data.');
+             } catch (\Exception $e) {
             DB::rollBack();
-            foreach ($filesMoved as $path) {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
+            foreach ($uploadedPaths as $path) {
+                Storage::disk(config('filesystems.default'))->delete($path);
             }
-            return back()->with('error', 'store')->with('message', 'Gagal menyimpan data: ' . $e->getMessage())->withInput();
+            Log::error('Gagal simpan: ' . $e->getMessage());
+            abort(500, 'Server Error.');
         }
 
-        return redirect()->route('p2m.cfd.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data CFD');
+      
     }
 
     public function edit($id): View 
@@ -293,7 +289,7 @@ class CfdController extends Controller
         return view('p2m.cfd.edit', compact('kegiatan', 'satuanKerjas', 'pegawais', 'selectedPegawaiNips'));
     }
 
-    public function update(Request $request, $id) 
+    public function update(Request $request, DokumenService $dokumenService, $id) 
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -310,10 +306,19 @@ class CfdController extends Controller
             'tempat_kegiatan'     => 'required',
             'jumlah_peserta'      => 'required|numeric',
             'pegawai_nips'        => 'required|array',
-            'pegawai_nips.*'      => 'exists:pegawai,nip',
-            'delete_files'        => 'nullable|array', 
-            'delete_files.*'      => 'exists:dokumentasi_kegiatan,id',
-            'dokumentasi'         => 'nullable|array',
+           
+             // Validasi File & Link
+            'delete_files'         => 'nullable|array', 
+            'dokumentasi'          => 'nullable|array',
+            'lampiran'             => 'nullable|array',
+            
+            'dokumentasi_links'        => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+
+            'lampiran_links'        => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ];
 
         if ($user->isAdmin()) {
@@ -328,7 +333,7 @@ class CfdController extends Controller
 
         try {
             $pegawaiNips = $validasi['pegawai_nips'];
-            $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
+            $dataUpdate = collect($validasi)->except(['dokumentasi', 'lampiran', 'pegawai_nips', 'delete_files', 'dokumentasi_links', 'lampiran_links'])->toArray();
 
             if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
                 unset($dataUpdate['satuan_kerja_id']); 
@@ -342,81 +347,68 @@ class CfdController extends Controller
             $syncData = [];
 
             foreach ($pegawaiNips as $nip) {
-                if (isset($oldPivotData[$nip]) && $oldPivotData[$nip]->saved_satuan_kerja_id) {
-                    $satkerToSave = $oldPivotData[$nip]->saved_satuan_kerja_id; 
-                } else {
-                    $satkerToSave = $masterPegawais[$nip]->satuan_kerja_id ?? null;
-                }
+                $satkerToSave = (isset($oldPivotData[$nip]) && $oldPivotData[$nip]->saved_satuan_kerja_id) ? $oldPivotData[$nip]->saved_satuan_kerja_id : ($masterPegawais[$nip]->satuan_kerja_id ?? null);
                 $syncData[$nip] = ['saved_satuan_kerja_id' => $satkerToSave];
             }
             $kegiatan->pegawai()->sync($syncData);
 
             // File Handling
+
             if ($request->has('delete_files')) {
-                $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
+                $filesToRemove = Dokumen::whereIn('id', $request->delete_files)->get();
                 foreach ($filesToRemove as $file) {
-                    $filesToDelete[] = $file->path_file; 
+                    if (!$file->is_link) $filesToDelete[] = $file->path_file; // Hanya hapus fisik jika bukan link
                     $file->delete();
                 }
             }
 
+            // Upload File Baru
             if ($request->filled('dokumentasi')) {
-                $tempFolders = $request->input('dokumentasi');
-                foreach ($tempFolders as $folder) {
-                    $tempFile = TemporaryFile::where('folder', $folder)->first();
-                    if ($tempFile) {
-                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        $mimeType = Storage::mimeType($sourcePath); 
-                        $size = Storage::size($sourcePath);
-                        $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                        $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
-                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
-                        $destinationPath = 'dokumentasi/' . date('Y') . '/' . $cleanFileName;
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $kegiatan, 'dokumentasi', $newFilesMoved);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $kegiatan, 'lampiran', $newFilesMoved);
+            }
 
-                        if (Storage::exists($sourcePath)) {
-                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
-                            $newFilesMoved[] = $destinationPath;
-                            $kegiatan->dokumentasi()->create([
-                                'nama_file_asli' => $tempFile->filename,
-                                'path_file'      => $destinationPath, 
-                                'tipe_file'      => $mimeType,
-                                'ukuran_file'    => $size,
-                            ]);
-                            Storage::deleteDirectory('public/tmp/' . $folder);
-                            $tempFile->delete();
-                        }
-                    }
-                }
+            // Simpan Link Baru
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $kegiatan, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $kegiatan, 'lampiran');
             }
 
             DB::commit();
 
             foreach ($filesToDelete as $path) {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
 
-            return redirect()->route('p2m.cfd.index')->with('success', 'update')->with('message', 'Data CFD berhasil diperbarui');
+            return redirect()->route('p2m.cfd.index')->with('success', 'update')->with('message', 'Data diperbarui');
 
         } catch (\Exception $e) {
             DB::rollBack();
             foreach ($newFilesMoved as $path) {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
-            return back()->with('error', 'update')->with('message', 'Gagal: ' . $e->getMessage())->withInput();
+            Log::error('Update error: ' . $e->getMessage());
+            return back()->with('error', 'update')->withInput();
         }
     }
 
-    public function destroy($id) 
+   public function destroy($id) 
     {
         $kegiatan = P2mCfd::findOrFail($id);
+        
         $filesToDelete = [];
         
-        foreach ($kegiatan->dokumentasi()->cursor() as $doc) {
-            $filesToDelete[] = $doc->path_file;
+        // Loop dokumen, tapi filter isinya
+        foreach ($kegiatan->dokumen()->cursor() as $doc) {
+            // Cek 1: Pastikan bukan Link (karena link tidak punya file fisik)
+            // Cek 2: Pastikan path_file TIDAK NULL dan TIDAK KOSONG
+            if (!$doc->is_link && !empty($doc->path_file)) {
+                $filesToDelete[] = $doc->path_file;
+            }
         }
 
         DB::beginTransaction();
@@ -425,17 +417,17 @@ class CfdController extends Controller
             DB::commit(); 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'destroy')->with('message', 'Gagal hapus: ' . $e->getMessage());
+            return back()->with('error', 'destroy')->with('message', 'Gagal menghapus data: ' . $e->getMessage());
         }
 
+        // Hapus file fisik
         foreach ($filesToDelete as $path) {
-            try {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
-            } catch (\Exception $e) {}
+            // Double check: Pastikan $path adalah string (bukan null) sebelum akses Storage
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
         }
 
-        return redirect()->back()->with('success', 'destroy')->with('message', 'Data CFD berhasil dihapus.');
+        return redirect()->back()->with('success', 'destroy')->with('message', 'Data dan file berhasil dihapus.');
     }
 }

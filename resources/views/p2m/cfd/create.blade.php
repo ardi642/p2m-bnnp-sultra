@@ -5,12 +5,18 @@
         <div class="container-fluid p-4 p-lg-5">
             <div class="row justify-content-center mb-4">
                 <div class="col-12 col-lg-10">
-                    <h1 class="h3 mb-1 fw-bold text-dark">Input Kegiatan P2M</h1>
-                    <p class="text-muted mb-0">Kegiatan Car Free Day (CFD)</p>
+                     <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                           <h1 class="h3 mb-1 fw-bold text-dark">Input Kegiatan P2M</h1>
+                            <p class="text-muted mb-0">Kegiatan Car Free Day (CFD)</p>
+                        </div>
+                        <a href="{{ route('p2m.cfd.index') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+                            <i class="bi bi-arrow-left"></i> Kembali
+                        </a>
+                    </div>
                 </div>
             </div>
             
-            @include('p2m.partials.select-p2m-create')
 
             <div class="row justify-content-center">
                 <div class="col-12 col-lg-10">
@@ -98,17 +104,125 @@
                                         @error('pegawai_nips') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
 
-                                    <div class="col-12">
+                                    <div class="col-12 mt-5">
                                         <div class="bg-light p-4 rounded-3 border border-dashed">
-                                            <label class="form-label fw-bold h6 mb-1 text-dark"><i class="bi bi-cloud-arrow-up me-2"></i>Upload Dokumentasi</label>
-                                            <p class="text-muted small mb-3">Format: .jpg, .png, .pdf, .docx. Maks 10MB/file.</p>
-                                            <input type="file" class="filepond" name="dokumentasi[]" multiple data-allow-reorder="true" data-max-file-size="10MB" data-max-files="10">
-                                            @error('dokumentasi') <div class="alert alert-danger py-2 mt-2 small"><i class="bi bi-exclamation-circle me-1"></i> {{ $message }}</div> @enderror
+                                            
+                                            <label class="form-label fw-bold h6 mb-3 text-dark d-block border-bottom pb-2">
+                                                <i class="bi bi-cloud-arrow-up me-2"></i>Upload File & Link (Opsional)
+                                            </label>
+                                            
+                                            <div class="row g-3">
+                                                
+                                                {{-- KOLOM KIRI: DOKUMENTASI --}}
+                                                <div class="col-12 col-md-6">
+                                                    <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
+                                                        <label class="form-label fw-bold small text-primary mb-1">
+                                                            <i class="bi bi-folder2-open me-2"></i>Dokumentasi
+                                                        </label>
+                                                        
+                                                        {{-- 1. File Upload --}}
+                                                        <div class="mb-3">
+                                                            <p class="text-muted small mb-2" style="font-size: 0.75rem">Upload dokumentasi. Maksimal 10MB.</p>
+                                                            <input type="file" id="fp-dokumentasi" name="dokumentasi[]" multiple>
+                                                            @error('dokumentasi') <div class="text-danger small">{{ $message }}</div> @enderror
+                                                        </div>
+
+                                                        <hr class="border-secondary-subtle my-3">
+
+                                                        {{-- 2. Link Input (Alpine) --}}
+                                                        <div x-data="linkManager( {{ \Illuminate\Support\Js::from(array_values(old('dokumentasi_links', []))) }} )">
+                                                            <label class="form-label fw-bold small text-primary mb-2">
+                                                                <i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link
+                                                            </label>
+                                                            
+                                                            <template x-for="(link, index) in links" :key="index">
+                                                                <div class="input-group mb-2 input-group-sm">
+                                                                    <input type="text" class="form-control" 
+                                                                           :name="`dokumentasi_links[${index}][nama]`" 
+                                                                           placeholder="Nama Tautan / File" 
+                                                                           x-model="link.nama" required>
+                                                                    
+                                                                    <input type="url" class="form-control" 
+                                                                           :name="`dokumentasi_links[${index}][url]`" 
+                                                                           placeholder="https://" 
+                                                                           x-model="link.url" required>
+                                                                    
+                                                                    <button type="button" class="btn btn-outline-danger" @click="removeLink(index)">
+                                                                        <i class="bi bi-x"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </template>
+                                                            
+                                                            @error('dokumentasi_links.*') 
+                                                                <div class="text-danger small mb-2">Pastikan nama dan URL diisi dengan benar.</div> 
+                                                            @enderror
+
+                                                            <button type="button" class="btn btn-xs btn-outline-primary dashed-border w-100 mt-1" @click="addLink()">
+                                                                <i class="bi bi-plus-circle me-1"></i> Tambah Link
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {{-- KOLOM KANAN: LAMPIRAN --}}
+                                                <div class="col-12 col-md-6">
+                                                    <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
+                                                        <label class="form-label fw-bold small text-danger mb-1">
+                                                            <i class="bi bi-paperclip me-2"></i>Lampiran Pendukung
+                                                        </label>
+                                                        
+                                                        {{-- 1. File Upload --}}
+                                                        <div class="mb-3">
+                                                            <p class="text-muted small mb-2" style="font-size: 0.75rem">Upload file pendukung. Maksimal 10MB.</p>
+                                                            <input type="file" id="fp-lampiran" name="lampiran[]" multiple>
+                                                            @error('lampiran') <div class="text-danger small">{{ $message }}</div> @enderror
+                                                        </div>
+
+                                                        <hr class="border-secondary-subtle my-3">
+
+                                                        {{-- 2. Link Input (Alpine) --}}
+                                                        <div x-data="linkManager( {{ \Illuminate\Support\Js::from(array_values(old('lampiran_links', []))) }} )">
+                                                            <label class="form-label fw-bold small text-danger mb-2">
+                                                                <i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link
+                                                            </label>
+                                                            
+                                                            <template x-for="(link, index) in links" :key="index">
+                                                                <div class="input-group mb-2 input-group-sm">
+                                                                    <input type="text" class="form-control" 
+                                                                           :name="`lampiran_links[${index}][nama]`" 
+                                                                           placeholder="Nama Tautan / File" 
+                                                                           x-model="link.nama" required>
+                                                                    
+                                                                    <input type="url" class="form-control" 
+                                                                           :name="`lampiran_links[${index}][url]`" 
+                                                                           placeholder="https://" 
+                                                                           x-model="link.url" required>
+                                                                    
+                                                                    <button type="button" class="btn btn-outline-danger" @click="removeLink(index)">
+                                                                        <i class="bi bi-x"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </template>
+
+                                                            @error('lampiran_links.*') 
+                                                                <div class="text-danger small mb-2">Pastikan nama dan URL diisi dengan benar.</div> 
+                                                            @enderror
+
+                                                            <button type="button" class="btn btn-xs btn-outline-danger dashed-border w-100 mt-1" @click="addLink()">
+                                                                <i class="bi bi-plus-circle me-1"></i> Tambah Link
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div> 
                                         </div>
                                     </div>
+
+
                                 </div> 
 
-                                <div class="d-flex flex-column-reverse flex-lg-row justify-content-end gap-2 pt-3 border-top">
+                                <div class="d-flex flex-column-reverse flex-lg-row justify-content-end gap-2 pt-3 border-top mt-4">
                                     <button type="button" onclick="window.location.reload()" class="btn btn-light border text-secondary px-4"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
                                     <button type="submit" id="btn-submit" class="btn btn-primary px-5 shadow-sm"><i class="bi bi-save me-1"></i> Simpan Data</button>
                                 </div>
@@ -122,39 +236,87 @@
 @endsection
 
 @push('styles')
-    @vite([ 'resources/css/filepond.css', 'resources/js/filepond.js'])
+    @vite(['resources/css/filepond.css'])
     <style>
+        .dashed-border { border-style: dashed !important; border-width: 1px !important; }
         .ts-control { border: 1px solid #dee2e6; padding: 0.5rem 0.75rem; border-radius: 0.375rem; box-shadow: none; }
         .ts-control.focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
         .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; }
         .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+        .filepond--item { width: 100%; }
     </style>
 @endpush
 
 @push('scripts')
+@vite(['resources/js/filepond.js'])
+
 <script type="module">
     document.addEventListener("DOMContentLoaded", function() {
+        
+        // 1. TOM SELECT
         if(typeof TomSelect !== 'undefined'){
-            new TomSelect("#select-pegawai", { create: false, sortField: { field: "text", direction: "asc" }, maxItems: null, placeholder: "Pilih pegawai...", plugins: ['remove_button', 'clear_button'], render: { option: function(data, escape) { return '<div class="d-flex align-items-center"><i class="bi bi-person me-2 text-muted"></i>' + escape(data.text) + '</div>'; }, item: function(data, escape) { return '<div>' + escape(data.text) + '</div>'; } } });
+            new TomSelect("#select-pegawai", {
+                create: false,
+                sortField: { field: "text", direction: "asc" },
+                maxItems: null,
+                placeholder: "Pilih pegawai...",
+                plugins: ['remove_button', 'clear_button'], 
+                render: {
+                    option: function(data, escape) {
+                        return '<div class="d-flex align-items-center"><i class="bi bi-person me-2 text-muted"></i>' + escape(data.text) + '</div>';
+                    },
+                    item: function(data, escape) {
+                        return '<div>' + escape(data.text) + '</div>';
+                    }
+                }
+            });
         }
-        const inputElement = document.querySelector('input.filepond');
-        const form = document.getElementById('form-create');
-        const submitBtn = document.getElementById('btn-submit');
-        const originalBtnText = submitBtn.innerHTML;
-        const setButtonState = (isLoading, text = null) => {
-            if (isLoading) { submitBtn.disabled = true; submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + (text || 'Memproses...'); submitBtn.classList.add('btn-secondary'); submitBtn.classList.remove('btn-primary'); } else { submitBtn.disabled = false; submitBtn.innerHTML = originalBtnText; submitBtn.classList.add('btn-primary'); submitBtn.classList.remove('btn-secondary'); }
+
+        // 2. FILEPOND MANAGER
+        const commonConfig = {
+            uploadRoute: '{{ route('upload.temp') }}',
+            revertRoute: '{{ route('revert.temp') }}',
+            loadRoute:   '{{ route('load.temp') }}',
+            csrfToken:   '{{ csrf_token() }}',
+            submitBtnId: 'btn-submit'
         };
-        const pond = FilePond.create(inputElement, {
-            acceptedFileTypes: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-            labelIdle: 'Drag & Drop file atau <span class="filepond--label-action">Cari File</span>', imagePreviewHeight: 120, credits: false, allowMultiple: true,
-            files: [ @if(old('dokumentasi')) @foreach(old('dokumentasi') as $file) { source: '{{ $file }}', options: { type: 'local' } }, @endforeach @endif ],
-            server: { process: { url: '{{ route('upload.temp') }}', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }, onload: (response) => { return response; }, onerror: (response) => { setButtonState(false); return response; } }, revert: { url: '{{ route('revert.temp') }}', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } }, load: { url: '{{ route('load.temp') }}/?file=', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } }, },
-            onprocessstart: () => { setButtonState(true, 'Mengupload...'); }, onprocessfiles: () => { setButtonState(false); }, onwarning: () => { setButtonState(false); }, onerror: () => { setButtonState(false); }, onremovefile: () => { const files = pond.getFiles(); const isStillBusy = files.some(file => file.status === 3 || file.status === 9); if (!isStillBusy) { setButtonState(false); } }
-        });
-        form.addEventListener('submit', function(e) {
-            const files = pond.getFiles(); const isBusy = files.some(file => file.status !== 2 && file.status !== 5);
-            if (isBusy) { e.preventDefault(); e.stopPropagation(); if (typeof Swal !== 'undefined') { Swal.fire({ icon: 'warning', title: 'Upload Belum Selesai', text: 'Silakan tunggu proses upload selesai.', showConfirmButton: true, confirmButtonText: 'Mengerti' }); } else { alert('Mohon tunggu, file sedang diupload.'); } } else { setButtonState(true, 'Menyimpan...'); }
-        });
+
+        if (window.FilePondManager) {
+            
+            // A. Init Dokumentasi (Format Bebas, Max 10MB)
+            window.FilePondManager.create('#fp-dokumentasi', {
+                ...commonConfig,
+                maxSize: '10MB',
+                existingFiles: @json(old('dokumentasi', [])),
+            });
+
+            // B. Init Lampiran Pendukung (Format Bebas, Max 10MB)
+            window.FilePondManager.create('#fp-lampiran', {
+                ...commonConfig,
+                maxSize: '10MB',
+                existingFiles: @json(old('lampiran', [])),
+            });
+
+            // C. Validasi Submit
+            window.FilePondManager.attachFormSubmit('form-create', 'btn-submit');
+
+        } else {
+            console.error("FilePondManager belum dimuat. Pastikan 'npm run build' atau 'npm run dev' berjalan.");
+        }
+        
+    });
+
+    // 3. ALPINE JS LINK MANAGER
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('linkManager', (initialData = []) => ({
+            links: Array.isArray(initialData) ? initialData : [], 
+            addLink() {
+                this.links.push({ nama: '', url: '' });
+            },
+            removeLink(index) {
+                this.links.splice(index, 1);
+            }
+        }));
     });
 </script>
 @endpush

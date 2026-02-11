@@ -6,11 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Traits\HasDokumentasi;
+use App\Traits\HasDokumen;
 
 class P2mCfd extends Model
 {
-    use HasFactory, HasDokumentasi;
+    use HasFactory, HasDokumen;
 
     protected $table = 'p2m_cfd';
 
@@ -25,7 +25,7 @@ class P2mCfd extends Model
     {
         parent::boot();
         static::deleting(function ($kegiatan) {
-            $kegiatan->dokumentasi()->delete(); 
+            $kegiatan->dokumen()->delete(); 
         });
     }
 

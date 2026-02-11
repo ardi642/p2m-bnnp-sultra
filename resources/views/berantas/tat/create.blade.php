@@ -4,6 +4,7 @@
 <main class="admin-main" x-data="tatForm">
     <div class="container-fluid p-4">
         
+        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="fw-bold text-dark mb-1">Input Data TAT</h4>
@@ -14,6 +15,7 @@
             </a>
         </div>
 
+        {{-- ALERT ERROR --}}
         @if ($errors->any())
             <div class="alert alert-danger border-0 shadow-sm mb-4">
                 <div class="d-flex align-items-center">
@@ -23,7 +25,8 @@
             </div>
         @endif
 
-        <form action="{{ route('berantas.tat.store') }}" method="POST" enctype="multipart/form-data" id="form-tat" @submit.prevent="submitForm">
+        {{-- FORM --}}
+        <form action="{{ route('berantas.tat.store') }}" method="POST" enctype="multipart/form-data" id="form-tat">
             @csrf
             
             {{-- CARD 1: DATA UTAMA --}}
@@ -37,7 +40,9 @@
                             <select name="satuan_kerja_id" class="form-select py-2">
                                 <option value="" selected disabled>Pilih Satuan Kerja...</option>
                                 @foreach($satuanKerjas as $s) 
-                                    <option value="{{ $s->id }}" {{ old('satuan_kerja_id') == $s->id ? 'selected' : '' }}>{{ $s->satuan_kerja }}</option> 
+                                    <option value="{{ $s->id }}" {{ old('satuan_kerja_id') == $s->id ? 'selected' : '' }}>
+                                        {{ $s->satuan_kerja }}
+                                    </option> 
                                 @endforeach
                             </select>
                         </div>
@@ -89,7 +94,7 @@
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'nama')"></div>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label small fw-semibold text-secondary">NIK <span class="text-danger">*</span></label>
+                                        <label class="form-label small fw-semibold text-secondary">NIK</label>
                                         <input type="text" :name="`tersangka[${index}][nik]`" x-model="t.nik" 
                                                class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'nik')}"
                                                placeholder="16 Digit NIK...">
@@ -108,22 +113,37 @@
                                                class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'usia')}" placeholder="Contoh: 30">
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'usia')"></div>
                                     </div>
+                                    
+                                    {{-- PENDIDIKAN DARI CONSTANT --}}
                                     <div class="col-md-3">
                                         <label class="form-label small fw-semibold text-secondary">Pendidikan <span class="text-danger">*</span></label>
-                                        <input type="text" :name="`tersangka[${index}][pendidikan]`" x-model="t.pendidikan" 
-                                               class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'pendidikan')}" placeholder="Terakhir (SD/SMA/S1)">
+                                        <select :name="`tersangka[${index}][pendidikan]`" x-model="t.pendidikan" 
+                                                class="form-select py-2" :class="{'is-invalid': hasError('tersangka', index, 'pendidikan')}">
+                                            <option value="" selected disabled>Pilih Pendidikan...</option>
+                                            @foreach(\App\Constants\Pendidikan::ALL as $p)
+                                                <option value="{{ $p }}">{{ $p }}</option>
+                                            @endforeach
+                                        </select>
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'pendidikan')"></div>
                                     </div>
+
+                                    {{-- PEKERJAAN DARI CONSTANT --}}
                                     <div class="col-md-3">
                                         <label class="form-label small fw-semibold text-secondary">Pekerjaan <span class="text-danger">*</span></label>
-                                        <input type="text" :name="`tersangka[${index}][pekerjaan]`" x-model="t.pekerjaan" 
-                                               class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'pekerjaan')}" placeholder="Masukkan pekerjaan...">
+                                        <select :name="`tersangka[${index}][pekerjaan]`" x-model="t.pekerjaan" 
+                                                class="form-select py-2" :class="{'is-invalid': hasError('tersangka', index, 'pekerjaan')}">
+                                            <option value="" selected disabled>Pilih Pekerjaan...</option>
+                                            @foreach(\App\Constants\Pekerjaan::ALL as $pj)
+                                                <option value="{{ $pj }}">{{ $pj }}</option>
+                                            @endforeach
+                                        </select>
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'pekerjaan')"></div>
                                     </div>
+
                                     <div class="col-md-3">
-                                        <label class="form-label small fw-semibold text-secondary">No Telepon <span class="text-danger">*</span></label>
+                                        <label class="form-label small fw-semibold text-secondary">No Telepon</label>
                                         <input type="text" :name="`tersangka[${index}][no_telepon]`" x-model="t.no_telepon" 
-                                               class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'no_telepon')}" placeholder="08xxxxxxxx">
+                                               class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'no_telepon')}" placeholder="08xxx...">
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'no_telepon')"></div>
                                     </div>
                                 </div>
@@ -160,21 +180,21 @@
                                 <template x-for="(bb, i) in bbList" :key="bb.temp_id">
                                     <tr>
                                         <td class="align-top">
-                                            <select :name="`barang_bukti[${i}][kategori]`" x-model="bb.kategori" 
-                                                    class="form-select py-2" 
-                                                    @change="resetBB(bb)">
+                                            <select :name="`barang_bukti[${i}][kategori]`" x-model="bb.kategori" class="form-select py-2" @change="resetBB(bb)">
                                                 <option value="Narkotika">Narkotika</option>
                                                 <option value="Non-Narkotika">Non-Narkotika</option>
                                             </select>
                                         </td>
                                         <td class="align-top">
+                                            {{-- LOGIC TOMSELECT NARKOTIKA --}}
                                             <div x-show="bb.kategori === 'Narkotika'" class="w-100">
                                                 <div wire:ignore :class="{'border border-danger rounded': hasError('barang_bukti', i, 'narkotika_id')}">
-                                                    {{-- SINGLE SELECT NARKOTIKA --}}
                                                     <select :id="'select_bb_' + bb.temp_id" :name="`barang_bukti[${i}][narkotika_id]`" x-init="initTS($el, bb)"></select>
                                                 </div>
                                                 <div class="text-danger small mt-1" x-show="hasError('barang_bukti', i, 'narkotika_id')" x-text="getErrorMessage('barang_bukti', i, 'narkotika_id')"></div>
                                             </div>
+                                            
+                                            {{-- LOGIC INPUT MANUAL NON-NARKOTIKA --}}
                                             <div x-show="bb.kategori === 'Non-Narkotika'" class="w-100">
                                                 <input type="text" :name="`barang_bukti[${i}][nama_barang_bukti]`" x-model="bb.nama_barang_bukti" 
                                                        class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'nama_barang_bukti')}"
@@ -189,21 +209,24 @@
                                             <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'jumlah')"></div>
                                         </td>
                                         <td class="align-top">
+                                            {{-- SATUAN NARKOTIKA (ENUM) --}}
                                             <template x-if="bb.kategori === 'Narkotika'">
                                                 <div>
-                                                    <select :name="`barang_bukti[${i}][satuan]`" x-model="bb.satuan" class="form-select py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan')}">
+                                                    <select :name="`barang_bukti[${i}][satuan_narkotika]`" x-model="bb.satuan_narkotika" class="form-select py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan_narkotika')}">
                                                         <option value="Gram">Gram</option>
                                                         <option value="Kg">Kg</option>
-                                                        <option value="Butir">Butir</option>
+                                                        <option value="Ton">Ton</option>
                                                     </select>
-                                                    <div class="invalid-feedback d-block" x-show="hasError('barang_bukti', i, 'satuan')" x-text="getErrorMessage('barang_bukti', i, 'satuan')"></div>
+                                                    <div class="invalid-feedback d-block" x-show="hasError('barang_bukti', i, 'satuan_narkotika')" x-text="getErrorMessage('barang_bukti', i, 'satuan_narkotika')"></div>
                                                 </div>
                                             </template>
+                                            
+                                            {{-- SATUAN NON-NARKOTIKA (STRING) --}}
                                             <template x-if="bb.kategori === 'Non-Narkotika'">
                                                 <div class="w-100">
-                                                    <input type="text" :name="`barang_bukti[${i}][satuan]`" x-model="bb.satuan" 
-                                                           class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan')}" placeholder="Masukkan Satuan">
-                                                    <div class="invalid-feedback d-block" x-show="hasError('barang_bukti', i, 'satuan')" x-text="getErrorMessage('barang_bukti', i, 'satuan')"></div>
+                                                    <input type="text" :name="`barang_bukti[${i}][satuan_non_narkotika]`" x-model="bb.satuan_non_narkotika" 
+                                                           class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan_non_narkotika')}" placeholder="Masukkan satuan">
+                                                    <div class="invalid-feedback d-block" x-show="hasError('barang_bukti', i, 'satuan_non_narkotika')" x-text="getErrorMessage('barang_bukti', i, 'satuan_non_narkotika')"></div>
                                                 </div>
                                             </template>
                                         </td>
@@ -222,7 +245,6 @@
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <h5 class="card-title fw-bold mb-4 text-dark border-bottom pb-2">Detail Kasus & Asesmen</h5>
-                    
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label fw-semibold small text-secondary">Pasal Disangkakan</label>
@@ -236,25 +258,70 @@
                             <input type="text" name="instansi_pengirim" value="{{ old('instansi_pengirim') }}" 
                                    class="form-control py-2" placeholder="Nama instansi...">
                         </div>
-                        <div class="col-md-3"><label class="form-label fw-semibold small text-secondary">Tgl Penangkapan</label><input type="date" name="tanggal_penangkapan" value="{{ old('tanggal_penangkapan') }}" class="form-control py-2"></div>
-                        <div class="col-md-3"><label class="form-label fw-semibold small text-secondary">Tgl Permohonan</label><input type="date" name="tanggal_permohonan" value="{{ old('tanggal_permohonan') }}" class="form-control py-2"></div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-secondary">Tgl Penangkapan</label>
+                            <input type="date" name="tanggal_penangkapan" value="{{ old('tanggal_penangkapan') }}" class="form-control py-2">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold small text-secondary">Tgl Permohonan</label>
+                            <input type="date" name="tanggal_permohonan" value="{{ old('tanggal_permohonan') }}" class="form-control py-2">
+                        </div>
+                        
+                        {{-- TIM HUKUM DINAMIS --}}
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold small text-secondary">Tim Hukum</label>
-                            <textarea name="tim_hukum" class="form-control py-2 auto-resize" rows="2" 
-                                      x-data="{ resize() { $el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px' } }" 
-                                      x-init="resize()" @input="resize()"
-                                      placeholder="Nama tim hukum...">{{ old('tim_hukum') }}</textarea>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold small text-secondary mb-0">Tim Hukum</label>
+                                <button type="button" class="btn btn-xs btn-outline-primary" @click="addTimHukum"><i class="bi bi-plus"></i> Tambah</button>
+                            </div>
+                            <template x-for="(th, idx) in timHukumList" :key="idx">
+                                <div class="input-group mb-2">
+                                    <input type="text" :name="`tim_hukum[${idx}][nama]`" x-model="th.nama" 
+                                           class="form-control form-control-sm" placeholder="Nama..." required>
+                                    <select :name="`tim_hukum[${idx}][instansi]`" x-model="th.instansi" 
+                                            class="form-select form-select-sm" style="max-width: 130px;" required>
+                                        <option value="Polda">Polda</option>
+                                        <option value="BNN">BNN</option>
+                                        <option value="Kejaksaan">Kejaksaan</option>
+                                        <option value="Kemenkumham">Kemenkumham</option>
+                                        <option value="Masyarakat">Masyarakat</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" @click="removeTimHukum(idx)"><i class="bi bi-x"></i></button>
+                                </div>
+                            </template>
+                            @error('tim_hukum.*.nama') <div class="text-danger small">Nama anggota tim hukum wajib diisi.</div> @enderror
+                        </div>
+
+                        {{-- TIM MEDIS DINAMIS --}}
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold small text-secondary mb-0">Tim Medis</label>
+                                <button type="button" class="btn btn-xs btn-outline-primary" @click="addTimMedis"><i class="bi bi-plus"></i> Tambah</button>
+                            </div>
+                            <template x-for="(tm, idx) in timMedisList" :key="idx">
+                                <div class="input-group mb-2">
+                                    <input type="text" :name="`tim_medis[${idx}][nama]`" x-model="tm.nama" 
+                                           class="form-control form-control-sm" placeholder="Nama Dokter/Medis..." required>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" @click="removeTimMedis(idx)"><i class="bi bi-x"></i></button>
+                                </div>
+                            </template>
+                            @error('tim_medis.*.nama') <div class="text-danger small">Nama tim medis wajib diisi.</div> @enderror
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small text-secondary">Lembaga Rehab</label>
+                            <input type="text" name="lembaga_rehab" value="{{ old('lembaga_rehab') }}" class="form-control py-2" placeholder="Nama lembaga...">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold small text-secondary">Tim Medis</label>
-                            <textarea name="tim_medis" class="form-control py-2 auto-resize" rows="2" 
-                                      x-data="{ resize() { $el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px' } }" 
-                                      x-init="resize()" @input="resize()"
-                                      placeholder="Nama tim medis...">{{ old('tim_medis') }}</textarea>
+                            <label class="form-label fw-semibold small text-secondary">Rekomendasi</label>
+                            <select name="tindak_lanjut_rekomendasi" class="form-select py-2">
+                                <option value="dilaksanakan">Dilaksanakan</option>
+                                <option value="tidak dilaksanakan">Tidak Dilaksanakan</option>
+                            </select>
                         </div>
-                        <div class="col-12"><label class="form-label fw-semibold small text-secondary">Lembaga Rehab</label><input type="text" name="lembaga_rehab" value="{{ old('lembaga_rehab') }}" class="form-control py-2" placeholder="Nama lembaga..."></div>
-                        <div class="col-md-6"><label class="form-label fw-semibold small text-secondary">Rekomendasi</label><select name="tindak_lanjut_rekomendasi" class="form-select py-2"><option value="dilaksanakan">Dilaksanakan</option><option value="tidak dilaksanakan">Tidak Dilaksanakan</option></select></div>
-                        <div class="col-md-6"><label class="form-label fw-semibold small text-secondary">Biaya (Rp)</label><input type="number" name="biaya" value="{{ old('biaya', 0) }}" class="form-control py-2"></div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small text-secondary">Biaya (Rp)</label>
+                            <input type="number" name="biaya" value="{{ old('biaya', 0) }}" class="form-control py-2">
+                        </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold small text-secondary">Proses Hukum Lanjut</label>
                             <textarea name="proses_hukum_lanjut" class="form-control py-2 auto-resize" rows="2" 
@@ -275,26 +342,21 @@
                 </div>
                 <div class="card-body p-4">
                     <div class="bg-body-tertiary p-4 rounded-3 border border-dashed">
-                        {{-- ========================================== --}}
-                        {{-- AREA UPLOAD FILE & LINK (HYBRID) --}}
-                        {{-- ========================================== --}}
+                        
                         <div class="row">
                             <div class="col-12 mb-3">
-                                
                                 <label class="form-label fw-bold h6 mb-3 text-dark d-block border-bottom pb-2">
                                     <i class="bi bi-cloud-arrow-up me-2"></i>Upload File & Link (Opsional)
                                 </label>
                                 
                                 <div class="row g-3">
-                                    
-                                    {{-- KOLOM KIRI: DOKUMENTASI --}}
+                                    {{-- KIRI: DOKUMENTASI --}}
                                     <div class="col-12 col-md-6">
                                         <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
                                             <label class="form-label fw-bold small text-primary mb-1">
                                                 <i class="bi bi-folder2-open me-2"></i>Dokumentasi
                                             </label>
                                             
-                                            {{-- 1. File Upload --}}
                                             <div class="mb-3">
                                                 <p class="text-muted small mb-2" style="font-size: 0.75rem">Upload dokumentasi. Maksimal 10MB.</p>
                                                 <input type="file" id="fp-dokumentasi" name="dokumentasi[]" multiple>
@@ -303,7 +365,6 @@
 
                                             <hr class="border-secondary-subtle my-3">
 
-                                            {{-- 2. Link Input (Alpine) --}}
                                             <div x-data="linkManager( {{ \Illuminate\Support\Js::from(array_values(old('dokumentasi_links', []))) }} )">
                                                 <label class="form-label fw-bold small text-primary mb-2">
                                                     <i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link
@@ -311,25 +372,13 @@
                                                 
                                                 <template x-for="(link, index) in links" :key="index">
                                                     <div class="input-group mb-2 input-group-sm">
-                                                        <input type="text" class="form-control" 
-                                                            :name="`dokumentasi_links[${index}][nama]`" 
-                                                            placeholder="Nama Tautan / File" 
-                                                            x-model="link.nama" required>
-                                                        
-                                                        <input type="url" class="form-control" 
-                                                            :name="`dokumentasi_links[${index}][url]`" 
-                                                            placeholder="https://" 
-                                                            x-model="link.url" required>
-                                                        
-                                                        <button type="button" class="btn btn-outline-danger" @click="removeLink(index)">
-                                                            <i class="bi bi-x"></i>
-                                                        </button>
+                                                        <input type="text" class="form-control" :name="`dokumentasi_links[${index}][nama]`" placeholder="Nama Tautan / File" x-model="link.nama" required>
+                                                        <input type="url" class="form-control" :name="`dokumentasi_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
+                                                        <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
                                                     </div>
                                                 </template>
                                                 
-                                                @error('dokumentasi_links.*') 
-                                                    <div class="text-danger small mb-2">Pastikan nama dan URL diisi dengan benar.</div> 
-                                                @enderror
+                                                @error('dokumentasi_links.*') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
 
                                                 <button type="button" class="btn btn-xs btn-outline-primary dashed-border w-100 mt-1" @click="addLink()">
                                                     <i class="bi bi-plus-circle me-1"></i> Tambah Link
@@ -338,14 +387,13 @@
                                         </div>
                                     </div>
 
-                                    {{-- KOLOM KANAN: LAMPIRAN --}}
+                                    {{-- KANAN: LAMPIRAN --}}
                                     <div class="col-12 col-md-6">
                                         <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
                                             <label class="form-label fw-bold small text-danger mb-1">
                                                 <i class="bi bi-paperclip me-2"></i>Lampiran Pendukung
                                             </label>
                                             
-                                            {{-- 1. File Upload --}}
                                             <div class="mb-3">
                                                 <p class="text-muted small mb-2" style="font-size: 0.75rem">Upload file pendukung. Maksimal 10MB.</p>
                                                 <input type="file" id="fp-lampiran" name="lampiran[]" multiple>
@@ -354,7 +402,6 @@
 
                                             <hr class="border-secondary-subtle my-3">
 
-                                            {{-- 2. Link Input (Alpine) --}}
                                             <div x-data="linkManager( {{ \Illuminate\Support\Js::from(array_values(old('lampiran_links', []))) }} )">
                                                 <label class="form-label fw-bold small text-danger mb-2">
                                                     <i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link
@@ -362,25 +409,13 @@
                                                 
                                                 <template x-for="(link, index) in links" :key="index">
                                                     <div class="input-group mb-2 input-group-sm">
-                                                        <input type="text" class="form-control" 
-                                                            :name="`lampiran_links[${index}][nama]`" 
-                                                            placeholder="Nama Tautan / File" 
-                                                            x-model="link.nama" required>
-                                                        
-                                                        <input type="url" class="form-control" 
-                                                            :name="`lampiran_links[${index}][url]`" 
-                                                            placeholder="https://" 
-                                                            x-model="link.url" required>
-                                                        
-                                                        <button type="button" class="btn btn-outline-danger" @click="removeLink(index)">
-                                                            <i class="bi bi-x"></i>
-                                                        </button>
+                                                        <input type="text" class="form-control" :name="`lampiran_links[${index}][nama]`" placeholder="Nama Tautan / File" x-model="link.nama" required>
+                                                        <input type="url" class="form-control" :name="`lampiran_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
+                                                        <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
                                                     </div>
                                                 </template>
 
-                                                @error('lampiran_links.*') 
-                                                    <div class="text-danger small mb-2">Pastikan nama dan URL diisi dengan benar.</div> 
-                                                @enderror
+                                                @error('lampiran_links.*') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
 
                                                 <button type="button" class="btn btn-xs btn-outline-danger dashed-border w-100 mt-1" @click="addLink()">
                                                     <i class="bi bi-plus-circle me-1"></i> Tambah Link
@@ -388,7 +423,6 @@
                                             </div>
                                         </div>
                                     </div>
-
                                 </div> 
                             </div>
                         </div>
@@ -398,7 +432,7 @@
 
             <div class="d-flex justify-content-end gap-2 pb-5">
                 <button type="button" onclick="window.location.reload()" class="btn btn-light border px-4 py-2">Reset Form</button>
-                <button type="submit" id="btn-submit" class="btn btn-primary px-5 py-2 fw-bold" :disabled="isUploading">Simpan Data</button>
+                <button type="submit" id="btn-submit" class="btn btn-primary px-5 py-2 fw-bold">Simpan Data</button>
             </div>
         </form>
     </div>
@@ -425,7 +459,7 @@
 
     document.addEventListener("DOMContentLoaded", function() {
 
-        // 2. FILEPOND MANAGER
+        // FILEPOND MANAGER CONFIG
         const commonConfig = {
             uploadRoute: '{{ route('upload.temp') }}',
             revertRoute: '{{ route('revert.temp') }}',
@@ -436,41 +470,43 @@
 
         if (window.FilePondManager) {
             
-            // A. Init Dokumentasi (Format Bebas, Max 10MB)
+            // A. Init Dokumentasi
             window.FilePondManager.create('#fp-dokumentasi', {
                 ...commonConfig,
                 maxSize: '10MB',
                 existingFiles: @json(old('dokumentasi', [])),
             });
 
-            // B. Init Lampiran Pendukung (Format Bebas, Max 10MB)
+            // B. Init Lampiran
             window.FilePondManager.create('#fp-lampiran', {
                 ...commonConfig,
                 maxSize: '10MB',
                 existingFiles: @json(old('lampiran', [])),
             });
 
-            // C. Validasi Submit
-            window.FilePondManager.attachFormSubmit('form-create', 'btn-submit');
+            // C. Validasi Submit - PASTIKAN ID FORM COCOK ('form-tat')
+            window.FilePondManager.attachFormSubmit('form-tat', 'btn-submit');
 
         } else {
-            console.error("FilePondManager belum dimuat. Pastikan 'npm run build' atau 'npm run dev' berjalan.");
+            console.error("FilePondManager belum dimuat.");
         }
 
     });
 
     document.addEventListener('alpine:init', () => {
         Alpine.data('tatForm', () => ({
-            tersangkaList: [], bbList: [], tsInstances: {}, 
-            isUploading: false,
-            pond: null, 
+            tersangkaList: [], bbList: [], timHukumList: [], timMedisList: [],
+            tsInstances: {}, 
             errors: @json($errors->toArray()), 
             masterNarkotika: @json($masterNarkotika),
 
             init() { 
                 const oldTersangka = @json(old('tersangka', []));
                 const oldBB = @json(old('barang_bukti', []));
+                const oldTH = @json(old('tim_hukum', []));
+                const oldTM = @json(old('tim_medis', []));
 
+                // Init Tersangka
                 if (oldTersangka.length > 0) {
                     oldTersangka.forEach(t => {
                         this.tersangkaList.push({
@@ -480,22 +516,59 @@
                     });
                 } else { this.addTersangka(); }
 
+                // Init BB
                 if (oldBB.length > 0) {
                     oldBB.forEach(b => {
                         this.bbList.push({
                             temp_id: 'bb_' + Math.random(),
                             kategori: b.kategori || 'Narkotika',
-                            narkotika_id: b.narkotika_id || '', // Single Value
+                            narkotika_id: b.narkotika_id || '',
                             nama_barang_bukti: b.nama_barang_bukti || '',
                             jumlah: b.jumlah || '',
-                            satuan: b.satuan || (b.kategori === 'Narkotika' ? 'Gram' : '')
+                            satuan_narkotika: b.satuan_narkotika || 'Gram',
+                            satuan_non_narkotika: b.satuan_non_narkotika || ''
                         });
                     });
                 } else { this.addBB(); }
 
-                this.initFilePond(); 
+                // Init Tim
+                if (oldTH.length > 0) {
+                    oldTH.forEach(t => this.timHukumList.push({ nama: t.nama, instansi: t.instansi }));
+                } 
+                if (oldTM.length > 0) {
+                    oldTM.forEach(t => this.timMedisList.push({ nama: t.nama }));
+                } 
+                
+                // Auto resize textarea
+                this.$nextTick(() => {
+                    document.querySelectorAll('textarea.auto-resize').forEach(el => {
+                        this.autoResize(el);
+                    });
+                });
             },
 
+            // --- REPEATER FUNCTIONS ---
+            addTersangka() { this.tersangkaList.push({ temp_id: 't_'+Date.now(), nama: '', nik: '', jk: 'Laki-laki', usia: '', pendidikan: '', pekerjaan: '', no_telepon: '' }); },
+            removeTersangka(i) { if(this.tersangkaList.length > 1) this.tersangkaList.splice(i, 1); },
+
+            addBB() { 
+                this.bbList.push({ temp_id: 'bb_'+Date.now(), kategori: 'Narkotika', narkotika_id: '', nama_barang_bukti: '', jumlah: '', satuan_narkotika: 'Gram', satuan_non_narkotika: '' }); 
+            },
+            removeBB(i) { const id = this.bbList[i].temp_id; if(this.tsInstances[id]) this.tsInstances[id].destroy(); this.bbList.splice(i, 1); },
+            
+            resetBB(bb) {
+                if(this.tsInstances[bb.temp_id]) this.tsInstances[bb.temp_id].destroy();
+                bb.narkotika_id = ''; bb.nama_barang_bukti = ''; bb.satuan_narkotika = 'Gram'; bb.satuan_non_narkotika = '';
+                this.$nextTick(() => this.initTS(document.getElementById('select_bb_'+bb.temp_id), bb));
+            },
+
+            addTimHukum() { this.timHukumList.push({ nama: '', instansi: 'Polda' }); },
+            removeTimHukum(i) { this.timHukumList.splice(i, 1); },
+
+            addTimMedis() { this.timMedisList.push({ nama: '' }); },
+            removeTimMedis(i) { this.timMedisList.splice(i, 1); },
+
+            // --- HELPER FUNCTIONS ---
             getQuantityLabel() {
                 if (this.bbList.length === 0) return 'Berat / Jumlah';
                 const allNarkotika = this.bbList.every(bb => bb.kategori === 'Narkotika');
@@ -504,118 +577,26 @@
 
             hasError(field, index, key) { const errorKey = `${field}.${index}.${key}`; return this.errors && this.errors[errorKey]; },
             getErrorMessage(field, index, key) { const errorKey = `${field}.${index}.${key}`; return this.errors[errorKey] ? this.errors[errorKey][0] : ''; },
-
-            addTersangka() { this.tersangkaList.push({ temp_id: 't_'+Date.now(), nama: '', nik: '', jk: 'Laki-laki', usia: '', pendidikan: '', pekerjaan: '', no_telepon: '' }); },
-            removeTersangka(i) { if(this.tersangkaList.length > 1) this.tersangkaList.splice(i, 1); },
-            
-            // Tambah Barang Bukti Single Narkotika
-            addBB() { this.bbList.push({ temp_id: 'bb_'+Date.now(), kategori: 'Narkotika', narkotika_id: '', nama_barang_bukti: '', jumlah: '', satuan: 'Gram' }); },
-            removeBB(i) { const id = this.bbList[i].temp_id; if(this.tsInstances[id]) this.tsInstances[id].destroy(); this.bbList.splice(i, 1); },
-            
-            resetBB(bb) {
-                if(this.tsInstances[bb.temp_id]) this.tsInstances[bb.temp_id].destroy();
-                bb.narkotika_id = ''; 
-                bb.nama_barang_bukti = '';
-                bb.satuan = ''; 
-                this.$nextTick(() => this.initTS(document.getElementById('select_bb_'+bb.temp_id), bb));
-            },
+            autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; },
 
             initTS(el, bb) {
-                if(!el || bb.kategori !== 'Narkotika') return; 
-                const ts = new TomSelect(el, {
-                    // plugins: ['remove_button'], // Tidak perlu remove button jika single
-                    create: false, valueField: 'id', labelField: 'text', searchField: 'text',
-                    options: this.masterNarkotika.map(n => ({id: n.id, text: n.nama_narkotika})), placeholder: 'Pilih Narkotika...',
-                    dropdownParent: 'body',
-                    maxItems: 1 // Single Select
-                });
-                if (bb.narkotika_id) ts.setValue(bb.narkotika_id);
-                ts.on('change', (val) => { bb.narkotika_id = val; });
-                this.tsInstances[bb.temp_id] = ts;
+               if(!el || bb.kategori !== 'Narkotika') return; 
+               const ts = new TomSelect(el, {
+                   plugins: ['remove_button'], create: false, valueField: 'id', labelField: 'text', searchField: 'text',
+                   options: this.masterNarkotika.map(n => ({id: n.id, text: n.nama_narkotika})), placeholder: 'Pilih Narkotika...',
+                   dropdownParent: 'body', maxItems: 1
+               });
+               if (bb.narkotika_id) ts.setValue(bb.narkotika_id);
+               ts.on('change', (val) => { bb.narkotika_id = val; });
+               this.tsInstances[bb.temp_id] = ts;
             },
-
-            initFilePond() {
-                const submitBtn = document.getElementById('btn-submit');
-                const inputEl = document.querySelector('input.filepond');
-
-                this.pond = FilePond.create(inputEl, {
-                    server: {
-                        // PROCESS (Upload File Baru)
-                        process: {
-                            url: '{{ route("upload.temp") }}',
-                            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                            // PENTING: Matikan loading jika upload error/gagal
-                            onerror: (response) => {
-                                this.isUploading = false;
-                                console.error('Upload Error:', response);
-                            }
-                        },
-
-                        // REVERT (Hapus File Baru sebelum Disimpan)
-                        revert: {
-                            url: '{{ route("revert.temp") }}',
-                            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-                        },
-
-                        // LOAD (Preview File Lama/Sementara saat Validasi Error)
-                        load: {
-                            url: '{{ route("load.temp") }}/?file=',
-                            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
-                        }
-                    },
-                    files: [
-                        @if(old('dokumentasi'))
-                            @foreach(old('dokumentasi') as $file)
-                                { source: '{{ $file }}', options: { type: 'local' } },
-                            @endforeach
-                        @endif
-                    ],
-                    onprocessstart: () => { 
-                        this.isUploading = true; 
-                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mengupload...'; 
-                    },
-                    onprocessfiles: () => { 
-                        this.isUploading = false; 
-                        submitBtn.innerHTML = 'Simpan Data'; 
-                    },
-                    onremovefile: () => {
-                        const files = this.pond.getFiles();
-                        const isBusy = files.some(file => file.status === 3 || file.status === 9);
-                        if(!isBusy) {
-                           this.isUploading = false;
-                           submitBtn.innerHTML = 'Simpan Data';
-                        }
-                    }
-                });
-            },
-
-            submitForm(e) { 
-                const files = this.pond.getFiles();
-                const isBusy = files.some(file => file.status !== 2 && file.status !== 5);
-
-                if (this.isUploading || isBusy) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Upload Belum Selesai',
-                        text: 'Silakan tunggu proses upload file selesai atau hapus file yang macet.',
-                        showConfirmButton: true
-                    });
-                    return; 
-                } 
-                e.target.submit(); 
-            }
         }));
 
         Alpine.data('linkManager', (initialData = []) => ({
             links: Array.isArray(initialData) ? initialData : [], 
-            addLink() {
-                this.links.push({ nama: '', url: '' });
-            },
-            removeLink(index) {
-                this.links.splice(index, 1);
-            }
+            addLink() { this.links.push({ nama: '', url: '' }); },
+            removeLink(index) { this.links.splice(index, 1); }
         }));
-
     });
 </script>
 @endpush

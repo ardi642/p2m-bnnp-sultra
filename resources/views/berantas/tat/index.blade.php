@@ -51,7 +51,6 @@
             $sortLink = function($col, $label) {
                 $currentCol = request('sort_by', 'created_at'); 
                 $currentOrder = request('sort_order', 'desc');
-                
                 $newOrder = ($currentCol === $col && $currentOrder === 'desc') ? 'asc' : 'desc';
                 
                 $icon = 'bi-arrow-down-up text-muted opacity-25';
@@ -298,6 +297,7 @@
                                                                     <i class="bi bi-box-seam text-success me-2" title="Non-Narkotika"></i> 
                                                                 @endif
                                                                 <span class="text-dark me-1 fw-semibold">{{ $bb->nama_barang }}</span>
+                                                                {{-- Menggunakan Accessor getSatuanAttribute --}}
                                                                 <span class="text-muted">({{ (float)$bb->kuantitas }} {{ $bb->satuan }})</span>
                                                             </div>
                                                         @endforeach
@@ -315,11 +315,12 @@
                                             <td class="text-center pe-3 py-3">
                                                 <div class="btn-group btn-group-sm shadow-sm">
                                                     {{-- Tombol Mata (Detail) --}}
-                                                    <button type="button" class="btn btn-light border text-primary" 
-                                                            :class="expanded.includes({{ $row->id }}) ? 'border-primary bg-primary-subtle' : 'border-secondary-subtle'"
-                                                            @click="expanded.includes({{ $row->id }}) ? expanded = expanded.filter(id => id !== {{ $row->id }}) : expanded.push({{ $row->id }})"
-                                                            title="Lihat Detail">
-                                                        <i class="bi" :class="expanded.includes({{ $row->id }}) ? 'bi-chevron-up' : 'bi-eye'"></i>
+                                                    <button type="button" class="btn btn-light border border-secondary-subtle"
+                                                        @click="expanded.includes({{ $row->id }}) ? expanded = expanded.filter(id => id !== {{ $row->id }}) : expanded.push({{ $row->id }})"
+                                                        title="Lihat Detail">
+                                                        <i class="bi transition-all"
+                                                        :class="expanded.includes({{ $row->id }}) ? 'bi-chevron-up text-primary' : 'bi-eye text-secondary'">
+                                                        </i>
                                                     </button>
                                                     
                                                     @if (auth()->user()->hasRole(['operator_satker', 'operator_berantas']))
@@ -357,14 +358,39 @@
                                                                     <label class="small text-secondary fw-bold text-uppercase mb-1">Tgl Permohonan</label>
                                                                     <div class="text-dark small">{{ $row->tanggal_permohonan ? $row->tanggal_permohonan->locale('id')->translatedFormat('d F Y') : '-' }}</div>
                                                                 </div>
+
+                                                                {{-- TIM HUKUM DINAMIS --}}
                                                                 <div class="col-md-6">
                                                                     <label class="small text-secondary fw-bold text-uppercase mb-1">Tim Hukum</label>
-                                                                    <div class="p-2 bg-light rounded border text-dark small" style="white-space: pre-wrap;">{{ $row->tim_hukum ?? '-' }}</div>
+                                                                    <div class="p-2 bg-light rounded border text-dark small">
+                                                                        @if(is_array($row->tim_hukum) && count($row->tim_hukum) > 0)
+                                                                            <ul class="mb-0 ps-3">
+                                                                                @foreach($row->tim_hukum as $th)
+                                                                                    <li>{{ $th['nama'] ?? '-' }} <span class="text-muted fst-italic">({{ $th['instansi'] ?? '-' }})</span></li>
+                                                                                @endforeach
+                                                                            </ul>
+                                                                        @else
+                                                                            -
+                                                                        @endif
+                                                                    </div>
                                                                 </div>
+
+                                                                {{-- TIM MEDIS DINAMIS --}}
                                                                 <div class="col-md-6">
                                                                     <label class="small text-secondary fw-bold text-uppercase mb-1">Tim Medis</label>
-                                                                    <div class="p-2 bg-light rounded border text-dark small" style="white-space: pre-wrap;">{{ $row->tim_medis ?? '-' }}</div>
+                                                                    <div class="p-2 bg-light rounded border text-dark small">
+                                                                        @if(is_array($row->tim_medis) && count($row->tim_medis) > 0)
+                                                                            <ul class="mb-0 ps-3">
+                                                                                @foreach($row->tim_medis as $tm)
+                                                                                    <li>{{ $tm['nama'] ?? '-' }}</li>
+                                                                                @endforeach
+                                                                            </ul>
+                                                                        @else
+                                                                            -
+                                                                        @endif
+                                                                    </div>
                                                                 </div>
+
                                                                 <div class="col-md-6">
                                                                     <label class="small text-secondary fw-bold text-uppercase mb-1">Lembaga Rehab</label>
                                                                     <div class="text-dark small fw-bold">{{ $row->lembaga_rehab ?? '-' }}</div>

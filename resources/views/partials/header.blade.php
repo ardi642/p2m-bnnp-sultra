@@ -14,7 +14,7 @@
                         Nama Aplikasinya
                     </span>
                     <span class="text-secondary fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">
-                        SISTEM PELAPORAN
+                        SISTEM PELAPORAN TERINTEGRASI
                     </span>
                 </div>
             </div>

@@ -23,21 +23,18 @@ class TatExport implements FromCollection, WithHeadings, WithMapping, ShouldAuto
     public function __construct($query)
     {
         $this->query = $query;
-        // Ambil filter kategori yang sedang aktif
         $kategori = request('kategori_bb', []); 
         $this->filters = is_array($kategori) ? array_filter($kategori) : [$kategori];
     }
 
     public function collection()
     {
-        // 1. Ambil ID Kasus
         $tatIds = $this->query->pluck('id')->toArray();
 
         if (empty($tatIds)) {
             return collect([]);
         }
 
-        // 2. Ambil data Tersangka (Urut sesuai Index Tabel)
         $idsString = implode(',', $tatIds);
         
         return BerantasTatTersangka::query()
@@ -59,7 +56,7 @@ class TatExport implements FromCollection, WithHeadings, WithMapping, ShouldAuto
             'PEKERJAAN',                // G
             'PASAL YG DISANGKAKAN',     // H
             'TGL PENANGKAPAN',          // I
-            'BARANG BUKTI',             // J (PERUBAHAN DISINI: Lebih Universal)
+            'BARANG BUKTI',             // J
             'JUMLAH / BERAT',           // K
             'INSTANSI PENGIRIM',        // L
             'TGL PERMOHONAN',           // M
@@ -79,21 +76,18 @@ class TatExport implements FromCollection, WithHeadings, WithMapping, ShouldAuto
         $listNamaBB = [];
         $listJumlahBB = [];
 
-        // Deteksi apakah user sedang memfilter "Hanya Non-Narkotika"
+        // --- 1. LOGIK BARANG BUKTI ---
         $isStrictNonNarkotika = (count($this->filters) === 1 && in_array('Non-Narkotika', $this->filters));
 
         if ($row->tat && $row->tat->barangBukti) {
             foreach ($row->tat->barangBukti as $bb) {
                 
-                // Cek Visibility berdasarkan Filter
                 $showNarkotika = empty($this->filters) || in_array('Narkotika', $this->filters);
                 $showNonNarkotika = empty($this->filters) || in_array('Non-Narkotika', $this->filters);
 
-                // === KASUS 1: NARKOTIKA ===
                 if ($bb->kategori === 'Narkotika' && $showNarkotika) {
                     $nama = $bb->narkotika ? $bb->narkotika->nama_narkotika : 'Narkotika Lain';
                     
-                    // Konversi ke Gram
                     $qty = (float)$bb->kuantitas;
                     $satuanAsli = strtoupper(trim($bb->satuan));
 
@@ -105,14 +99,8 @@ class TatExport implements FromCollection, WithHeadings, WithMapping, ShouldAuto
                     
                     $listNamaBB[] = $nama; 
                     $listJumlahBB[] = $qty . ' Gram'; 
-                }
 
-                // === KASUS 2: NON-NARKOTIKA ===
-                elseif ($bb->kategori === 'Non-Narkotika' && $showNonNarkotika) {
-                    
-                    // LOGIKA PINTAR LABEL:
-                    // Jika filter HANYA Non-Narkotika -> Tampilkan Nama Saja (Bersih)
-                    // Jika filter CAMPUR (Kosong/Semua) -> Tambahkan label (Non-Narkotika)
+                } elseif ($bb->kategori === 'Non-Narkotika' && $showNonNarkotika) {
                     if ($isStrictNonNarkotika) {
                         $namaBarang = $bb->nama_barang_non_narkotika;
                     } else {
@@ -125,10 +113,29 @@ class TatExport implements FromCollection, WithHeadings, WithMapping, ShouldAuto
             }
         }
 
-        // Handle kosong
         if (empty($listNamaBB)) {
             $listNamaBB[] = '-';
             $listJumlahBB[] = '-';
+        }
+
+        // --- 2. LOGIK TIM HUKUM (JSON to String) ---
+        $timHukumString = '-';
+        if (!empty($row->tat->tim_hukum) && is_array($row->tat->tim_hukum)) {
+            // Mapping: "Nama (Instansi)"
+            $formattedHukum = array_map(function($t) {
+                return ($t['nama'] ?? '') . (isset($t['instansi']) ? ' (' . $t['instansi'] . ')' : '');
+            }, $row->tat->tim_hukum);
+            $timHukumString = implode("\n", $formattedHukum);
+        }
+
+        // --- 3. LOGIK TIM MEDIS (JSON to String) ---
+        $timMedisString = '-';
+        if (!empty($row->tat->tim_medis) && is_array($row->tat->tim_medis)) {
+            // Mapping: "Nama"
+            $formattedMedis = array_map(function($t) {
+                return $t['nama'] ?? '';
+            }, $row->tat->tim_medis);
+            $timMedisString = implode("\n", $formattedMedis);
         }
 
         $formatDate = function($date) {
@@ -149,8 +156,11 @@ class TatExport implements FromCollection, WithHeadings, WithMapping, ShouldAuto
             implode("\n", $listJumlahBB),
             $row->tat->instansi_pengirim ?? '-',
             $formatDate($row->tat->tanggal_permohonan),
-            $row->tat->tim_hukum ?? '-',
-            $row->tat->tim_medis ?? '-',
+            
+            // Kolom Hasil JSON
+            $timHukumString, // N
+            $timMedisString, // O
+            
             $row->tat->lembaga_rehab ?? '-',
             $row->tat->proses_hukum_lanjut ?? '-',
             strtoupper($row->tat->tindak_lanjut_rekomendasi ?? '-'),
@@ -164,7 +174,6 @@ class TatExport implements FromCollection, WithHeadings, WithMapping, ShouldAuto
     {
         $lastRow = $sheet->getHighestRow();
 
-        // Header Style
         $sheet->getStyle('A1:U1')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => '000000']],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFC000']],
@@ -172,7 +181,6 @@ class TatExport implements FromCollection, WithHeadings, WithMapping, ShouldAuto
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ]);
 
-        // Body Style
         $sheet->getStyle('A2:U' . $lastRow)->applyFromArray([
             'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -188,7 +196,7 @@ class TatExport implements FromCollection, WithHeadings, WithMapping, ShouldAuto
                 $sheet = $event->sheet;
                 $highestRow = $sheet->getHighestRow();
                 
-                // Kolom untuk Merge (Semua data KASUS)
+                // Kolom untuk Merge
                 $columnsToMerge = ['A', 'B', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S'];
                 $startRow = 2; 
 
@@ -205,12 +213,19 @@ class TatExport implements FromCollection, WithHeadings, WithMapping, ShouldAuto
                         }
 
                         // 2. Hitung Tinggi Baris Otomatis (Smart Row Height)
+                        // Kita cek kolom mana yang kontennya paling banyak barisnya
                         $bbNames = $sheet->getCell('J' . $startRow)->getValue();
                         $bbAmounts = $sheet->getCell('K' . $startRow)->getValue();
+                        $timHukum = $sheet->getCell('N' . $startRow)->getValue();
+                        $timMedis = $sheet->getCell('O' . $startRow)->getValue();
                         
                         $linesName = substr_count((string)$bbNames, "\n") + 1;
                         $linesAmount = substr_count((string)$bbAmounts, "\n") + 1;
-                        $maxTextLines = max($linesName, $linesAmount);
+                        $linesHukum = substr_count((string)$timHukum, "\n") + 1;
+                        $linesMedis = substr_count((string)$timMedis, "\n") + 1;
+
+                        // Ambil jumlah baris terbanyak
+                        $maxTextLines = max($linesName, $linesAmount, $linesHukum, $linesMedis);
 
                         $rowCount = $row - $startRow + 1;
 

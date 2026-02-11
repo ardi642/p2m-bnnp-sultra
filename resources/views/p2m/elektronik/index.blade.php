@@ -1,7 +1,7 @@
 @extends('admin')
 
 @section('content')
-{{-- 1. Panggil Alpine Data Utama 'p2mIndex' di sini --}}
+{{-- Panggil Alpine Data Utama 'p2mIndex' di sini --}}
 <main class="admin-main" x-data="p2mIndex">
     <div class="container-fluid p-4 p-lg-5">
         

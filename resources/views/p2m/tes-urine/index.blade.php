@@ -3,13 +3,25 @@
 @section('content')
     <main class="admin-main">
         <div class="container-fluid p-4 p-lg-5">
-            
-            {{-- Header --}}
+
+            {{-- ==================================================================== --}}
+            {{-- HEADER: JUDUL (KIRI) & TOMBOL TAMBAH (KANAN) --}}
+            {{-- ==================================================================== --}}
             <div class="d-flex justify-content-between align-items-center mb-4">
+                
+                {{-- BAGIAN KIRI: Judul & Deskripsi --}}
                 <div>
-                    <h1 class="h3 mb-1 fw-bold text-dark">Kegiatan Tes Urine</h1>
-                    <p class="text-muted mb-0">Deteksi Dini & Tes Urine Lingkungan Masyarakat/Pemerintah/Swasta</p>
+                    <h1 class="h3 mb-1 fw-bold text-dark">Kegiatan P2M</h1>
+                    <p class="text-muted mb-0">Master Data Kegiatan Tes Urine</p>
                 </div>
+
+                {{-- BAGIAN KANAN: Tombol Tambah Data --}}
+                @if (auth()->user()->hasRole(['operator_satker', 'operator_p2m']))
+                    <a href="{{ route('p2m.tes-urine.create') }}" class="btn btn-primary btn-lg fs-6 px-4 rounded-pill shadow-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>Tambah Data</span>
+                    </a>
+                @endif
             </div>
 
             {{-- ALERT NOTIFIKASI --}}
@@ -32,8 +44,6 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
-            
-            @include('p2m.partials.select-p2m-index')
 
             {{-- LOGIKA PHP FILTER & SORTING --}}
             @php
@@ -281,7 +291,7 @@
                                             </tr>
 
                                             {{-- TR DETAIL --}}
-                                            <tr x-show="expanded.includes({{ $data->id }})" x-transition>
+                                            <tr x-show="expanded.includes({{ $data->id }})" x-transition x-data="fileDownloader">
                                                 <td colspan="11" class="p-0 border-0">
                                                     <div class="bg-body-tertiary p-4 border-bottom shadow-inner text-start">
                                                         <div class="card border-0 shadow-sm">
@@ -349,38 +359,116 @@
                                                                         </div>
                                                                     </div>
                                                                     
-                                                                    {{-- DOKUMENTASI (Dengan Preview) --}}
-                                                                    <div class="col-12 mt-3 text-start">
-                                                                        <div class="d-flex justify-content-between align-items-center mb-3">
-                                                                            <span class="fw-bold text-secondary small">Dokumentasi & Lampiran</span>
-                                                                            <span class="badge bg-secondary rounded-pill">{{ $data->dokumentasi->count() }} File</span>
-                                                                        </div>
-                                                                        @if($data->dokumentasi->count() > 0)
-                                                                            <div class="row g-2 text-start">
-                                                                                @foreach($data->dokumentasi as $doc)
-                                                                                    <div class="col-12 col-md-6 col-lg-4 text-start">
-                                                                                        <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center h-100 shadow-sm">
-                                                                                            <div class="small fw-bold text-dark text-wrap pe-2">
-                                                                                                @if(Str::contains($doc->tipe_file, 'image')) <i class="bi bi-file-image text-primary me-1"></i>
-                                                                                                @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf text-danger me-1"></i>
-                                                                                                @elseif(Str::contains($doc->tipe_file, ['word', 'officedocument'])) <i class="bi bi-file-word text-primary me-1"></i>
-                                                                                                @else <i class="bi bi-file-earmark-text text-secondary me-1"></i> @endif
-                                                                                                {{ $doc->nama_file_asli }}
-                                                                                            </div>
-                                                                                            <div class="d-flex gap-1 flex-shrink-0">
-                                                                                                @if(Str::contains($doc->tipe_file, ['image', 'pdf', 'video']))
-                                                                                                    <a href="{{ Storage::url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-info px-2 py-0" title="Preview"><i class="bi bi-eye"></i></a>
+                                                                    {{-- FORM DOWNLOAD ZIP (DENGAN PERBAIKAN LOGIKA CHECKBOX) --}}
+                                                                    <form action="{{ route('dokumen.zip.selected') }}" method="POST" x-ref="formZip">
+                                                                        @csrf
+                                                                        <div class="col-12 mt-4 text-start">
+                                                                            <div class="row g-4">
+                                                                                @php
+                                                                                    $fotos = $data->dokumen->where('kategori', 'dokumentasi');
+                                                                                    $lampirans = $data->dokumen->where('kategori', 'lampiran');
+                                                                                    $fotoIds = $fotos->where('is_link', false)->pluck('id')->values()->toArray();
+                                                                                    $lampiranIds = $lampirans->where('is_link', false)->pluck('id')->values()->toArray();
+                                                                                @endphp
+                                                                                
+                                                                                {{-- KOLOM DOKUMENTASI --}}
+                                                                                <div class="col-lg-6">
+                                                                                    <div class="card h-100 border bg-light shadow-none">
+                                                                                        <div class="card-header bg-transparent border-bottom fw-bold text-primary d-flex justify-content-between align-items-center">
+                                                                                            <div class="form-check">
+                                                                                                @if(count($fotoIds) > 0)
+                                                                                                    <input class="form-check-input cursor-pointer" type="checkbox" @change="toggleAll({{ json_encode($fotoIds) }})" :checked="isAllSelected({{ json_encode($fotoIds) }})">
                                                                                                 @endif
-                                                                                                <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-xs btn-outline-primary px-2 py-0" title="Download"><i class="bi bi-download"></i></a>
+                                                                                                <label class="form-check-label cursor-pointer select-none"><i class="bi bi-images me-2"></i>Dokumentasi</label>
                                                                                             </div>
+                                                                                            <span class="badge bg-primary rounded-pill">{{ $fotos->count() }}</span>
+                                                                                        </div>
+                                                                                        <div class="card-body p-2" style="max-height: 40vh; min-height: 100px; overflow-y: auto;">
+                                                                                            @forelse($fotos as $doc)
+                                                                                                <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-primary bg-primary bg-opacity-10' : ''">
+                                                                                                    @if(!$doc->is_link)
+                                                                                                        <div class="form-check me-2 d-flex align-items-center">
+                                                                                                            <input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="chk-doc-{{ $doc->id }}" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                                        </div>
+                                                                                                    @endif
+                                                                                                    <label for="chk-doc-{{ $doc->id }}" class="flex-grow-1 text-truncate small cursor-pointer d-flex align-items-center m-0">
+                                                                                                        <div class="flex-shrink-0 me-2 text-primary bg-primary bg-opacity-10 p-1 rounded">
+                                                                                                            @if($doc->is_link) <i class="bi bi-link-45deg"></i> @else <i class="bi bi-file-image"></i> @endif
+                                                                                                        </div>
+                                                                                                        <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
+                                                                                                    </label>
+                                                                                                    <div class="d-flex gap-1 flex-shrink-0 ms-2">
+                                                                                                        @if(!$doc->is_link)
+                                                                                                            <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                                                                                            <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-primary"><i class="bi bi-download"></i></a>
+                                                                                                        @else
+                                                                                                            <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-xs btn-outline-info w-100"><i class="bi bi-box-arrow-up-right me-1"></i>Buka</a>
+                                                                                                        @endif
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            @empty
+                                                                                                <div class="text-center py-3 text-muted small fst-italic">Tidak ada dokumentasi.</div>
+                                                                                            @endforelse
                                                                                         </div>
                                                                                     </div>
-                                                                                @endforeach
+                                                                                </div>
+                                                                                
+                                                                                {{-- KOLOM LAMPIRAN --}}
+                                                                                <div class="col-lg-6">
+                                                                                    <div class="card h-100 border bg-light shadow-none">
+                                                                                        <div class="card-header bg-transparent border-bottom fw-bold text-danger d-flex justify-content-between align-items-center">
+                                                                                            <div class="form-check">
+                                                                                                @if(count($lampiranIds) > 0)
+                                                                                                    <input class="form-check-input cursor-pointer" type="checkbox" @change="toggleAll({{ json_encode($lampiranIds) }})" :checked="isAllSelected({{ json_encode($lampiranIds) }})">
+                                                                                                @endif
+                                                                                                <label class="form-check-label cursor-pointer select-none"><i class="bi bi-paperclip me-2"></i>Lampiran</label>
+                                                                                            </div>
+                                                                                            <span class="badge bg-danger rounded-pill">{{ $lampirans->count() }}</span>
+                                                                                        </div>
+                                                                                        <div class="card-body p-2" style="max-height: 40vh; min-height: 100px; overflow-y: auto;">
+                                                                                            @forelse($lampirans as $doc)
+                                                                                                <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-danger bg-danger bg-opacity-10' : ''">
+                                                                                                    @if(!$doc->is_link)
+                                                                                                        <div class="form-check me-2 d-flex align-items-center">
+                                                                                                            <input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="chk-lamp-{{ $doc->id }}" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                                        </div>
+                                                                                                    @endif
+                                                                                                    <label for="chk-lamp-{{ $doc->id }}" class="flex-grow-1 text-truncate small cursor-pointer d-flex align-items-center m-0">
+                                                                                                        <div class="flex-shrink-0 me-2 text-danger bg-danger bg-opacity-10 p-1 rounded">
+                                                                                                            @if($doc->is_link) <i class="bi bi-link-45deg"></i>
+                                                                                                            @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf"></i>
+                                                                                                            @elseif(Str::contains($doc->tipe_file, ['word', 'office'])) <i class="bi bi-file-word"></i>
+                                                                                                            @else <i class="bi bi-file-earmark-text"></i> @endif
+                                                                                                        </div>
+                                                                                                        <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
+                                                                                                    </label>
+                                                                                                    <div class="d-flex gap-1 flex-shrink-0 ms-2">
+                                                                                                        @if(!$doc->is_link)
+                                                                                                            <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                                                                                            <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-danger"><i class="bi bi-download"></i></a>
+                                                                                                        @else
+                                                                                                            <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-xs btn-outline-info w-100"><i class="bi bi-box-arrow-up-right me-1"></i>Buka</a>
+                                                                                                        @endif
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            @empty
+                                                                                                <div class="text-center py-3 text-muted small fst-italic">Tidak ada lampiran.</div>
+                                                                                            @endforelse
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
                                                                             </div>
-                                                                        @else
-                                                                            <div class="text-muted small fst-italic border rounded p-3 text-center bg-light">Tidak ada dokumentasi.</div>
-                                                                        @endif
-                                                                    </div>
+
+                                                                            @php $hasPhysicalFiles = $data->dokumen->where('is_link', false)->count() > 0; @endphp
+                                                                            @if($hasPhysicalFiles)
+                                                                                <div class="col-12 text-end border-top pt-3">
+                                                                                    <button type="button" @click="submitDownload" class="btn btn-dark btn-sm px-4 shadow-sm" :disabled="selected.length === 0">
+                                                                                        <i class="bi bi-file-earmark-zip-fill me-2"></i>Download File Terpilih (.ZIP)
+                                                                                    </button>
+                                                                                </div>
+                                                                            @endif
+                                                                        </div>
+                                                                    </form>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -433,6 +521,45 @@
 
 @push('scripts')
 <script type="module">
+    document.addEventListener('alpine:init', () => {    
+        
+        // Data Lokal 'fileDownloader' (Checkbox Logic)
+        Alpine.data('fileDownloader', () => ({
+            selected: [],
+
+            isSelected(id) {
+                return this.selected.includes(id.toString()) || this.selected.includes(id);
+            },
+
+            // NOTE: Toggle dihapus karena menggunakan x-model + label for
+
+            toggleAll(ids) {
+                const stringIds = ids.map(String);
+                const allSelected = stringIds.every(id => this.selected.includes(id));
+
+                if (allSelected) {
+                    this.selected = this.selected.filter(id => !stringIds.includes(id));
+                } else {
+                    this.selected = [...new Set([...this.selected, ...stringIds])];
+                }
+            },
+
+            isAllSelected(ids) {
+                if (ids.length === 0) return false;
+                const stringIds = ids.map(String);
+                return stringIds.every(id => this.selected.includes(id));
+            },
+
+            submitDownload() {
+                if (this.selected.length === 0) {
+                    Swal.fire({icon: 'warning', title: 'Pilih File', text: 'Silakan centang minimal satu file.', confirmButtonColor: '#0d6efd'});
+                    return;
+                }
+                this.$refs.formZip.submit();
+            }
+        }));
+    });
+
     document.addEventListener("DOMContentLoaded", function() {
         const configTomSelect = { plugins: ['remove_button', 'clear_button'], persist: false, create: false, maxOptions: null };
         const ids = ['select-satker', 'select-bulan', 'select-anggaran', 'select-sasaran', 'select-tahun', 'select-pegawai'];

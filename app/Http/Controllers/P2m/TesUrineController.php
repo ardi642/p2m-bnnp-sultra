@@ -10,10 +10,13 @@ use Illuminate\View\View;
 use Illuminate\Http\Request;
 use App\Exports\TesUrineExport; 
 use App\Helpers\SearchHelper;
+use App\Models\Dokumen;
 use App\Models\DokumentasiKegiatan;
 use App\Models\TemporaryFile;
+use App\Services\DokumenService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
@@ -150,7 +153,7 @@ class TesUrineController extends Controller
         $totalPeserta = $statsQuery->sum('jumlah_peserta');
         $totalPositif = $statsQuery->sum('jumlah_positif');
 
-        $query->with('dokumentasi'); // Eager load docs for index view
+        $query->with('dokumen'); // Eager load docs for index view
 
         $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : 10;
         $kegiatans = $query->paginate($perPage)->withQueryString();
@@ -183,7 +186,7 @@ class TesUrineController extends Controller
         return view('p2m.tes-urine.create', compact('satuanKerjas', 'pegawais'));
     }
 
-    public function store(Request $request) {
+    public function store(Request $request, DokumenService $dokumenService) {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
@@ -198,8 +201,14 @@ class TesUrineController extends Controller
             'keterangan_positif'   => 'nullable|string',
             'pegawai_nips'         => 'required|array',
             'pegawai_nips.*'       => 'exists:pegawai,nip',
-            'dokumentasi'          => 'nullable|array',
-            'dokumentasi.*'        => 'required',
+            'dokumentasi'          => 'nullable|array', 
+            'lampiran'             => 'nullable|array',
+            'dokumentasi_links'    => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+            'lampiran_links'       => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ];
 
         if ($user->isAdmin()) {
@@ -210,11 +219,11 @@ class TesUrineController extends Controller
             'jumlah_positif.lte' => 'Jumlah positif tidak boleh melebihi jumlah peserta.'
         ]);
 
-        $filesMoved = [];
+        $uploadedPaths = [];
         DB::beginTransaction();
 
         try {
-            $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips')->toArray();
+            $dataKegiatan = collect($validasi)->except('dokumentasi', 'pegawai_nips', 'lampiran', 'dokumentasi_links', 'lampiran_links')->toArray();
             $pegawaiNips  = $validasi['pegawai_nips'];
 
             if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
@@ -232,44 +241,32 @@ class TesUrineController extends Controller
             }
             $kegiatan->pegawai()->attach($attachData);
 
-            // PROSES FILE
             if ($request->filled('dokumentasi')) {
-                foreach ($request->input('dokumentasi') as $folder) {
-                    $tempFile = TemporaryFile::where('folder', $folder)->first();
-                    if ($tempFile) {
-                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        $mimeType = Storage::mimeType($sourcePath); 
-                        $size = Storage::size($sourcePath);
-                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug(pathinfo($tempFile->filename, PATHINFO_FILENAME)) . '.' . pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                        $destinationPath = 'dokumentasi/' . date('Y') . '/' . $cleanFileName;
-
-                        if (Storage::exists($sourcePath)) {
-                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
-                            $filesMoved[] = $destinationPath;
-                            $kegiatan->dokumentasi()->create([
-                                'nama_file_asli' => $tempFile->filename,
-                                'path_file'      => $destinationPath,    
-                                'tipe_file'      => $mimeType,           
-                                'ukuran_file'    => $size,               
-                            ]);
-                            Storage::deleteDirectory('public/tmp/' . $folder);
-                            $tempFile->delete();
-                        }
-                    }
-                }
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $kegiatan, 'dokumentasi', $uploadedPaths);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $kegiatan, 'lampiran', $uploadedPaths);
+            }
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $kegiatan, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $kegiatan, 'lampiran');
             }
 
-            DB::commit(); 
+            DB::commit();
+            return redirect()->route('p2m.tes-urine.index')->with('success', 'store')->with('message', 'Berhasil menyimpan data Tes Urine');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            foreach ($filesMoved as $path) {
-                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            dd($e);
+            foreach ($uploadedPaths as $path) {
+                Storage::disk(config('filesystems.default'))->delete($path);
             }
-            return back()->with('error', 'store')->with('message', 'Gagal: ' . $e->getMessage())->withInput();
+            Log::error('Gagal simpan: ' . $e->getMessage());
+            abort(500, 'Server Error.');
         }
 
-        return redirect()->route('p2m.tes-urine.index')->with('success', 'store')->with('message', 'Berhasil menyimpan data Tes Urine');
     }
 
     public function edit($id): View 
@@ -296,7 +293,7 @@ class TesUrineController extends Controller
         return view('p2m.tes-urine.edit', compact('kegiatan', 'satuanKerjas', 'pegawais'));
     }
 
-    public function update(Request $request, $id) 
+    public function update(Request $request, DokumenService $dokumenService, $id) 
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -315,9 +312,19 @@ class TesUrineController extends Controller
             'keterangan_positif'   => 'nullable|string',
             'pegawai_nips'         => 'required|array',
             'pegawai_nips.*'       => 'exists:pegawai,nip',
+
+            // Validasi File & Link
             'delete_files'         => 'nullable|array', 
-            'delete_files.*'       => 'exists:dokumentasi_kegiatan,id',
             'dokumentasi'          => 'nullable|array',
+            'lampiran'             => 'nullable|array',
+            
+            'dokumentasi_links'        => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+
+            'lampiran_links'        => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ];
 
         if ($user->isAdmin()) {
@@ -335,7 +342,8 @@ class TesUrineController extends Controller
 
         try {
             $pegawaiNips = $validasi['pegawai_nips'];
-            $dataUpdate = collect($validasi)->except(['dokumentasi', 'pegawai_nips', 'delete_files'])->toArray();
+            $dataUpdate = collect($validasi)->except(['dokumentasi', 'lampiran', 'pegawai_nips', 
+                            'delete_files', 'dokumentasi_links', 'lampiran_links'])->toArray();
 
             if ($user->hasRole(['operator_satker', 'operator_p2m'])) unset($dataUpdate['satuan_kerja_id']); 
 
@@ -357,45 +365,33 @@ class TesUrineController extends Controller
             }
             $kegiatan->pegawai()->sync($syncData);
 
-            // HAPUS FILE
+            // Hapus Dokumen Lama (File atau Link)
             if ($request->has('delete_files')) {
-                $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
+                $filesToRemove = Dokumen::whereIn('id', $request->delete_files)->get();
                 foreach ($filesToRemove as $file) {
-                    $filesToDelete[] = $file->path_file; 
+                    if (!$file->is_link) $filesToDelete[] = $file->path_file; // Hanya hapus fisik jika bukan link
                     $file->delete();
                 }
             }
 
-            // UPLOAD FILE BARU
+            // Upload File Baru
             if ($request->filled('dokumentasi')) {
-                foreach ($request->input('dokumentasi') as $folder) {
-                    $tempFile = TemporaryFile::where('folder', $folder)->first();
-                    if ($tempFile) {
-                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        $mimeType = Storage::mimeType($sourcePath); 
-                        $size = Storage::size($sourcePath);
-                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug(pathinfo($tempFile->filename, PATHINFO_FILENAME)) . '.' . pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                        $destinationPath = 'dokumentasi/' . date('Y') . '/' . $cleanFileName;
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $kegiatan, 'dokumentasi', $newFilesMoved);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $kegiatan, 'lampiran', $newFilesMoved);
+            }
 
-                        if (Storage::exists($sourcePath)) {
-                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
-                            $newFilesMoved[] = $destinationPath;
-                            $kegiatan->dokumentasi()->create([
-                                'nama_file_asli' => $tempFile->filename,
-                                'path_file'      => $destinationPath, 
-                                'tipe_file'      => $mimeType,
-                                'ukuran_file'    => $size,
-                            ]);
-                            Storage::deleteDirectory('public/tmp/' . $folder);
-                            $tempFile->delete();
-                        }
-                    }
-                }
+            // Simpan Link Baru
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $kegiatan, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $kegiatan, 'lampiran');
             }
 
             DB::commit();
 
-            // CLEANUP FISIK FILE LAMA
             foreach ($filesToDelete as $path) {
                 if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
@@ -403,11 +399,13 @@ class TesUrineController extends Controller
             return redirect()->route('p2m.tes-urine.index')->with('success', 'update')->with('message', 'Data Tes Urine diperbarui');
 
         } catch (\Exception $e) {
+            dd($e);
             DB::rollBack();
             foreach ($newFilesMoved as $path) {
                 if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
-            return back()->with('error', 'update')->with('message', 'Gagal: ' . $e->getMessage())->withInput();
+            Log::error('Update error: ' . $e->getMessage());
+            return back()->with('error', 'update')->withInput();
         }
     }
 

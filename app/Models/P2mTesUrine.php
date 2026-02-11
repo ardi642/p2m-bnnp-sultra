@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Traits\HasDokumentasi; // Pastikan Trait ini ada sesuai kode sebelumnya
+use App\Traits\HasDokumen; // Pastikan Trait ini ada sesuai kode sebelumnya
 
 class P2mTesUrine extends Model
 {
     use HasFactory;
-    use HasDokumentasi; // Menggunakan trait polymorphic dokumentasi yang sama
+    use HasDokumen; // Menggunakan trait polymorphic dokumentasi yang sama
 
     protected $table = 'p2m_tes_urine';
 
@@ -26,7 +26,7 @@ class P2mTesUrine extends Model
     {
         parent::boot();
         static::deleting(function ($kegiatan) {
-            $kegiatan->dokumentasi()->delete(); 
+            $kegiatan->dokumen()->delete(); 
         });
     }
 

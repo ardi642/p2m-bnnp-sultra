@@ -189,7 +189,6 @@ class ElektronikController extends Controller
             DB::commit();
             return redirect()->route('p2m.elektronik.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data');
         } catch (\Exception $e) {
-            dd($e);
             DB::rollBack();
             foreach ($uploadedPaths as $path) {
                 Storage::disk(config('filesystems.default'))->delete($path);
@@ -295,7 +294,6 @@ class ElektronikController extends Controller
                 if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
             Log::error('Update error: ' . $e->getMessage());
-            dd($e);
             return back()->with('error', 'update')->withInput();
         }
     }

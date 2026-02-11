@@ -18,6 +18,9 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\TatExport;
 use App\Models\BerantasTatBarangBukti;
 use App\Models\BerantasTatTersangka;
+use App\Models\Dokumen;
+use App\Services\DokumenService;
+use Illuminate\Support\Facades\Log;
 
 class TatController extends Controller
 {
@@ -66,7 +69,7 @@ class TatController extends Controller
                 }
             },
             'barangBukti.narkotika', 
-            'dokumentasi'
+            'dokumen'
         ]);
 
         if (!$user->hasRole('admin')) {
@@ -171,7 +174,7 @@ class TatController extends Controller
         return view('berantas.tat.create', compact('masterNarkotika', 'satuanKerjas'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, DokumenService $dokumenService)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -199,7 +202,15 @@ class TatController extends Controller
             'barang_bukti.*.satuan'   => 'required|string',
             'pasal_disangkakan'   => 'nullable|string',
             'biaya'               => 'nullable|numeric|min:0',
-            'dokumentasi'         => 'nullable|array',
+
+            'dokumentasi'          => 'nullable|array', 
+            'lampiran'             => 'nullable|array',
+            'dokumentasi_links'    => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+            'lampiran_links'       => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ], $messages);
 
         // VALIDASI SINGLE VALUE
@@ -219,11 +230,11 @@ class TatController extends Controller
 
         if ($validator->fails()) return back()->withErrors($validator)->withInput();
 
-        $filesMoved = [];
+        $uploadedPaths = [];
 
         DB::beginTransaction();
         try {
-            $data = $request->except(['tersangka', 'barang_bukti', 'dokumentasi']);
+            $data = $request->except(['tersangka', 'barang_bukti', 'dokumentasi', 'lampiran', 'dokumentasi_links', 'lampiran_links']);
             $data['satuan_kerja_id'] = $user->isAdmin() ? $request->satuan_kerja_id : $user->getSatkerId();
             $tat = BerantasTat::create($data);
 
@@ -250,56 +261,35 @@ class TatController extends Controller
                 ]);
             }
 
-            // SAFE UPLOAD
             if ($request->filled('dokumentasi')) {
-                foreach ($request->input('dokumentasi') as $folder) {
-                    $tempFile = TemporaryFile::where('folder', $folder)->first();
-
-                    if ($tempFile) {
-                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        $mimeType = Storage::mimeType($sourcePath);
-                        $size = Storage::size($sourcePath);
-
-                        $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                        $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
-                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
-
-                        $destinationPath = 'dokumentasi/tat/' . date('Y') . '/' . $cleanFileName;
-
-                        if (Storage::exists($sourcePath)) {
-                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
-                            $filesMoved[] = $destinationPath;
-
-                            $tat->dokumentasi()->create([
-                                'nama_file_asli' => $tempFile->filename,
-                                'path_file' => $destinationPath,
-                                'tipe_file' => $mimeType,
-                                'ukuran_file' => $size
-                            ]);
-
-                            Storage::deleteDirectory('public/tmp/' . $folder);
-                            $tempFile->delete();
-                        }
-                    }
-                }
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $tat, 'dokumentasi', $uploadedPaths);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $tat, 'lampiran', $uploadedPaths);
+            }
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $tat, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $tat, 'lampiran');
             }
 
             DB::commit();
             return redirect()->route('berantas.tat.index')->with('success', 'Data TAT berhasil disimpan.');
         } catch (\Exception $e) {
             DB::rollBack();
-            foreach ($filesMoved as $path) {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
+            dd($e);
+            foreach ($uploadedPaths as $path) {
+                Storage::disk(config('filesystems.default'))->delete($path);
             }
-            return back()->with('error', 'Gagal menyimpan: ' . $e->getMessage())->withInput();
+            Log::error('Gagal simpan: ' . $e->getMessage());
+            abort(500, 'Server Error.');
         }
     }
 
     public function edit($id)
     {
-        $tat = BerantasTat::with(['tersangka', 'barangBukti', 'dokumentasi'])->findOrFail($id);
+        $tat = BerantasTat::with(['tersangka', 'barangBukti', 'dokumen'])->findOrFail($id);
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
         $satuanKerjas = SatuanKerja::all();
 
@@ -309,7 +299,7 @@ class TatController extends Controller
         return view('berantas.tat.edit', compact('tat', 'masterNarkotika', 'satuanKerjas'));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, DokumenService $dokumenService, $id)
     {
         $tat = BerantasTat::findOrFail($id);
         
@@ -327,9 +317,19 @@ class TatController extends Controller
             'tersangka.*.nik'     => 'required|numeric',
             'barang_bukti.*.jumlah' => 'required|numeric|min:0',
             'barang_bukti.*.satuan' => 'required|string',
-            'delete_files'        => 'nullable|array',
-            'delete_files.*'      => 'exists:dokumentasi_kegiatan,id',
-            'dokumentasi'         => 'nullable|array',
+
+            // Validasi File & Link
+            'delete_files'         => 'nullable|array', 
+            'dokumentasi'          => 'nullable|array',
+            'lampiran'             => 'nullable|array',
+            
+            'dokumentasi_links'        => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+
+            'lampiran_links'        => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ], $messages);
 
         $validator->after(function ($validator) use ($request) {
@@ -348,11 +348,10 @@ class TatController extends Controller
         if ($validator->fails()) return back()->withErrors($validator)->withInput();
 
         $newFilesMoved = [];
-        $filesToDelete = [];
 
         DB::beginTransaction();
         try {
-            $tat->update($request->except(['tersangka', 'barang_bukti', 'dokumentasi', 'delete_files']));
+            $tat->update($request->except(['tersangka', 'barang_bukti', 'delete_files', 'dokumentasi', 'lampiran', 'dokumentasi_links', 'lampiran_links']));
             
             $tat->tersangka()->delete();
             foreach ($request->tersangka as $t) {
@@ -379,89 +378,81 @@ class TatController extends Controller
                 ]);
             }
 
+            // Hapus Dokumen Lama (File atau Link)
             if ($request->has('delete_files')) {
-                $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
+                $filesToRemove = Dokumen::whereIn('id', $request->delete_files)->get();
                 foreach ($filesToRemove as $file) {
-                    $filesToDelete[] = $file->path_file;
+                    if (!$file->is_link) $filesToDelete[] = $file->path_file; // Hanya hapus fisik jika bukan link
                     $file->delete();
                 }
             }
 
+            // Upload File Baru
             if ($request->filled('dokumentasi')) {
-                foreach ($request->input('dokumentasi') as $folder) {
-                    $tempFile = TemporaryFile::where('folder', $folder)->first();
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $tat, 'dokumentasi', $newFilesMoved);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $tat, 'lampiran', $newFilesMoved);
+            }
 
-                    if ($tempFile) {
-                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        $mimeType = Storage::mimeType($sourcePath);
-                        $size = Storage::size($sourcePath);
-
-                        $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                        $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
-                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
-                        $destinationPath = 'dokumentasi/tat/' . date('Y') . '/' . $cleanFileName;
-
-                        if (Storage::exists($sourcePath)) {
-                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
-                            $newFilesMoved[] = $destinationPath;
-
-                            $tat->dokumentasi()->create([
-                                'nama_file_asli' => $tempFile->filename,
-                                'path_file' => $destinationPath,
-                                'tipe_file' => $mimeType,
-                                'ukuran_file' => $size
-                            ]);
-
-                            Storage::deleteDirectory('public/tmp/' . $folder);
-                            $tempFile->delete();
-                        }
-                    }
-                }
+            // Simpan Link Baru
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $tat, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $tat, 'lampiran');
             }
 
             DB::commit();
-
             foreach ($filesToDelete as $path) {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
 
             return redirect()->route('berantas.tat.index')->with('success', 'Data TAT diperbarui.');
         } catch (\Exception $e) {
             DB::rollBack();
             foreach ($newFilesMoved as $path) {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
-            return back()->with('error', 'Gagal update: ' . $e->getMessage())->withInput();
+            Log::error('Update error: ' . $e->getMessage());
+            abort(500, 'Server Error.');
         }
     }
 
-    public function destroy($id)
+
+    public function destroy($id) 
     {
         $tat = BerantasTat::findOrFail($id);
         
         $filesToDelete = [];
-        foreach($tat->dokumentasi as $doc) {
-            $filesToDelete[] = $doc->path_file;
+        
+        // Loop dokumen, tapi filter isinya
+        foreach ($tat->dokumen()->cursor() as $doc) {
+            // Cek 1: Pastikan bukan Link (karena link tidak punya file fisik)
+            // Cek 2: Pastikan path_file TIDAK NULL dan TIDAK KOSONG
+            if (!$doc->is_link && !empty($doc->path_file)) {
+                $filesToDelete[] = $doc->path_file;
+            }
         }
 
         DB::beginTransaction();
         try {
-            $tat->delete();
-            DB::commit();
+            $tat->delete(); 
+            DB::commit(); 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', 'destroy')->with('message', 'Gagal menghapus data: ' . $e->getMessage());
         }
 
+        // Hapus file fisik
         foreach ($filesToDelete as $path) {
-            if(Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            // Double check: Pastikan $path adalah string (bukan null) sebelum akses Storage
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
         }
 
-        return back()->with('success', 'Data dihapus.');
+        return redirect()->back()->with('success', 'destroy')->with('message', 'Data dan file berhasil dihapus.');
     }
 
     public function export(Request $request)

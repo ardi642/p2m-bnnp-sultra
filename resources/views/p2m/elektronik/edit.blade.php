@@ -420,69 +420,82 @@
 
 @push('scripts')
 <script type="module">
-document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function() {
 
-    // 2. FILEPOND MANAGER
-    const commonConfig = {
-        uploadRoute: '{{ route('upload.temp') }}',
-        revertRoute: '{{ route('revert.temp') }}',
-        loadRoute:   '{{ route('load.temp') }}',
-        csrfToken:   '{{ csrf_token() }}',
-        submitBtnId: 'btn-submit'
-    };
+        // 2. FILEPOND MANAGER
+        const commonConfig = {
+            uploadRoute: '{{ route('upload.temp') }}',
+            revertRoute: '{{ route('revert.temp') }}',
+            loadRoute:   '{{ route('load.temp') }}',
+            csrfToken:   '{{ csrf_token() }}',
+            submitBtnId: 'btn-submit'
+        };
 
-    if (window.FilePondManager) {
-        
-        // A. Init Dokumentasi Baru
-        window.FilePondManager.create('#fp-dokumentasi', {
-            ...commonConfig,
-            maxSize: '10MB',
-            // Existing Files disini hanya untuk file BARU yang gagal validasi saat submit, bukan file lama dari DB
-            existingFiles: @json(old('dokumentasi', [])), 
-        });
+        if (window.FilePondManager) {
+            
+            // A. Init Dokumentasi Baru
+            window.FilePondManager.create('#fp-dokumentasi', {
+                ...commonConfig,
+                maxSize: '10MB',
+                // Existing Files disini hanya untuk file BARU yang gagal validasi saat submit, bukan file lama dari DB
+                existingFiles: @json(old('dokumentasi', [])), 
+            });
 
-        // B. Init Lampiran Baru
-        window.FilePondManager.create('#fp-lampiran', {
-            ...commonConfig,
-            maxSize: '10MB',
-            existingFiles: @json(old('lampiran', [])), 
-        });
+            // B. Init Lampiran Baru
+            window.FilePondManager.create('#fp-lampiran', {
+                ...commonConfig,
+                maxSize: '10MB',
+                existingFiles: @json(old('lampiran', [])), 
+            });
 
-        // C. Validasi Submit
-        window.FilePondManager.attachFormSubmit('form-edit', 'btn-submit');
+            // C. Validasi Submit
+            window.FilePondManager.attachFormSubmit('form-edit', 'btn-submit');
 
-    } else {
-        console.error("FilePondManager belum dimuat. Pastikan 'npm run build' atau 'npm run dev' berjalan.");
-    }
-
-    });
-
-    window.markForDeletion = function(id) {
-        const cardInner = document.querySelector('#file-card-' + id + ' .file-card-inner');
-        const overlay = cardInner.querySelector('.delete-overlay');
-        const btnDelete = document.getElementById('btn-delete-' + id);
-        const containerInputs = document.getElementById('delete-inputs-container');
-        
-        if (!overlay.classList.contains('d-none')) {
-            overlay.classList.add('d-none');
-            overlay.classList.remove('d-flex');
-            cardInner.classList.remove('border-danger-subtle-thick');
-            btnDelete.classList.remove('btn-secondary');
-            btnDelete.classList.add('btn-outline-danger');
-            btnDelete.innerHTML = 'Hapus';
-            const input = document.getElementById('input-delete-' + id);
-            if(input) input.remove();
         } else {
-            overlay.classList.remove('d-none');
-            overlay.classList.add('d-flex');
-            cardInner.classList.add('border-danger-subtle-thick');
-            btnDelete.classList.remove('btn-outline-danger');
-            btnDelete.classList.add('btn-secondary');
-            btnDelete.innerHTML = 'Batal';
-            const input = document.createElement('input');
-            input.type = 'hidden'; input.name = 'delete_files[]'; input.value = id; input.id = 'input-delete-' + id;
-            containerInputs.appendChild(input);
+            console.error("FilePondManager belum dimuat. Pastikan 'npm run build' atau 'npm run dev' berjalan.");
         }
+
+        });
+
+        window.markForDeletion = function(id) {
+            const cardInner = document.querySelector('#file-card-' + id + ' .file-card-inner');
+            const overlay = cardInner.querySelector('.delete-overlay');
+            const btnDelete = document.getElementById('btn-delete-' + id);
+            const containerInputs = document.getElementById('delete-inputs-container');
+            
+            if (!overlay.classList.contains('d-none')) {
+                overlay.classList.add('d-none');
+                overlay.classList.remove('d-flex');
+                cardInner.classList.remove('border-danger-subtle-thick');
+                btnDelete.classList.remove('btn-secondary');
+                btnDelete.classList.add('btn-outline-danger');
+                btnDelete.innerHTML = 'Hapus';
+                const input = document.getElementById('input-delete-' + id);
+                if(input) input.remove();
+            } else {
+                overlay.classList.remove('d-none');
+                overlay.classList.add('d-flex');
+                cardInner.classList.add('border-danger-subtle-thick');
+                btnDelete.classList.remove('btn-outline-danger');
+                btnDelete.classList.add('btn-secondary');
+                btnDelete.innerHTML = 'Batal';
+                const input = document.createElement('input');
+                input.type = 'hidden'; input.name = 'delete_files[]'; input.value = id; input.id = 'input-delete-' + id;
+                containerInputs.appendChild(input);
+            }
     };
+
+    // 3. ALPINE JS LINK MANAGER
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('linkManager', (initialData = []) => ({
+            links: Array.isArray(initialData) ? initialData : [], 
+            addLink() {
+                this.links.push({ nama: '', url: '' });
+            },
+            removeLink(index) {
+                this.links.splice(index, 1);
+            }
+        }));
+    });
 </script>
 @endpush

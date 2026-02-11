@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use App\Traits\HasDokumen;
 
 class BerantasTat extends Model
 {
+    use HasDokumen;
+
     protected $table = 'berantas_tat';
     protected $guarded = ['id'];
     protected $casts = [
@@ -30,5 +33,4 @@ class BerantasTat extends Model
     public function tersangka() { return $this->hasMany(BerantasTatTersangka::class, 'berantas_tat_id'); }
     public function barangBukti() { return $this->hasMany(BerantasTatBarangBukti::class, 'berantas_tat_id'); }
     public function satuanKerja() { return $this->belongsTo(SatuanKerja::class); }
-    public function dokumentasi() { return $this->morphMany(DokumentasiKegiatan::class, 'dokumentasiable'); }
 }

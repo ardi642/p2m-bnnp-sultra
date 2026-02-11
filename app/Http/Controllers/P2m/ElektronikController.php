@@ -294,7 +294,7 @@ class ElektronikController extends Controller
                 if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
             Log::error('Update error: ' . $e->getMessage());
-            return back()->with('error', 'update')->withInput();
+            abort(500, 'Server Error.');
         }
     }
 

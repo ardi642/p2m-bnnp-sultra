@@ -184,7 +184,7 @@
 
                                                 {{-- LAYER 3: TOMBOL AKSI (Z-30) --}}
                                                 <div class="d-flex gap-2 justify-content-center w-100" style="position: relative; z-index: 30;">
-                                                    <a href="{{ route('dokumentasi.download', $doc->id) }}" 
+                                                    <a href="{{ route('dokumen.download', $doc->id) }}" 
                                                        class="btn btn-outline-secondary btn-sm flex-grow-1" 
                                                        title="Download">
                                                         <i class="bi bi-download"></i>

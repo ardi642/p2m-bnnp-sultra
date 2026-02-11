@@ -166,7 +166,7 @@
                                                                 
                                                                 {{-- Tombol Aksi --}}
                                                                 <div class="d-flex gap-1 justify-content-center position-relative" style="z-index: 10;">
-                                                                    <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-outline-primary btn-sm w-100 py-0" style="font-size: 0.75rem;" title="Unduh">
+                                                                    <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-outline-primary btn-sm w-100 py-0" style="font-size: 0.75rem;" title="Unduh">
                                                                         <i class="bi bi-download"></i>
                                                                     </a>
                                                                     <button type="button" 

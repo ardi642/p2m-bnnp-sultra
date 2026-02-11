@@ -27,9 +27,9 @@ class AsistensiRelawanController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
-        
+
         $query = P2mAsistensiRelawan::with('pegawai.satuanKerja', 'satuanKerja');
 
         // Filter Satker
@@ -44,7 +44,7 @@ class AsistensiRelawanController extends Controller
 
         // Filter Bulan
         if ($request->filled('bulan')) {
-            $query->where(function($q) use ($request) {
+            $query->where(function ($q) use ($request) {
                 foreach ($request->bulan as $b) {
                     $q->orWhereMonth('tanggal_pelaksanaan', $b);
                 }
@@ -52,7 +52,7 @@ class AsistensiRelawanController extends Controller
         }
 
         // Filter Tahun
-        $query->where(function($q) use ($activeYears) {
+        $query->where(function ($q) use ($activeYears) {
             foreach ($activeYears as $y) {
                 $q->orWhereYear('tanggal_pelaksanaan', $y);
             }
@@ -67,19 +67,19 @@ class AsistensiRelawanController extends Controller
         if ($request->filled('sasaran_kegiatan')) {
             $query->whereIn('sasaran_kegiatan', $request->sasaran_kegiatan);
         }
-        
+
         // Filter Pegawai
         if ($request->filled('pegawai_nips')) {
             $nips = $request->pegawai_nips;
             $logic = $request->input('pegawai_logic', 'OR');
             if ($logic === 'AND') {
                 foreach ($nips as $nip) {
-                    $query->whereHas('pegawai', function($q) use ($nip) {
+                    $query->whereHas('pegawai', function ($q) use ($nip) {
                         $q->where('pegawai.nip', $nip);
                     });
                 }
             } else {
-                $query->whereHas('pegawai', function($q) use ($nips) {
+                $query->whereHas('pegawai', function ($q) use ($nips) {
                     $q->whereIn('pegawai.nip', $nips);
                 });
             }
@@ -89,16 +89,16 @@ class AsistensiRelawanController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $searchDate = SearchHelper::translateDateInput($search);
-            $query->where(function($q) use ($search, $searchDate) {
+            $query->where(function ($q) use ($search, $searchDate) {
                 $q->where('nama_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhere('tempat_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhere('sasaran_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%")
                     ->orWhere('jumlah_peserta', 'LIKE', "%{$search}%")
-                    ->orWhereHas('satuanKerja', function($subQ) use ($search) {
+                    ->orWhereHas('satuanKerja', function ($subQ) use ($search) {
                         $subQ->where('satuan_kerja', 'LIKE', "%{$search}%");
                     })
-                    ->orWhereHas('pegawai', function($subQ) use ($search) {
+                    ->orWhereHas('pegawai', function ($subQ) use ($search) {
                         $subQ->where('nama', 'LIKE', "%{$search}%");
                     });
 
@@ -117,8 +117,8 @@ class AsistensiRelawanController extends Controller
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {
                 $query->join('satuan_kerja', 'p2m_asistensi_relawan.satuan_kerja_id', '=', 'satuan_kerja.id')
-                        ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
-                        ->select('p2m_asistensi_relawan.*');
+                    ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
+                    ->select('p2m_asistensi_relawan.*');
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }
@@ -129,7 +129,7 @@ class AsistensiRelawanController extends Controller
         return $query;
     }
 
-    public function index(Request $request): View 
+    public function index(Request $request): View
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -164,11 +164,11 @@ class AsistensiRelawanController extends Controller
         $asistensirelawans = $query->paginate($perPage)->withQueryString();
 
         $satkerLookup = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
-                        
+
         return view('p2m.asistensi-relawan.index', compact('asistensirelawans', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup', 'totalKegiatan', 'totalPeserta'));
     }
 
-    public function create(): View 
+    public function create(): View
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -186,8 +186,9 @@ class AsistensiRelawanController extends Controller
     }
 
     // --- STORE METHOD (UPDATED) ---
-    public function store(Request $request, DokumenService $dokumenService) {
-        
+    public function store(Request $request, DokumenService $dokumenService)
+    {
+
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
@@ -199,9 +200,9 @@ class AsistensiRelawanController extends Controller
             'tempat_kegiatan'      => 'required',
             'jumlah_peserta'       => 'required|numeric',
             'pegawai_nips'         => 'required|array',
-            
+
             // Validasi File Upload
-            'dokumentasi'          => 'nullable|array', 
+            'dokumentasi'          => 'nullable|array',
             'lampiran'             => 'nullable|array',
 
             // Validasi Link (Array of Objects)
@@ -219,9 +220,9 @@ class AsistensiRelawanController extends Controller
         }
 
         $validasi = $request->validate($rules);
-        $uploadedPaths = []; 
+        $uploadedPaths = [];
 
-        DB::beginTransaction(); 
+        DB::beginTransaction();
 
         try {
             $dataKegiatan = collect($validasi)->except(['dokumentasi', 'lampiran', 'pegawai_nips', 'dokumentasi_links', 'lampiran_links'])->toArray();
@@ -259,7 +260,6 @@ class AsistensiRelawanController extends Controller
 
             DB::commit();
             return redirect()->route('p2m.asistensi-relawan.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             foreach ($uploadedPaths as $path) {
@@ -270,7 +270,7 @@ class AsistensiRelawanController extends Controller
         }
     }
 
-    public function edit($id): View 
+    public function edit($id): View
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -284,7 +284,7 @@ class AsistensiRelawanController extends Controller
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
             $pegawais = Pegawai::orderBy('nama', 'asc')->get();
         } else {
-            $satuanKerjas = []; 
+            $satuanKerjas = [];
             $satkerId = $user->getSatkerId();
             $pegawaiAktif = Pegawai::where('satuan_kerja_id', $satkerId)->get();
             $pegawaiExisting = $kegiatan->pegawai;
@@ -297,7 +297,7 @@ class AsistensiRelawanController extends Controller
     }
 
     // --- UPDATE METHOD (UPDATED) ---
-    public function update(Request $request, DokumenService $dokumenService, $id) 
+    public function update(Request $request, DokumenService $dokumenService, $id)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -315,12 +315,12 @@ class AsistensiRelawanController extends Controller
             'tempat_kegiatan'      => 'required',
             'jumlah_peserta'       => 'required|numeric',
             'pegawai_nips'         => 'required|array',
-            
+
             // Validasi File & Link
-            'delete_files'         => 'nullable|array', 
+            'delete_files'         => 'nullable|array',
             'dokumentasi'          => 'nullable|array',
             'lampiran'             => 'nullable|array',
-            
+
             'dokumentasi_links'        => 'nullable|array',
             'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
             'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
@@ -386,7 +386,6 @@ class AsistensiRelawanController extends Controller
             }
 
             return redirect()->route('p2m.asistensi-relawan.index')->with('success', 'update')->with('message', 'Data diperbarui');
-
         } catch (\Exception $e) {
             DB::rollBack();
             foreach ($newFilesMoved as $path) {
@@ -397,35 +396,44 @@ class AsistensiRelawanController extends Controller
         }
     }
 
-    public function destroy($id) 
+    public function destroy($id)
     {
         $kegiatan = P2mAsistensiRelawan::findOrFail($id);
-        
+
         $filesToDelete = [];
+
+        // Loop dokumen, tapi filter isinya
         foreach ($kegiatan->dokumen()->cursor() as $doc) {
-            $filesToDelete[] = $doc->path_file;
+            // Cek 1: Pastikan bukan Link (karena link tidak punya file fisik)
+            // Cek 2: Pastikan path_file TIDAK NULL dan TIDAK KOSONG
+            if (!$doc->is_link && !empty($doc->path_file)) {
+                $filesToDelete[] = $doc->path_file;
+            }
         }
 
         DB::beginTransaction();
         try {
-            $kegiatan->delete(); 
-            DB::commit(); 
+            $kegiatan->delete();
+            DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'destroy')->with('message', 'Gagal menghapus data: ' . $e->getMessage());
         }
 
+        // Hapus file fisik
         foreach ($filesToDelete as $path) {
-            if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            // Double check: Pastikan $path adalah string (bukan null) sebelum akses Storage
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
         }
 
         return redirect()->back()->with('success', 'destroy')->with('message', 'Data dan file berhasil dihapus.');
     }
 
-    public function export(Request $request) 
+    public function export(Request $request)
     {
         $query = $this->getFilteredQuery($request);
         return Excel::download(new AsistensiRelawanExport($query), 'Laporan_P2M_Asistensi_Relawan.xlsx');
     }
-
 }

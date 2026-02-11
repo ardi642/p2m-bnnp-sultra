@@ -30,12 +30,12 @@
 
                 @foreach([
                     ['route' => 'p2m.informasi-edukasi.index', 'label' => 'Informasi dan Edukasi', 'url' => 'p2m/informasi-edukasi*'],
-                    ['route' => 'p2m.ikan.index', 'label' => 'IKAN', 'url' => 'p2m/ikan*'],
+                    ['route' => 'p2m.ikan.index', 'label' => 'Integrasi Kurikulum Anti Narkotika (IKAN)', 'url' => 'p2m/ikan*'],
                     ['route' => 'p2m.asistensi-relawan.index', 'label' => 'Asistensi Relawan', 'url' => 'p2m/asistensi-relawan*'],
-                    // ['route' => 'p2m.sosialisasi.index', 'label' => 'Sosialisasi', 'url' => 'p2m/sosialisasi*'],
-                    // ['route' => 'p2m.upacara.index', 'label' => 'Upacara', 'url' => 'p2m/upacara*'],
-                    // ['route' => 'p2m.kie.index', 'label' => 'KIE', 'url' => 'p2m/kie*'],
-                    // ['route' => 'p2m.lingkungan-bersinar.index', 'label' => 'Lingkungan Bersinar', 'url' => 'p2m/lingkungan-bersinar*'],
+                    ['route' => 'p2m.sosialisasi.index', 'label' => 'Sosialisasi', 'url' => 'p2m/sosialisasi*'],
+                    ['route' => 'p2m.upacara.index', 'label' => 'Upacara', 'url' => 'p2m/upacara*'],
+                    ['route' => 'p2m.kie.index', 'label' => 'KIE', 'url' => 'p2m/kie*'],
+                    ['route' => 'p2m.lingkungan-bersinar.index', 'label' => 'Lingkungan Bersinar', 'url' => 'p2m/lingkungan-bersinar*'],
                     ['route' => 'p2m.cfd.index', 'label' => 'Car Free Day', 'url' => 'p2m/cfd*'],
                     ['route' => 'p2m.elektronik.index', 'label' => 'Media Elektronik', 'url' => 'p2m/elektronik*'],
                     ['route' => 'p2m.non-elektronik.index', 'label' => 'Media Non-Elektronik', 'url' => 'p2m/non-elektronik*'],

@@ -338,7 +338,7 @@
                                                                 </div>
                                                                 <div class="d-flex gap-1">
                                                                     {{-- Tombol Download (Kiri) --}}
-                                                                    <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-outline-secondary btn-sm px-3" style="font-size: 0.75rem;" title="Download">
+                                                                    <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-outline-secondary btn-sm px-3" style="font-size: 0.75rem;" title="Download">
                                                                         <i class="bi bi-download"></i>
                                                                     </a>
                                                                     {{-- Tombol Hapus (Kanan - Lebar) --}}

@@ -22,7 +22,7 @@
                             <option {{ Route::is('p2m.non-elektronik.*') ? 'selected' : '' }} data-url="{{ route('p2m.non-elektronik.create') }}">Media Non Elektronik</option>
                             <option {{ Route::is('p2m.online.*') ? 'selected' : '' }} data-url="{{ route('p2m.online.create') }}">Media Online</option>
                             <option {{ Route::is('p2m.tes-urine.*') ? 'selected' : '' }} data-url="{{ route('p2m.tes-urine.create') }}">Tes Urine / Deteksi Dini</option>
-                            <option {{ Route::is('p2m.desa-bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desa-bersinar.create') }}">Desa Bersinar</option>
+                            <option {{ Route::is('p2m.desa-kelurahan-bersinar.*') ? 'selected' : '' }} data-url="{{ route('p2m.desa-kelurahan-bersinar.create') }}">Desa Bersinar</option>
                             <option {{ Route::is('p2m.safari-religi.*') ? 'selected' : '' }} data-url="{{ route('p2m.safari-religi.create') }}">Safari Religi</option>
                         </select>
                     </div>

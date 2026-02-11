@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Traits\HasDokumentasi;
+use App\Traits\HasDokumen;
 
 class P2mNonElektronik extends Model
 {
-    use HasFactory, HasDokumentasi;
+    use HasFactory, HasDokumen;
 
     protected $table = 'p2m_non_elektronik';
 
@@ -33,7 +33,7 @@ class P2mNonElektronik extends Model
     {
         parent::boot();
         static::deleting(function ($kegiatan) {
-            $kegiatan->dokumentasi()->delete(); 
+            $kegiatan->dokumen()->delete(); 
         });
     }
 

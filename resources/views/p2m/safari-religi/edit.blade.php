@@ -130,8 +130,8 @@
                                     @enderror
                                 </div>
 
-                                {{-- Jumlah Masyarakat --}}
-                                <div class="col-12 col-lg-4">
+                                                                        <a 
+                                                                            href="{{ route('dokumen.download', $doc->id) }}" 
                                     <label class="form-label fw-semibold text-secondary small">Jumlah Masyarakat Tersosialisasi <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input 
@@ -203,7 +203,7 @@
                                                                 {{-- Tombol Aksi --}}
                                                                 <div class="d-flex gap-1 justify-content-center position-relative" style="z-index: 10;">
                                                                     <a 
-                                                                        href="{{ route('dokumentasi.download', $doc->id) }}" 
+                                                                        href="{{ route('dokumen.download', $doc->id) }}" 
                                                                         class="btn btn-outline-primary btn-sm w-100 py-0" 
                                                                         style="font-size: 0.75rem;" 
                                                                         title="Unduh"

@@ -148,7 +148,7 @@
                                                                 <div class="card-body p-2 text-center d-flex flex-column justify-content-between">
                                                                     <div class="mb-2"><div class="small text-truncate fw-bold">{{ $doc->nama_file_asli }}</div></div>
                                                                     <div class="d-flex gap-1 justify-content-center position-relative" style="z-index: 10;">
-                                                                        <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-outline-primary btn-sm w-100 py-0" title="Unduh"><i class="bi bi-download"></i></a>
+                                                                        <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-outline-primary btn-sm w-100 py-0" title="Unduh"><i class="bi bi-download"></i></a>
                                                                         <button type="button" id="btn-delete-{{ $doc->id }}" class="btn btn-sm w-100 py-0 {{ $isMarkedDeleted ? 'btn-secondary' : 'btn-outline-danger' }}" onclick="markForDeletion({{ $doc->id }})">@if($isMarkedDeleted) Batal @else Hapus @endif</button>
                                                                     </div>
                                                                 </div>

@@ -403,8 +403,14 @@ class IkanController extends Controller
         $kegiatan = P2mIkan::findOrFail($id);
 
         $filesToDelete = [];
+
+        // Loop dokumen, tapi filter isinya
         foreach ($kegiatan->dokumen()->cursor() as $doc) {
-            $filesToDelete[] = $doc->path_file;
+            // Cek 1: Pastikan bukan Link (karena link tidak punya file fisik)
+            // Cek 2: Pastikan path_file TIDAK NULL dan TIDAK KOSONG
+            if (!$doc->is_link && !empty($doc->path_file)) {
+                $filesToDelete[] = $doc->path_file;
+            }
         }
 
         DB::beginTransaction();
@@ -416,8 +422,12 @@ class IkanController extends Controller
             return back()->with('error', 'destroy')->with('message', 'Gagal menghapus data: ' . $e->getMessage());
         }
 
+        // Hapus file fisik
         foreach ($filesToDelete as $path) {
-            if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            // Double check: Pastikan $path adalah string (bukan null) sebelum akses Storage
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
         }
 
         return redirect()->back()->with('success', 'destroy')->with('message', 'Data dan file berhasil dihapus.');

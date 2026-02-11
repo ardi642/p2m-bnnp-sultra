@@ -294,9 +294,9 @@
                                                     </div>
                                                 </div>
                                                 <div class="d-flex gap-1">
-                                                    <a href="{{ route('dokumentasi.download', $doc->id) }}" 
-                                                       class="btn btn-outline-secondary btn-sm px-3" 
-                                                       title="Download">
+                                                                     <a href="{{ route('dokumen.download', $doc->id) }}" 
+                                                                         class="btn btn-outline-secondary btn-sm px-3" 
+                                                                         title="Download">
                                                         <i class="bi bi-download"></i>
                                                     </a>
                                                     <button type="button" 

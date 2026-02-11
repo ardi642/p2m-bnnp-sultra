@@ -361,7 +361,7 @@
                                                                                                 @if(Str::contains($doc->tipe_file, ['image', 'pdf', 'video']))
                                                                                                     <a href="{{ Storage::url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-info px-2 py-0" title="Preview"><i class="bi bi-eye"></i></a>
                                                                                                 @endif
-                                                                                                <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-xs btn-outline-primary px-2 py-0" title="Download"><i class="bi bi-download"></i></a>
+                                                                                                <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-primary px-2 py-0" title="Download"><i class="bi bi-download"></i></a>
                                                                                             </div>
                                                                                         </div>
                                                                                     </div>

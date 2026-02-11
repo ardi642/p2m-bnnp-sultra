@@ -139,7 +139,7 @@
                                                                         <div class="text-muted" style="font-size: 0.7rem;">{{ $doc->ukuran_file >= 1048576 ? number_format($doc->ukuran_file / 1048576, 2) . ' MB' : number_format($doc->ukuran_file / 1024, 0) . ' KB' }}</div>
                                                                     </div>
                                                                     <div class="d-flex gap-1 justify-content-center position-relative" style="z-index: 10;">
-                                                                        <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-outline-primary btn-sm w-100 py-0" style="font-size: 0.75rem;" title="Unduh"><i class="bi bi-download"></i></a>
+                                                                        <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-outline-primary btn-sm w-100 py-0" style="font-size: 0.75rem;" title="Unduh"><i class="bi bi-download"></i></a>
                                                                         <button type="button" id="btn-delete-{{ $doc->id }}" class="btn btn-sm w-100 py-0 {{ $isMarkedDeleted ? 'btn-secondary' : 'btn-outline-danger' }}" onclick="markForDeletion({{ $doc->id }})" style="font-size: 0.75rem;">@if($isMarkedDeleted) Batal @else Hapus @endif</button>
                                                                     </div>
                                                                 </div>

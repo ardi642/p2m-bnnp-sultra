@@ -414,7 +414,7 @@
                                                                                 <i class="bi bi-eye"></i>
                                                                             </a>
                                                                         @endif
-                                                                        <a href="{{ route('dokumentasi.download', $doc->id) }}" 
+                                                                            <a href="{{ route('dokumen.download', $doc->id) }}" 
                                                                            class="btn btn-xs btn-outline-primary px-2 py-0">
                                                                             <i class="bi bi-download"></i>
                                                                         </a>

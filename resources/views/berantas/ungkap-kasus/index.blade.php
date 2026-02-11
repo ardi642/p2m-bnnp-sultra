@@ -469,7 +469,7 @@
                                                                                         @else <i class="bi bi-file-earmark-text text-secondary"></i> @endif
                                                                                         <span class="d-inline-block text-truncate" style="max-width: 150px;">{{ $doc->nama_file_asli }}</span>
                                                                                     </a>
-                                                                                    <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-light border text-primary" title="Download"><i class="bi bi-download"></i></a>
+                                                                                    <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-light border text-primary" title="Download"><i class="bi bi-download"></i></a>
                                                                                 </div>
                                                                             @endforeach
                                                                         </div>

@@ -292,7 +292,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="d-flex gap-1">
-                                                    <a href="{{ route('dokumentasi.download', $doc->id) }}" class="btn btn-outline-secondary btn-sm flex-grow-1 py-0 d-flex align-items-center justify-content-center" style="font-size: 0.75rem;" title="Download">
+                                                    <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-outline-secondary btn-sm flex-grow-1 py-0 d-flex align-items-center justify-content-center" style="font-size: 0.75rem;" title="Download">
                                                         <i class="bi bi-download"></i>
                                                     </a>
                                                     <button type="button" 

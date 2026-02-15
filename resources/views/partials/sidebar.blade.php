@@ -76,10 +76,22 @@
                     <span>Bidang Rehab</span>
                 </div>
 
-                <a href="{{ route('rehab.laporan.index') }}" class="nav-link {{ Request::is('rehab/laporan*') ? 'active' : '' }}">
+                @foreach([
+                    ['route' => 'rehab.laporan.index', 'label' => 'Laporan Tahunan', 'url' => 'rehab/laporan*'],
+                    ['route' => 'rehab.pasien.index', 'label' => 'Daftar Pasien', 'url' => 'rehab/pasien*'],
+                ] as $menu)
+                    <a href="{{ route($menu['route']) }}" class="nav-link {{ Request::is($menu['url']) ? 'active' : '' }}">
+                        {{ $menu['label'] }}
+                    </a>
+                @endforeach
+            @endif
+                {{-- <a href="{{ route('rehab.laporan.index') }}" class="nav-link {{ Request::is('rehab/laporan*') ? 'active' : '' }}">
                     Laporan Bulanan
                 </a>
-            @endif
+                 <a href="{{ route('rehab.pasien.index') }}" class="nav-link {{ Request::is('rehab/pasien*') ? 'active' : '' }}">
+                    Daftar Pasien
+                </a>
+            @endif --}}
 
             {{-- 4. ADMINISTRATOR --}}
             {{-- Role: admin, admin_satker, dan admin_bidang (p2m, berantas, rehab) --}}

@@ -27,6 +27,7 @@ use App\Http\Controllers\P2m\SafariReligiController;
 use App\Http\Controllers\P2m\TesUrineController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Rehab\RehabLaporanController;
+use App\Http\Controllers\Rehab\RehabPasienController;
 use App\Http\Controllers\TemporaryFileController;
 use App\Http\Controllers\DokumenController;
 use App\Http\Controllers\P2m\InformasiEdukasiController;
@@ -247,12 +248,19 @@ Route::middleware('auth')->group(function () {
 
         // A. READ/VIEW ACCESS
         Route::middleware(['role:admin,admin_satker,admin_rehab,operator_satker,operator_rehab'])->group(function () {
+            // LAPORAN    
             Route::get('/laporan', [RehabLaporanController::class, 'index'])->name('laporan.index');
             Route::get('/laporan/export', [RehabLaporanController::class, 'export'])->name('laporan.export');
+
+            // PASIEN    
+            Route::get('/pasien', [RehabPasienController::class, 'index'])->name('pasien.index');
+            Route::get('/pasien/export', [RehabPasienController::class, 'export'])->name('pasien.export');
         });
 
         // B. WRITE ACCESS (Target & Laporan Harian)
         Route::middleware(['role:operator_satker,operator_rehab,admin,admin_satker'])->group(function () {
+            // PASIEN
+            Route::resource('pasien', RehabPasienController::class)->except(['index']);
 
             // Route Simpan/Update Target
             Route::post('/laporan/target', [RehabLaporanController::class, 'storeTarget'])->name('laporan.store_target');

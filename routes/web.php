@@ -4,7 +4,9 @@ use App\Http\Controllers\Admin\PegawaiController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Berantas\MapController;
 use App\Http\Controllers\Berantas\NarkotikaController;
+use App\Http\Controllers\Berantas\PetaUngkapKasusController;
 use App\Http\Controllers\Berantas\TatController;
 use App\Http\Controllers\Berantas\UngkapKasusController;
 use App\Http\Controllers\Berantas\RegisterBarangBuktiController;
@@ -217,6 +219,25 @@ Route::middleware('auth')->group(function() {
             // Barang Bukti
             Route::get('/register-barang-bukti', [RegisterBarangBuktiController::class, 'index'])->name('register-barang-bukti.index');
             Route::get('/register-barang-bukti/export', [RegisterBarangBuktiController::class, 'export'])->name('register-barang-bukti.export');
+
+            // Route Peta Ungkap Kasus
+            Route::get('peta-ungkap-kasus', [PetaUngkapKasusController::class, 'index'])->name('peta-ungkap-kasus.index');
+            Route::get('peta-ungkap-kasus/data', [PetaUngkapKasusController::class, 'data'])->name('peta-ungkap-kasus.data');
+            Route::get('peta-ungkap-kasus/detail/{id}', [PetaUngkapKasusController::class, 'show'])->name('peta-ungkap-kasus.show');
+
+            // // --- PETA SEBARAN (GIS) ---
+        
+            // // 1. Peta Ungkap Kasus (Crime Map)
+            // Route::get('/peta/ungkap-kasus', [MapController::class, 'ungkapKasusIndex'])
+            //     ->name('peta.ungkap-kasus.index');
+            // Route::get('/peta/ungkap-kasus/data', [MapController::class, 'getUngkapKasusData'])
+            //     ->name('peta.ungkap-kasus.data');
+
+            // // 2. Peta Register Barang Bukti (Evidence Map)
+            // Route::get('/peta/register-bb', [MapController::class, 'registerBbIndex'])
+            //     ->name('peta.register-bb.index');
+            // Route::get('/peta/register-bb/data', [MapController::class, 'getRegisterBbData'])
+            //     ->name('peta.register-bb.data');
         });
 
         // B. WRITE ACCESS (Hanya Operator Berantas & Operator Satker)

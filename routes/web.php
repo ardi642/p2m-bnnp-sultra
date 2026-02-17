@@ -34,6 +34,7 @@ use App\Http\Controllers\Rehab\RehabLaporanController;
 use App\Http\Controllers\TemporaryFileController;
 use App\Http\Controllers\DokumenController;
 use App\Http\Controllers\P2m\InformasiEdukasiController;
+use App\Http\Controllers\P2m\MonevController;
 use App\Livewire\Dashboard\Index;
 use App\Models\Dokumen;
 use App\Models\DokumentasiKegiatan;
@@ -168,6 +169,9 @@ Route::middleware('auth')->group(function() {
             // Safari Religi
             Route::get('/safari-religi', [SafariReligiController::class, 'index'])->name("safari-religi.index");
             Route::get('/safari-religi/export', [SafariReligiController::class, 'export'])->name('safari-religi.export');
+            // Monev
+            Route::get('/monev', [MonevController::class, 'index'])->name("monev.index");
+            Route::get('/monev/export', [MonevController::class, 'export'])->name('monev.export');
         });
 
         // B. WRITE/CREATE/EDIT ACCESS (Hanya Operator P2M & Operator Satker)
@@ -198,6 +202,8 @@ Route::middleware('auth')->group(function() {
             Route::resource('desa-kelurahan-bersinar', DesaKelurahanBersinarController::class)->except(['index', 'show']);
             // Safari Religi CRUD
             Route::resource('safari-religi', SafariReligiController::class)->except(['index', 'show']);
+            // Monev CRUD
+            Route::resource('monev', MonevController::class)->except(['index', 'show']);
         });
     });
 

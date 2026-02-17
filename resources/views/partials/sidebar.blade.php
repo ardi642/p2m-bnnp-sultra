@@ -40,6 +40,7 @@
                     ['route' => 'p2m.tes-urine.index', 'label' => 'Tes Urine', 'url' => 'p2m/tes-urine*'],
                     ['route' => 'p2m.desa-kelurahan-bersinar.index', 'label' => 'Desa / Kelurahan Bersinar', 'url' => 'p2m/desa-kelurahan-bersinar*'],
                     ['route' => 'p2m.safari-religi.index', 'label' => 'Safari Religi', 'url' => 'p2m/safari-religi*'],
+                    ['route' => 'p2m.monev.index', 'label' => 'Monev', 'url' => 'p2m/monev*'],
                 ] as $menu)
                     <a href="{{ route($menu['route']) }}" class="nav-link {{ Request::is($menu['url']) ? 'active' : '' }}">
                         {{ $menu['label'] }}
@@ -58,6 +59,7 @@
                     ['route' => 'berantas.narkotika.index', 'label' => 'Data Narkotika', 'url' => 'berantas/narkotika*'],
                     ['route' => 'berantas.tat.index', 'label' => 'Tim Asesmen (TAT)', 'url' => 'berantas/tat*'],
                     ['route' => 'berantas.ungkap-kasus.index', 'label' => 'Ungkap Kasus', 'url' => 'berantas/ungkap-kasus*'],
+                    ['route' => 'berantas.peta-ungkap-kasus.index', 'label' => 'Pemetaan Ungkap Kasus', 'url' => 'berantas/peta-ungkap-kasus*'],
                     ['route' => 'berantas.register-barang-bukti.index', 'label' => 'Barang Bukti', 'url' => 'berantas/register-barang-bukti*'],
                 ] as $menu)
                     <a href="{{ route($menu['route']) }}" class="nav-link {{ Request::is($menu['url']) ? 'active' : '' }}">

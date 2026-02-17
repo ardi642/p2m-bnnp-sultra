@@ -36,7 +36,8 @@ class DatabaseSeeder extends Seeder
             P2mOnlineSeeder::class,
             P2mTesUrineSeeder::class,
             P2mDesaKelurahanBersinarSeeder::class,
-            P2mSafariReligiSeeder::class
+            P2mSafariReligiSeeder::class,
+            P2mMonevSeeder::class
         ]);
 
 

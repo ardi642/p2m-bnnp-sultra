@@ -281,7 +281,6 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
 
@@ -303,7 +302,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
 <script>
@@ -333,7 +331,14 @@
                 L.control.zoom({ position: 'topright' }).addTo(this.map);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', maxZoom: 19 }).addTo(this.map);
 
-                this.map.createPane('heatmapPane'); this.map.getPane('heatmapPane').style.zIndex = 500; this.map.getPane('heatmapPane').style.pointerEvents = 'none'; 
+                // --- PERBAIKAN: MEMBUAT PANE KHUSUS UNTUK WILAYAH (PALING BAWAH) ---
+                this.map.createPane('choroplethPane');
+                this.map.getPane('choroplethPane').style.zIndex = 250; // Lebih rendah dari marker (600) tapi di atas tile (200)
+                // ------------------------------------------------------------------
+
+                this.map.createPane('heatmapPane'); 
+                this.map.getPane('heatmapPane').style.zIndex = 500; 
+                this.map.getPane('heatmapPane').style.pointerEvents = 'none'; 
                 
                 // Init Layers (Semua didaftarkan agar bisa di-toggle di Layer Control)
                 this.markerCluster = L.markerClusterGroup({ showCoverageOnHover: false, zoomToBoundsOnClick: true, spiderfyOnMaxZoom: true });
@@ -438,6 +443,9 @@
                 });
 
                 const geoLayer = L.geoJson(this.geoJsonData, {
+                    // --- PERBAIKAN: MENGGUNAKAN PANE KHUSUS ---
+                    pane: 'choroplethPane',
+                    // ------------------------------------------
                     style: (feature) => ({
                         fillColor: this.getColor(regionCounts[feature.properties.code] || 0, maxCount),
                         weight: 1, opacity: 1, color: 'white', dashArray: '3', fillOpacity: 0.6

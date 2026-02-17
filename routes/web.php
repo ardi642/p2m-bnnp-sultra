@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Berantas\MapController;
 use App\Http\Controllers\Berantas\NarkotikaController;
+use App\Http\Controllers\Berantas\PetaRegisterBarangBuktiController;
 use App\Http\Controllers\Berantas\PetaUngkapKasusController;
 use App\Http\Controllers\Berantas\TatController;
 use App\Http\Controllers\Berantas\UngkapKasusController;
@@ -260,6 +261,12 @@ Route::middleware('auth')->group(function() {
             Route::get('peta-ungkap-kasus', [PetaUngkapKasusController::class, 'index'])->name('peta-ungkap-kasus.index');
             Route::get('peta-ungkap-kasus/data', [PetaUngkapKasusController::class, 'data'])->name('peta-ungkap-kasus.data');
             Route::get('peta-ungkap-kasus/detail/{id}', [PetaUngkapKasusController::class, 'show'])->name('peta-ungkap-kasus.show');
+
+            Route::get('peta-sebaran-bb/', [PetaRegisterBarangBuktiController::class, 'index'])->name('peta-sebaran-bb.index');
+            // API Data JSON (untuk Map)
+            Route::get('peta-sebaran-bb/data', [PetaRegisterBarangBuktiController::class, 'data'])->name('peta-sebaran-bb.data');
+            // Modal Detail (HTML Partial)
+            Route::get('peta-sebaran-bb/{id}', [PetaRegisterBarangBuktiController::class, 'show'])->name('peta-sebaran-bb.show');
 
             // // --- PETA SEBARAN (GIS) ---
         

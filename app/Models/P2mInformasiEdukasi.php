@@ -22,19 +22,6 @@ class P2mInformasiEdukasi extends Model
     protected $guarded = [];
 
     /**
-     * CLEANUP DATABASE OTOMATIS
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::deleting(function ($kegiatan) {
-            // Hapus dokumen terkait saat kegiatan dihapus
-            $kegiatan->dokumen()->delete(); 
-        });
-    }
-
-    /**
      * Relasi ke Satuan Kerja (Many to One)
      */
     public function satuanKerja(): BelongsTo

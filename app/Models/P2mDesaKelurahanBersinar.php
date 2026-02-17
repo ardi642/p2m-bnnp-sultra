@@ -19,14 +19,6 @@ class P2mDesaKelurahanBersinar extends Model
         'tanggal_pencanangan' => 'date'
     ];
 
-    protected static function boot()
-    {
-        parent::boot();
-        static::deleting(function ($kegiatan) {
-            $kegiatan->dokumen()->delete();
-        });
-    }
-
     public function satuanKerja(): BelongsTo
     {
         return $this->belongsTo(SatuanKerja::class, 'satuan_kerja_id');

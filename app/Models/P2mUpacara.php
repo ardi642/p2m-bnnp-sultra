@@ -20,15 +20,6 @@ class P2mUpacara extends Model
 
     protected $guarded = ['id'];
 
-    // Cleanup otomatis dokumentasi saat data dihapus
-    protected static function boot()
-    {
-        parent::boot();
-        static::deleting(function ($kegiatan) {
-            $kegiatan->dokumentasi()->delete(); 
-        });
-    }
-
     public function satuanKerja(): BelongsTo
     {
         return $this->belongsTo(SatuanKerja::class, 'satuan_kerja_id');

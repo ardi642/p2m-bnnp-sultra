@@ -21,15 +21,6 @@ class P2mTesUrine extends Model
 
     protected $guarded = [];
 
-    // Hapus dokumentasi otomatis saat data dihapus
-    protected static function boot()
-    {
-        parent::boot();
-        static::deleting(function ($kegiatan) {
-            $kegiatan->dokumen()->delete(); 
-        });
-    }
-
     public function satuanKerja(): BelongsTo
     {
         return $this->belongsTo(SatuanKerja::class, 'satuan_kerja_id');

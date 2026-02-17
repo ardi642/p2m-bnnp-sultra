@@ -20,15 +20,6 @@ class P2mCfd extends Model
 
     protected $guarded = [];
 
-    // Cleanup Dokumentasi saat delete
-    protected static function boot()
-    {
-        parent::boot();
-        static::deleting(function ($kegiatan) {
-            $kegiatan->dokumen()->delete(); 
-        });
-    }
-
     public function satuanKerja(): BelongsTo
     {
         return $this->belongsTo(SatuanKerja::class, 'satuan_kerja_id');

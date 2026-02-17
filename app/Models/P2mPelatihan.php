@@ -12,7 +12,6 @@ use App\Traits\HasDokumen;
 class P2mPelatihan extends Model
 {
     use HasFactory;
-    // use HasDokumentasi;
     use HasDokumen;
     protected $table = 'p2m_pelatihan';
 
@@ -21,20 +20,6 @@ class P2mPelatihan extends Model
     ];
 
     protected $guarded = [];
-
-    /**
-     * CLEANUP DATABASE OTOMATIS
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::deleting(function ($kegiatan) {
-            // Hapus record database anak-anaknya.
-            // Tidak pakai cursor disini karena ->delete() langsung eksekusi query SQL (Cepat & Ringan)
-            $kegiatan->dokumen()->delete(); 
-        });
-    }
 
     /**
      * Relasi ke Satuan Kerja (Many to One)

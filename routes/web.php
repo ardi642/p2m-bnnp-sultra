@@ -35,6 +35,7 @@ use App\Http\Controllers\TemporaryFileController;
 use App\Http\Controllers\DokumenController;
 use App\Http\Controllers\P2m\InformasiEdukasiController;
 use App\Http\Controllers\P2m\MonevController;
+use App\Http\Controllers\P2m\PemetaanSdmSdaController;
 use App\Livewire\Dashboard\Index;
 use App\Models\Dokumen;
 use App\Models\DokumentasiKegiatan;
@@ -172,6 +173,9 @@ Route::middleware('auth')->group(function() {
             // Monev
             Route::get('/monev', [MonevController::class, 'index'])->name("monev.index");
             Route::get('/monev/export', [MonevController::class, 'export'])->name('monev.export');
+            // Pemetaan SDM & SDA
+            Route::get('/pemetaan-sdm-sda', [PemetaanSdmSdaController::class, 'index'])->name("pemetaan-sdm-sda.index");
+            Route::get('/pemetaan-sdm-sda/export', [PemetaanSdmSdaController::class, 'export'])->name('pemetaan-sdm-sda.export');
         });
 
         // B. WRITE/CREATE/EDIT ACCESS (Hanya Operator P2M & Operator Satker)
@@ -204,6 +208,8 @@ Route::middleware('auth')->group(function() {
             Route::resource('safari-religi', SafariReligiController::class)->except(['index', 'show']);
             // Monev CRUD
             Route::resource('monev', MonevController::class)->except(['index', 'show']);
+            // Pemetaan SDM & SDA CRUD
+            Route::resource('pemetaan-sdm-sda', PemetaanSdmSdaController::class)->except(['index', 'show']);
         });
     });
 

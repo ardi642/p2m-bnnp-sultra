@@ -13,35 +13,35 @@ use Illuminate\Support\Facades\DB;
 
 class PetaUngkapKasusController extends Controller
 {
-    /**
-     * Menampilkan Halaman Peta Utama
-     */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
+        
         $satuanKerjas = $user->hasRole('admin') ? SatuanKerja::orderBy('satuan_kerja')->get() : [];
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika', 'asc')->get();
         
-        // Ambil tahun yang tersedia di data
+        // List Pekerjaan Unik
+        $listPekerjaan = BerantasUngkapTersangka::select('pekerjaan')
+            ->whereNotNull('pekerjaan')->distinct()->orderBy('pekerjaan')->pluck('pekerjaan');
+
         $years = BerantasUngkapKasus::selectRaw('YEAR(tanggal_kejadian) as year')
             ->distinct()->orderByDesc('year')->pluck('year');
 
-        return view('berantas.peta-ungkap-kasus.index', compact('satuanKerjas', 'masterNarkotika', 'years'));
+        // Logic Default Tahun
+        $isFreshLoad = empty($request->all());
+        $selectedTahun = $isFreshLoad ? [date('Y')] : $request->input('tahun', []);
+
+        return view('berantas.peta-ungkap-kasus.index', compact(
+            'satuanKerjas', 'masterNarkotika', 'listPekerjaan', 'years', 'selectedTahun'
+        ));
     }
 
-    /**
-     * API JSON: Mengembalikan data GeoJSON & Statistik untuk Peta
-     */
     public function data(Request $request)
     {
         $user = Auth::user();
-        
-        // 1. Base Query (Mirip dengan Index Table tapi dioptimasi)
-        $query = BerantasUngkapKasus::with(['barangBukti.narkotika']);
+        $query = BerantasUngkapKasus::with(['barangBukti.narkotika', 'tersangka']);
 
-        // --- FILTERING ---
-        
-        // Filter Satker
+        // 1. Filter Satker
         if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', (array)$request->satuan_kerja_id);
@@ -50,68 +50,133 @@ class PetaUngkapKasusController extends Controller
             $query->where('satuan_kerja_id', $user->getSatkerId());
         }
 
-        // Filter Waktu
+        // 2. Filter Bulan
         if ($request->filled('bulan')) {
             $query->whereIn(DB::raw('MONTH(tanggal_kejadian)'), (array)$request->bulan);
         }
-        $activeYears = $request->filled('tahun') ? (array)$request->tahun : [date('Y')];
-        $query->whereIn(DB::raw('YEAR(tanggal_kejadian)'), $activeYears);
 
-        // Filter Narkotika (Filter Parent berdasarkan Child)
-        if ($request->filled('narkotika_ids')) {
-            $query->whereHas('barangBukti', function($q) use ($request) {
-                $q->where('kategori', 'Narkotika')
-                  ->whereIn('narkotika_id', (array)$request->narkotika_ids);
-            });
+        // 3. Filter Tahun
+        $isFreshLoad = empty($request->all());
+        if ($isFreshLoad) {
+            $query->whereIn(DB::raw('YEAR(tanggal_kejadian)'), [date('Y')]);
+        } else {
+            $activeYears = $request->input('tahun', []);
+            if (!empty($activeYears)) {
+                $query->whereIn(DB::raw('YEAR(tanggal_kejadian)'), $activeYears);
+            }
         }
 
-        // Ambil Data
+        // 4. Filter Narkotika (AND/OR Logic)
+        if ($request->filled('narkotika_ids')) {
+            $ids = (array)$request->narkotika_ids;
+            $logic = $request->input('narkotika_logic', 'OR');
+
+            if ($logic === 'AND') {
+                foreach ($ids as $id) {
+                    $query->whereHas('barangBukti', function($q) use ($id) {
+                        $q->where('kategori', 'Narkotika')->where('narkotika_id', $id);
+                    });
+                }
+            } else {
+                $query->whereHas('barangBukti', function($q) use ($ids) {
+                    $q->where('kategori', 'Narkotika')->whereIn('narkotika_id', $ids);
+                });
+            }
+        }
+
+        // 5. Filter Pekerjaan (AND/OR Logic)
+        if ($request->filled('pekerjaan')) {
+            $jobs = (array)$request->pekerjaan;
+            $logic = $request->input('pekerjaan_logic', 'OR');
+
+            if ($logic === 'AND') {
+                foreach ($jobs as $job) {
+                    $query->whereHas('tersangka', function($q) use ($job) {
+                        $q->where('pekerjaan', $job);
+                    });
+                }
+            } else {
+                $query->whereHas('tersangka', function($q) use ($jobs) {
+                    $q->whereIn('pekerjaan', $jobs);
+                });
+            }
+        }
+
         $kasusCollection = $query->get();
 
-        // 2. Format Data untuk GeoJSON
+        // 6. Formatting GeoJSON
         $features = $kasusCollection->map(function($item) {
-            // Hitung Total Berat (Gram) untuk Radius Marker
             $totalBeratGram = 0;
-            $previewBarang = [];
-
+            $rawNarkoba = []; 
+            
+            // Proses BB
             foreach($item->barangBukti as $bb) {
                 if($bb->kategori === 'Narkotika') {
                     $qty = $bb->kuantitas;
-                    // Konversi ke Gram
                     if($bb->satuan_narkotika === 'Kg') $qty *= 1000;
                     if($bb->satuan_narkotika === 'Ton') $qty *= 1000000;
-                    
                     $totalBeratGram += $qty;
                     
-                    $namaNarko = $bb->narkotika->nama_narkotika ?? 'Narkotika';
-                    if(!in_array($namaNarko, $previewBarang)) $previewBarang[] = $namaNarko;
+                    $nama = $bb->narkotika->nama_narkotika ?? 'Lainnya';
+                    if(!isset($rawNarkoba[$nama])) $rawNarkoba[$nama] = 0;
+                    $rawNarkoba[$nama] += $qty; 
                 }
             }
+
+            // Proses Tersangka
+            $rawPekerjaan = [];
+            foreach($item->tersangka as $t) {
+                $rawPekerjaan[] = $t->pekerjaan ?? 'Tidak Diketahui';
+            }
+
+            // HTML Popup
+            arsort($rawNarkoba);
+            $htmlBarang = '<ul class="mb-2 ps-3 text-start small list-unstyled">';
+            if(!empty($rawNarkoba)) {
+                foreach($rawNarkoba as $k => $v) {
+                    $htmlBarang .= "<li>• <strong>{$k}</strong>: " . number_format($v, 0, ',', '.') . " g</li>";
+                }
+            } else {
+                $htmlBarang .= "<li class='text-muted fst-italic'>- Tidak ada BB -</li>";
+            }
+            $htmlBarang .= '</ul>';
+
+            $countPekerjaan = array_count_values($rawPekerjaan);
+            arsort($countPekerjaan);
+            $htmlTersangka = '<ul class="mb-0 ps-3 text-start small list-unstyled border-top pt-2">';
+            if(!empty($countPekerjaan)) {
+                $htmlTersangka .= "<li class='fw-bold text-secondary mb-1' style='font-size:0.7rem;'>TERSANGKA (" . count($rawPekerjaan) . ")</li>";
+                foreach($countPekerjaan as $k => $v) {
+                    $htmlTersangka .= "<li>• {$k}: <strong>{$v}</strong></li>";
+                }
+            } else {
+                $htmlTersangka .= "<li class='text-muted fst-italic'>- Tidak ada tsk -</li>";
+            }
+            $htmlTersangka .= '</ul>';
 
             return [
                 'type' => 'Feature',
                 'geometry' => [
                     'type' => 'Point',
-                    'coordinates' => [(float)$item->longitude, (float)$item->latitude] // GeoJSON urutannya: [Lng, Lat]
+                    'coordinates' => [(float)$item->longitude, (float)$item->latitude]
                 ],
                 'properties' => [
                     'id' => $item->id,
                     'lkn' => $item->nomor_lkn,
                     'tkp' => $item->alamat_tkp,
                     'tanggal' => $item->tanggal_kejadian->format('d/m/Y'),
-                    'berat_gram' => $totalBeratGram, // Value utama untuk visualisasi ukuran lingkaran
-                    'info_barang' => implode(', ', array_slice($previewBarang, 0, 2)) . (count($previewBarang)>2 ? '...' : ''),
+                    'bulan_angka' => (int)$item->tanggal_kejadian->format('m'),
+                    'berat_gram' => $totalBeratGram,
+                    'popup_html' => $htmlBarang . $htmlTersangka,
+                    'raw_narkoba' => $rawNarkoba,
+                    'raw_pekerjaan' => $rawPekerjaan
                 ]
             ];
         })->filter(function($f) {
-            // Pastikan koordinat valid agar tidak error di Leaflet
             return !empty($f['geometry']['coordinates'][0]) && !empty($f['geometry']['coordinates'][1]);
         })->values();
 
-        // 3. Hitung Statistik Footer
-        // Gunakan pluck ID untuk hitung relasi tersangka agar efisien
         $ids = $kasusCollection->pluck('id');
-        
         $stats = [
             'total_kasus' => $kasusCollection->count(),
             'total_tersangka' => BerantasUngkapTersangka::whereIn('berantas_ungkap_kasus_id', $ids)->count(),
@@ -125,20 +190,12 @@ class PetaUngkapKasusController extends Controller
         ]);
     }
 
-    /**
-     * HTML Partial: Detail Modal (Dipanggil saat klik marker)
-     */
     public function show($id)
     {
         $item = BerantasUngkapKasus::with([
-            'satuanKerja', 
-            'tersangka', 
-            'barangBukti.tersangka', 
-            'barangBukti.narkotika', 
-            'dokumen'
+            'satuanKerja', 'tersangka', 'barangBukti.tersangka', 'barangBukti.narkotika', 'dokumen'
         ])->findOrFail($id);
         
-        // Logika Grouping untuk Tabel Detail (Sama persis dengan Index)
         $evidenceGroups = $item->barangBukti->groupBy(function($bb) { 
             return $bb->tersangka->pluck('id')->sort()->values()->implode('-'); 
         });
@@ -146,7 +203,6 @@ class PetaUngkapKasusController extends Controller
         $suspectsWithEvidenceIds = $item->barangBukti->flatMap->tersangka->pluck('id')->unique()->toArray();
         $orphanSuspects = $item->tersangka->whereNotIn('id', $suspectsWithEvidenceIds);
         $showLabel = ($evidenceGroups->count() > 1);
-        
         $formatAngka = function($nilai) { return str_replace('.', ',', (string)(float)$nilai); };
 
         return view('berantas.peta-ungkap-kasus.show', compact('item', 'evidenceGroups', 'orphanSuspects', 'showLabel', 'formatAngka'));

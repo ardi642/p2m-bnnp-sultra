@@ -16,10 +16,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 class RegisterBarangBuktiExport implements FromCollection, WithHeadings, WithMapping, WithEvents, WithStyles
 {
     protected $query;
-    private $counter = 0;
     private $totals = [];
-    
-    // Variabel untuk menampung data yang sudah di-flatten (dipecah per item)
     private $flattenedData = [];
 
     public function __construct($query) {
@@ -27,47 +24,46 @@ class RegisterBarangBuktiExport implements FromCollection, WithHeadings, WithMap
         $this->prepareData();
     }
 
-    /**
-     * Memecah Data Register (Parent) menjadi baris-baris Item (Child)
-     * untuk memudahkan proses mapping dan merging.
-     */
     private function prepareData()
     {
         $registers = $this->query->get();
         $no = 1;
 
         foreach ($registers as $reg) {
-            // Jika register tidak punya item, tetap tampilkan 1 baris (kosong)
+            // Menggabungkan Alamat dengan Latitude & Longitude (Teks Lengkap)
+            $lokasiGabung = $reg->lokasi_perolehan ?? '-';
+            if (!empty($reg->latitude) && !empty($reg->longitude)) {
+                $lokasiGabung .= "\nLatitude: " . $reg->latitude . "\nLongitude: " . $reg->longitude;
+            }
+
             if ($reg->items->isEmpty()) {
                 $this->flattenedData[] = [
                     'no' => $no++,
                     'satker' => $reg->satuanKerja->satuan_kerja ?? '-',
                     'tanggal' => $reg->tanggal_perolehan->format('d/m/Y'),
-                    'lokasi' => $reg->lokasi_perolehan ?? '-',
+                    'lokasi' => $lokasiGabung,
                     'sumber' => '-',
                     'nama_barang' => '-',
+                    'modus' => '-',
                     'jumlah' => '-',
-                    'is_first_row' => true, // Penanda awal register (untuk merge)
+                    'is_first_row' => true,
                     'row_span' => 1
                 ];
                 continue;
             }
 
-            // Jika ada item, looping item
             $first = true;
             $countItems = $reg->items->count();
 
             foreach ($reg->items as $item) {
-                // Hitung Total Gram (Hanya Narkotika)
+                // Rekap Total Narkotika untuk Footer
                 if ($item->kategori === 'Narkotika') {
                     $qty = (float)$item->kuantitas;
-                    $satuan = $item->satuan;
+                    $satuan = $item->satuan_narkotika;
+                    $gram = ($satuan === 'Kg') ? $qty * 1000 : (($satuan === 'Ton') ? $qty * 1000000 : $qty);
                     
-                    $gram = $qty;
-                    if ($satuan === 'Kg') $gram = $qty * 1000;
-                    if ($satuan === 'Ton') $gram = $qty * 1000000;
-                    
-                    $key = strtoupper($item->nama_barang);
+                    $nama = ($item->narkotika->nama_narkotika ?? 'Narkotika');
+                    $key = strtoupper($nama);
                     if (!isset($this->totals[$key])) $this->totals[$key] = 0;
                     $this->totals[$key] += $gram;
                 }
@@ -76,18 +72,16 @@ class RegisterBarangBuktiExport implements FromCollection, WithHeadings, WithMap
                     'no' => $first ? $no++ : null,
                     'satker' => $first ? ($reg->satuanKerja->satuan_kerja ?? '-') : null,
                     'tanggal' => $first ? $reg->tanggal_perolehan->format('d/m/Y') : null,
-                    'lokasi' => $first ? ($reg->lokasi_perolehan ?? '-') : null,
+                    'lokasi' => $first ? $lokasiGabung : null,
                     
-                    // Kolom Item (Selalu Tampil)
                     'sumber' => $item->sumber_perolehan,
-                    'nama_barang' => $item->nama_barang,
-                    'jumlah' => (float)$item->kuantitas . ' ' . ucfirst($item->satuan),
+                    'nama_barang' => ($item->kategori === 'Narkotika') ? ($item->narkotika->nama_narkotika ?? '-') : $item->nama_barang_non_narkotika,
+                    'modus' => $item->modus_pengiriman ?? '-',
+                    'jumlah' => (float)$item->kuantitas . ' ' . ($item->kategori === 'Narkotika' ? $item->satuan_narkotika : $item->satuan_non_narkotika),
                     
-                    // Metadata Merging
                     'is_first_row' => $first,
                     'row_span' => $first ? $countItems : 0
                 ];
-
                 $first = false;
             }
         }
@@ -99,8 +93,14 @@ class RegisterBarangBuktiExport implements FromCollection, WithHeadings, WithMap
 
     public function headings(): array {
         return [
-            'NO', 'SATUAN KERJA', 'TANGGAL PEROLEHAN', 'LOKASI PEROLEHAN', 
-            'SUMBER', 'NAMA BARANG BUKTI', 'JUMLAH'
+            'NO', 
+            'SATUAN KERJA', 
+            'TANGGAL PEROLEHAN', 
+            'LOKASI & KOORDINAT', // Nama Kolom sesuai permintaan
+            'SUMBER', 
+            'NAMA BARANG BUKTI', 
+            'MODUS PENGIRIMAN', 
+            'JUMLAH / BERAT'
         ];
     }
 
@@ -112,13 +112,21 @@ class RegisterBarangBuktiExport implements FromCollection, WithHeadings, WithMap
             $row['lokasi'],
             $row['sumber'],
             $row['nama_barang'],
+            $row['modus'],
             $row['jumlah']
         ];
     }
 
     public function styles(Worksheet $sheet) {
         return [
-            1 => ['font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']], 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0000FF']], 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER]],
+            1 => [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']], 
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F81BD']], 
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER, 
+                    'vertical' => Alignment::VERTICAL_CENTER
+                ]
+            ],
         ];
     }
 
@@ -128,68 +136,63 @@ class RegisterBarangBuktiExport implements FromCollection, WithHeadings, WithMap
                 $sheet = $event->sheet;
                 $highestRow = $sheet->getHighestRow();
                 
-                // 1. LOGIKA MERGE VERTIKAL (PINTAR)
-                // Kita mulai dari baris ke-2 (karena baris 1 adalah Header)
                 $currentRow = 2; 
-
                 foreach ($this->flattenedData as $data) {
                     if ($data['is_first_row'] && $data['row_span'] > 1) {
                         $endRow = $currentRow + $data['row_span'] - 1;
-                        
-                        // Merge Kolom No
                         $sheet->mergeCells("A{$currentRow}:A{$endRow}");
-                        // Merge Kolom Satker
                         $sheet->mergeCells("B{$currentRow}:B{$endRow}");
-                        // Merge Kolom Tanggal
                         $sheet->mergeCells("C{$currentRow}:C{$endRow}");
-                        // Merge Kolom Lokasi
                         $sheet->mergeCells("D{$currentRow}:D{$endRow}");
                     }
                     $currentRow++;
                 }
 
-                // 2. Styling Data Table
-                $sheet->getStyle('A2:G' . $highestRow)->applyFromArray([
+                $sheet->getStyle('A1:H' . $highestRow)->applyFromArray([
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                    'alignment' => ['vertical' => Alignment::VERTICAL_TOP, 'wrapText' => true] // Align Top agar rapi saat merge
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_TOP, 
+                        'wrapText' => true // Agar baris baru (\n) berfungsi di dalam sel
+                    ]
                 ]);
                 
-                // Center Alignment untuk kolom tertentu
-                $sheet->getStyle("A2:A{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // No
-                $sheet->getStyle("C2:C{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Tanggal
-                $sheet->getStyle("E2:E{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER); // Sumber
+                // Alignment Tengah untuk kolom NO dan TANGGAL
+                $sheet->getStyle("A2:A{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("C2:C{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 
-                // 3. Lebar Kolom
+                // Lebar Kolom disesuaikan
                 $sheet->getColumnDimension('A')->setWidth(5);  
-                $sheet->getColumnDimension('B')->setWidth(30); 
-                $sheet->getColumnDimension('C')->setWidth(15); 
-                $sheet->getColumnDimension('D')->setWidth(30); 
-                $sheet->getColumnDimension('E')->setWidth(15); 
-                $sheet->getColumnDimension('F')->setWidth(35); 
-                $sheet->getColumnDimension('G')->setWidth(20); 
+                $sheet->getColumnDimension('B')->setWidth(25); 
+                $sheet->getColumnDimension('C')->setWidth(18); 
+                $sheet->getColumnDimension('D')->setWidth(45); // Diperlebar untuk Alamat + Latitude + Longitude
+                $sheet->getColumnDimension('E')->setWidth(18); 
+                $sheet->getColumnDimension('F')->setWidth(30); 
+                $sheet->getColumnDimension('G')->setWidth(25); 
+                $sheet->getColumnDimension('H')->setWidth(15); 
 
-                // 4. Footer Total
+                // Footer Total
                 $footerRow = $highestRow + 2;
                 $sheet->setCellValue('A' . $footerRow, 'TOTAL REKAPITULASI NARKOTIKA (GRAM)');
-                $sheet->mergeCells("A{$footerRow}:E{$footerRow}");
+                $sheet->mergeCells("A{$footerRow}:F{$footerRow}");
                 
                 $textTotal = [];
                 ksort($this->totals);
                 foreach ($this->totals as $jenis => $total) {
                     $textTotal[] = "$jenis: " . number_format($total, 2, ',', '.') . " Gram";
                 }
-                if(empty($textTotal)) $textTotal[] = "-";
-
-                $sheet->setCellValue('F' . $footerRow, implode("\n", $textTotal));
-                $sheet->mergeCells("F{$footerRow}:G{$footerRow}");
                 
-                $sheet->getStyle("A{$footerRow}:G{$footerRow}")->applyFromArray([
+                $sheet->setCellValue('G' . $footerRow, implode("\n", $textTotal ?: ['-']));
+                $sheet->mergeCells("G{$footerRow}:H{$footerRow}");
+                
+                $sheet->getStyle("A{$footerRow}:H{$footerRow}")->applyFromArray([
                     'font' => ['bold' => true],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E0E0E0']],
-                    'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E9ECEF']],
+                    'alignment' => [
+                        'vertical' => Alignment::VERTICAL_CENTER, 
+                        'wrapText' => true
+                    ],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]
                 ]);
-                $sheet->getRowDimension($footerRow)->setRowHeight(max(30, count($textTotal) * 15 + 20));
             }
         ];
     }

@@ -17,6 +17,9 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\RegisterBarangBuktiExport;
+use App\Models\Dokumen;
+use App\Services\DokumenService;
+use Illuminate\Support\Facades\Log;
 
 class RegisterBarangBuktiController extends Controller
 {
@@ -70,7 +73,7 @@ class RegisterBarangBuktiController extends Controller
         // Query Utama
         $query = BerantasRegisterBarangBukti::with([
             'satuanKerja', 
-            'dokumentasi',
+            'dokumen',
             'items' => $itemFilterScope, // Eager Load dengan filter (agar yang tampil di tabel hanya yg dicari)
             'items.narkotika'
         ]);
@@ -125,27 +128,52 @@ class RegisterBarangBuktiController extends Controller
     public function index(Request $request)
     {
         $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
+        // Ambil tahun dari model parent
         $years = BerantasRegisterBarangBukti::selectRaw('YEAR(tanggal_perolehan) as year')
             ->distinct()->orderBy('year', 'desc')->pluck('year');
         
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
 
+        // 1. Query untuk Tabel (Pagination) - Tetap pakai getQuery (Aman karena ada limit page)
         $query = $this->getQuery($request);
+        $data = $query->paginate($request->input('per_page', 10))->withQueryString();
 
-        // --- AGREGASI DATA (PERBAIKAN) ---
+        // 2. Query untuk Agregasi Statistik (OPTIMALISASI JOIN)
+        // Mulai dari Tabel Item -> Join ke Parent
+        $statsQuery = \App\Models\BerantasRegisterBarangBuktiItem::query()
+            ->join('berantas_register_barang_bukti as parent', 'berantas_register_barang_bukti_items.register_barang_bukti_id', '=', 'parent.id');
+
+        // --- A. Terapkan Filter PARENT pada StatsQuery (pakai alias 'parent') ---
         
-        $totalRegister = $query->count();
-        $subQueryRegister = $query->clone()->reorder()->select('berantas_register_barang_bukti.id');
+        // Filter Satuan Kerja
+        if (!Auth::user()->isAdmin()) {
+            $statsQuery->where('parent.satuan_kerja_id', Auth::user()->getSatkerId());
+        } elseif ($request->filled('satuan_kerja_id')) {
+            $statsQuery->whereIn('parent.satuan_kerja_id', (array)$request->satuan_kerja_id);
+        }
 
-        // Buat Base Query untuk Item agar filter Item konsisten dengan Tabel
-        // Kita filter item berdasarkan Parent yang lolos filter, DAN filter item itu sendiri
-        $baseItemQuery = \App\Models\BerantasRegisterBarangBuktiItem::query()
-            ->whereIn('register_barang_bukti_id', $subQueryRegister);
+        // Filter Waktu
+        if ($request->filled('bulan')) {
+            $statsQuery->whereIn(DB::raw('MONTH(parent.tanggal_perolehan)'), (array)$request->bulan);
+        }
+        $filterYears = $request->filled('tahun') ? (array)$request->tahun : [date('Y')];
+        $statsQuery->whereIn(DB::raw('YEAR(parent.tanggal_perolehan)'), $filterYears);
 
-        // Terapkan filter Item yang sama dengan yang ada di getQuery
+        // Filter Search Global (Logic gabungan Parent & Child)
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $statsQuery->where(function($q) use ($s) {
+                $q->where('parent.lokasi_perolehan', 'LIKE', "%{$s}%") // Kolom Parent
+                  ->orWhere('berantas_register_barang_bukti_items.nama_barang_non_narkotika', 'LIKE', "%{$s}%") // Kolom Child
+                  ->orWhereHas('narkotika', fn($nq) => $nq->where('nama_narkotika', 'LIKE', "%{$s}%")); // Relasi Child
+            });
+        }
+
+        // --- B. Terapkan Filter ITEM pada StatsQuery ---
+        
         if ($request->filled('kategori_bb')) {
             $categories = (array)$request->kategori_bb;
-            $baseItemQuery->where(function($q) use ($categories, $request) {
+            $statsQuery->where(function($q) use ($categories, $request) {
                 if (in_array('Narkotika', $categories)) {
                     $q->orWhere(function($narkoQ) use ($request) {
                         $narkoQ->where('kategori', 'Narkotika');
@@ -158,7 +186,11 @@ class RegisterBarangBuktiController extends Controller
                     $q->orWhere(function($nonQ) use ($request) {
                         $nonQ->where('kategori', 'Non-Narkotika');
                         if ($request->filled('search_non_narkotika')) {
-                            $nonQ->where(fn($textQ) => collect((array)$request->search_non_narkotika)->each(fn($k) => $textQ->orWhere('nama_barang_non_narkotika', 'LIKE', "%{$k}%")));
+                            $nonQ->where(function($textQ) use ($request) {
+                                foreach ((array)$request->search_non_narkotika as $keyword) {
+                                    $textQ->orWhere('nama_barang_non_narkotika', 'LIKE', "%{$keyword}%");
+                                }
+                            });
                         }
                     });
                 }
@@ -166,14 +198,17 @@ class RegisterBarangBuktiController extends Controller
         }
 
         if ($request->filled('sumber_perolehan')) {
-            $baseItemQuery->whereIn('sumber_perolehan', (array)$request->sumber_perolehan);
+            $statsQuery->whereIn('sumber_perolehan', (array)$request->sumber_perolehan);
         }
 
-        // 1. Total Barang Bukti Narkotika (Hanya yang lolos filter)
-        $totalBBNarkotika = (clone $baseItemQuery)->where('kategori', 'Narkotika')->count();
+        // --- C. Hitung Statistik (Query Cepat) ---
 
-        // 2. Total Berat Narkotika (Hanya yang lolos filter)
-        $totalBeratGram = (clone $baseItemQuery)
+        // 1. Total Barang Bukti Narkotika
+        // Gunakan clone agar query dasar tidak berubah
+        $totalBBNarkotika = (clone $statsQuery)->where('kategori', 'Narkotika')->count();
+
+        // 2. Total Berat Konversi ke Gram
+        $totalBeratGram = (clone $statsQuery)
             ->where('kategori', 'Narkotika')
             ->selectRaw("SUM(
                 CASE 
@@ -183,28 +218,23 @@ class RegisterBarangBuktiController extends Controller
                 END
             ) as total_gram")->value('total_gram') ?? 0;
 
-        // 3. Agregasi Sumber Perolehan (Hanya yang lolos filter & kategori Narkotika)
-        $sumberStats = (clone $baseItemQuery)
+        // 3. Statistik Sumber Perolehan
+        $sumberStats = (clone $statsQuery)
             ->where('kategori', 'Narkotika')
             ->select('sumber_perolehan', DB::raw('count(*) as total'))
-            ->groupBy('sumber_perolehan')
+            ->groupBy('sumber_perolehan') // Group by langsung di database, sangat cepat
             ->pluck('total', 'sumber_perolehan');
             
         $totalItemsNarkotika = $sumberStats->sum();
         $totalTangkap = $sumberStats['Hasil Tangkap'] ?? 0;
         $totalTemuan = $sumberStats['Temuan'] ?? 0;
         
-        // Hitung Persentase
         $persenTangkap = $totalItemsNarkotika > 0 ? round(($totalTangkap / $totalItemsNarkotika) * 100, 1) : 0;
         $persenTemuan = $totalItemsNarkotika > 0 ? round(($totalTemuan / $totalItemsNarkotika) * 100, 1) : 0;
 
-        // --- END AGREGASI ---
-        
-        $perPage = $request->input('per_page', 10);
-        if (!in_array($perPage, [10, 25, 50, 100])) $perPage = 10;
+        // Total Register (Header) diambil dari pagination metadata saja agar hemat query
+        $totalRegister = $data->total(); 
 
-        $data = $query->paginate($perPage)->withQueryString();
-        
         return view('berantas.register-barang-bukti.index', compact(
             'data', 'satuanKerjas', 'years', 'masterNarkotika',
             'totalRegister', 'totalBBNarkotika', 'totalBeratGram', 
@@ -222,7 +252,7 @@ class RegisterBarangBuktiController extends Controller
         return view('berantas.register-barang-bukti.create', compact('masterNarkotika', 'satuanKerjas'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, DokumenService $dokumenService)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
@@ -230,10 +260,13 @@ class RegisterBarangBuktiController extends Controller
         $validator = Validator::make($request->all(), [
             'tanggal_perolehan' => 'required|date',
             'lokasi_perolehan'  => 'nullable|string',
+            'latitude'          => 'required|numeric',
+            'longitude'         => 'required|numeric',
             
             // Validasi Items
             'items'                     => 'required|array|min:1',
             'items.*.kategori'          => 'required|in:Narkotika,Non-Narkotika',
+            'items.*.modus_pengiriman'  => 'nullable|string',
             'items.*.sumber_perolehan'  => 'required|in:Hasil Tangkap,Temuan',
             'items.*.jumlah'            => 'required|numeric|min:0',
             
@@ -246,8 +279,10 @@ class RegisterBarangBuktiController extends Controller
             // Validasi Kondisional Non-Narkotika
             'items.*.satuan_non_narkotika' => 'nullable|required_if:items.*.kategori,Non-Narkotika|string',
             
-            // Validasi File
-            'dokumentasi'   => 'nullable|array',
+            'dokumentasi'       => 'nullable|array',
+            'lampiran'          => 'nullable|array',
+            'dokumentasi_links' => 'nullable|array',
+            'lampiran_links'    => 'nullable|array',
         ]);
 
         if ($user->isAdmin()) {
@@ -269,7 +304,7 @@ class RegisterBarangBuktiController extends Controller
 
         if ($validator->fails()) return back()->withErrors($validator)->withInput();
 
-        $filesMoved = []; // Untuk rollback
+        $uploadedPaths = []; 
 
         DB::beginTransaction();
 
@@ -279,6 +314,8 @@ class RegisterBarangBuktiController extends Controller
                 'satuan_kerja_id'   => $user->isAdmin() ? $request->satuan_kerja_id : $user->getSatkerId(),
                 'tanggal_perolehan' => $request->tanggal_perolehan,
                 'lokasi_perolehan'  => $request->lokasi_perolehan,
+                'latitude'          => $request->latitude,
+                'longitude'         => $request->longitude,
             ]);
 
             // 2. Simpan Item Barang Bukti
@@ -286,6 +323,7 @@ class RegisterBarangBuktiController extends Controller
                 $register->items()->create([
                     'kategori'                  => $item['kategori'],
                     'sumber_perolehan'          => $item['sumber_perolehan'],
+                    'modus_pengiriman'          => $item['modus_pengiriman'] ?? null,
                     'narkotika_id'              => $item['kategori'] == 'Narkotika' ? $item['narkotika_id'] : null,
                     'nama_barang_non_narkotika' => $item['kategori'] == 'Non-Narkotika' ? $item['nama_barang_non_narkotika'] : null,
                     'kuantitas'                 => $item['jumlah'],
@@ -294,57 +332,25 @@ class RegisterBarangBuktiController extends Controller
                 ]);
             }
 
-            // 3. Simpan Dokumentasi (Move from Temp)
-            if ($request->filled('dokumentasi')) {
-                foreach ($request->input('dokumentasi') as $folder) {
-                    $tempFile = TemporaryFile::where('folder', $folder)->first();
-
-                    if ($tempFile) {
-                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        $mimeType = Storage::mimeType($sourcePath);
-                        $size = Storage::size($sourcePath);
-
-                        $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                        $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
-                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
-
-                        // Path Tujuan
-                        $destinationPath = 'dokumentasi/register-barang-bukti/' . date('Y') . '/' . $cleanFileName;
-
-                        if (Storage::exists($sourcePath)) {
-                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
-                            $filesMoved[] = $destinationPath;
-
-                            $register->dokumentasi()->create([
-                                'nama_file_asli' => $tempFile->filename,
-                                'path_file'      => $destinationPath,
-                                'tipe_file'      => $mimeType,
-                                'ukuran_file'    => $size
-                            ]);
-
-                            Storage::deleteDirectory('public/tmp/' . $folder);
-                            $tempFile->delete();
-                        }
-                    }
-                }
-            }
+            if ($request->filled('dokumentasi')) $dokumenService->moveToPermanent($request->input('dokumentasi'), $register, 'dokumentasi', $uploadedPaths);
+            if ($request->filled('lampiran')) $dokumenService->moveToPermanent($request->input('lampiran'), $register, 'lampiran', $uploadedPaths);
+            if ($request->filled('dokumentasi_links')) $dokumenService->saveLinks($request->input('dokumentasi_links'), $register, 'dokumentasi');
+            if ($request->filled('lampiran_links')) $dokumenService->saveLinks($request->input('lampiran_links'), $register, 'lampiran');
 
             DB::commit();
             return redirect()->route('berantas.register-barang-bukti.index')->with('success', 'Data berhasil disimpan.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            // Hapus file fisik jika gagal simpan DB
-            foreach ($filesMoved as $path) {
-                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
-            }
-            return back()->with('error', 'Gagal menyimpan: ' . $e->getMessage())->withInput();
+            foreach ($uploadedPaths as $path) Storage::disk('public')->delete($path);
+            Log::error('Store Kasus Error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal: ' . $e->getMessage())->withInput();
         }
     }
 
     public function edit($id)
     {
-        $register = BerantasRegisterBarangBukti::with(['items', 'dokumentasi'])->findOrFail($id);
+        $register = BerantasRegisterBarangBukti::with(['items', 'dokumen'])->findOrFail($id);
         /** @var \App\Models\User $user */
         $user = Auth::user();
         
@@ -358,7 +364,7 @@ class RegisterBarangBuktiController extends Controller
         return view('berantas.register-barang-bukti.edit', compact('register', 'masterNarkotika', 'satuanKerjas'));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, DokumenService $dokumenService, $id)
     {
         $register = BerantasRegisterBarangBukti::findOrFail($id);
         /** @var \App\Models\User $user */
@@ -371,9 +377,12 @@ class RegisterBarangBuktiController extends Controller
         $validator = Validator::make($request->all(), [
             'tanggal_perolehan' => 'required|date',
             'lokasi_perolehan'  => 'nullable|string',
+            'latitude'          => 'required|numeric',
+            'longitude'         => 'required|numeric',
             
             'items'                     => 'required|array|min:1',
             'items.*.kategori'          => 'required|in:Narkotika,Non-Narkotika',
+            'items.*.modus_pengiriman'  => 'nullable|string',
             'items.*.sumber_perolehan'  => 'required|in:Hasil Tangkap,Temuan',
             'items.*.jumlah'            => 'required|numeric|min:0',
             
@@ -384,8 +393,12 @@ class RegisterBarangBuktiController extends Controller
             ],
             'items.*.satuan_non_narkotika' => 'nullable|required_if:items.*.kategori,Non-Narkotika|string',
             
-            'delete_files'   => 'nullable|array',
-            'dokumentasi'    => 'nullable|array',
+            'delete_files' => 'nullable|array', 
+            'dokumentasi' => 'nullable|array',
+            'lampiran' => 'nullable|array',
+            'dokumentasi_links' => 'nullable|array',
+            'lampiran_links' => 'nullable|array',
+
         ]);
 
         if ($user->isAdmin()) {
@@ -417,6 +430,8 @@ class RegisterBarangBuktiController extends Controller
             $updateData = [
                 'tanggal_perolehan' => $request->tanggal_perolehan,
                 'lokasi_perolehan'  => $request->lokasi_perolehan,
+                'latitude'          => $request->latitude,
+                'longitude'         => $request->longitude,
             ];
             if ($user->isAdmin()) {
                 $updateData['satuan_kerja_id'] = $request->satuan_kerja_id;
@@ -431,6 +446,7 @@ class RegisterBarangBuktiController extends Controller
                     'kategori'                  => $item['kategori'],
                     'sumber_perolehan'          => $item['sumber_perolehan'],
                     'narkotika_id'              => $item['kategori'] == 'Narkotika' ? $item['narkotika_id'] : null,
+                    'modus_pengiriman'          => $item['modus_pengiriman'] ?? null,
                     'nama_barang_non_narkotika' => $item['kategori'] == 'Non-Narkotika' ? $item['nama_barang_non_narkotika'] : null,
                     'kuantitas'                 => $item['jumlah'],
                     'satuan_narkotika'          => $item['kategori'] == 'Narkotika' ? $item['satuan_narkotika'] : null,
@@ -438,91 +454,80 @@ class RegisterBarangBuktiController extends Controller
                 ]);
             }
 
-            // 3. Hapus File yang ditandai
+            // Hapus Dokumen Lama
             if ($request->has('delete_files')) {
-                $filesToRemove = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
+                $filesToRemove = Dokumen::whereIn('id', $request->delete_files)->get();
                 foreach ($filesToRemove as $file) {
-                    $filesToDelete[] = $file->path_file;
+                    if (!$file->is_link) $filesToDelete[] = $file->path_file;
                     $file->delete();
                 }
             }
 
-            // 4. Upload File Baru
             if ($request->filled('dokumentasi')) {
-                foreach ($request->input('dokumentasi') as $folder) {
-                    $tempFile = TemporaryFile::where('folder', $folder)->first();
-                    if ($tempFile) {
-                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        $mimeType = Storage::mimeType($sourcePath);
-                        $size = Storage::size($sourcePath);
-
-                        $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                        $nameOnly = pathinfo($tempFile->filename, PATHINFO_FILENAME);
-                        $cleanFileName = time() . '_' . uniqid() . '_' . Str::slug($nameOnly) . '.' . $ext;
-
-                        $destinationPath = 'dokumentasi/register-barang-bukti/' . date('Y') . '/' . $cleanFileName;
-
-                        if (Storage::exists($sourcePath)) {
-                            Storage::disk('public')->put($destinationPath, Storage::readStream($sourcePath));
-                            $newFilesMoved[] = $destinationPath;
-
-                            $register->dokumentasi()->create([
-                                'nama_file_asli' => $tempFile->filename,
-                                'path_file'      => $destinationPath,
-                                'tipe_file'      => $mimeType,
-                                'ukuran_file'    => $size
-                            ]);
-
-                            Storage::deleteDirectory('public/tmp/' . $folder);
-                            $tempFile->delete();
-                        }
-                    }
-                }
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $register, 'dokumentasi', $newFilesMoved);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $register, 'lampiran', $newFilesMoved);
+            }
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $register, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $register, 'lampiran');
             }
 
             DB::commit();
-
-            // Cleanup Fisik File Lama
-            foreach ($filesToDelete as $path) {
-                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            foreach ($filesToDelete ?? [] as $path) {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
             }
 
             return redirect()->route('berantas.register-barang-bukti.index')->with('success', 'Data berhasil diperbarui.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            // Cleanup Fisik File Baru (jika gagal)
             foreach ($newFilesMoved as $path) {
-                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
             }
-            return back()->with('error', 'Gagal update: ' . $e->getMessage())->withInput();
+            Log::error('Update error: ' . $e->getMessage());
+            abort(500, 'Server Error.');
         }
     }
 
-    public function destroy($id)
+    public function destroy($id) 
     {
         $register = BerantasRegisterBarangBukti::with('dokumentasi')->findOrFail($id);
-        
         $filesToDelete = [];
-        foreach ($register->dokumentasi as $doc) {
-            $filesToDelete[] = $doc->path_file;
+        foreach ($register->dokumen()->cursor() as $doc) {
+            if (!$doc->is_link && !empty($doc->path_file)) {
+                $filesToDelete[] = $doc->path_file;
+            }
         }
 
         DB::beginTransaction();
         try {
             $register->delete(); 
-            DB::commit();
-
-            // Cleanup Fisik
-            foreach ($filesToDelete as $path) {
-                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
-            }
-
-            return back()->with('success', 'Data berhasil dihapus.');
+            DB::commit(); 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal hapus: ' . $e->getMessage());
+            dd($e);
+            return back()
+                ->with('error', 'destroy')
+                ->with('message', 'Gagal menghapus data: ' . $e->getMessage());
         }
+
+        foreach ($filesToDelete as $path) {
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+
+        return redirect()->back()
+            ->with('success', 'Data dan file berhasil dihapus')
+            ->with('message', 'Data dan file berhasil dihapus.');
     }
 
     public function export(Request $request)

@@ -14,6 +14,9 @@ return new class extends Migration
             $table->unsignedBigInteger('satuan_kerja_id');
             $table->date('tanggal_perolehan');
             $table->text('lokasi_perolehan')->nullable();
+            // Koordinat
+            $table->decimal('latitude', 10, 7)->nullable();
+            $table->decimal('longitude', 10, 7)->nullable();
             $table->timestamps();
 
             $table->foreign('satuan_kerja_id')->references('id')->on('satuan_kerja')->onDelete('cascade');
@@ -32,6 +35,8 @@ return new class extends Migration
             $table->enum('sumber_perolehan', ['Hasil Tangkap', 'Temuan'])->default('Hasil Tangkap');
 
             $table->enum('kategori', ['Narkotika', 'Non-Narkotika']);
+
+            $table->string('modus_pengiriman')->nullable();
             
             $table->unsignedBigInteger('narkotika_id')->nullable();
             $table->foreign('narkotika_id', 'reg_bb_items_narko_fk')

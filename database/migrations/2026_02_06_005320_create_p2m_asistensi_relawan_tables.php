@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         // 1. Tabel Utama
-        Schema::create('p2m_informasi_edukasi', function (Blueprint $table) {
+        Schema::create('p2m_asistensi_relawan', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('satuan_kerja_id');
             $table->foreign('satuan_kerja_id')
@@ -30,42 +30,41 @@ return new class extends Migration
         });
 
         // 2. Tabel Pivot untuk Pegawai (Many-to-Many)
-        Schema::create('pegawai_p2m_informasi_edukasi', function (Blueprint $table) {
+        Schema::create('pegawai_p2m_asistensi_relawan', function (Blueprint $table) {
             $table->id();
-            
-            // Foreign Key ke Kegiatan
-            $table->unsignedBigInteger('p2m_informasi_edukasi_id');
-            $table->foreign('p2m_informasi_edukasi_id', 'fk_pegawai_info_edu_kegiatan') // Nama constraint dipendekkan agar tidak error
-                  ->references('id')
-                  ->on('p2m_informasi_edukasi')
-                  ->onDelete('cascade');
+            // 1. Relasi ke Kegiatan (Masih pakai ID/Integer standar)
+            $table->foreignId('p2m_asistensi_relawan_id')
+                ->constrained('p2m_asistensi_relawan')
+                ->onDelete('cascade');
 
-            // Foreign Key ke Pegawai (NIP string)
+            // 2. Relasi ke Pegawai (HARUS STRING karena NIP adalah String)
             $table->string('pegawai_nip');
-            $table->foreign('pegawai_nip', 'fk_pegawai_info_edu_nip')
-                  ->references('nip')
-                  ->on('pegawai')
-                  ->onDelete('cascade')
-                  ->onUpdate('cascade');
-            
-            // History Satker saat input
+
+            // Definisikan Foreign Key secara manual
+            $table->foreign('pegawai_nip')
+                ->references('nip') // Mengacu ke kolom 'nip'
+                ->on('pegawai')     // Di tabel 'pegawai'
+                ->onDelete('cascade');
+
+
+            //  HISTORY SATKER (SNAPSHOT) - INI YANG BARU
+            // Disimpan nullable jaga-jaga, onDelete set null agar history aman meski satker master dihapus
             $table->unsignedBigInteger('saved_satuan_kerja_id')->nullable();
             $table->foreign('saved_satuan_kerja_id')
                 ->references('id')
                 ->on('satuan_kerja')
                 ->onDelete('set null');
-            
+
             $table->timestamps();
-            $table->unique(['p2m_informasi_edukasi_id', 'pegawai_nip'], 'unique_kegiatan_pegawai');
+            // Opsional: Mencegah duplikasi (satu pegawai tidak bisa input 2x di kegiatan yang sama)
+            $table->unique(['p2m_asistensi_relawan_id', 'pegawai_nip'], 'unique_kegiatan_pegawai');
         });
+
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('pegawai_p2m_informasi_edukasi');
-        Schema::dropIfExists('p2m_informasi_edukasi');
+        Schema::dropIfExists('pegawai_p2m_asistensi_relawan');
+        Schema::dropIfExists('p2m_asistensi_relawan');
     }
 };

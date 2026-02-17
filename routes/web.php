@@ -35,6 +35,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Rehab\RehabLaporanController;
 use App\Http\Controllers\TemporaryFileController;
 use App\Http\Controllers\DokumenController;
+use App\Http\Controllers\P2m\AsistensiRelawanController;
+use App\Http\Controllers\P2m\IkanController;
 use App\Http\Controllers\P2m\InformasiEdukasiController;
 use App\Http\Controllers\P2m\MonevController;
 use App\Http\Controllers\P2m\PemetaanSdmSdaController;
@@ -172,6 +174,12 @@ Route::middleware('auth')->group(function() {
             // Safari Religi
             Route::get('/safari-religi', [SafariReligiController::class, 'index'])->name("safari-religi.index");
             Route::get('/safari-religi/export', [SafariReligiController::class, 'export'])->name('safari-religi.export');
+            // IKAN
+            Route::get('/ikan', [IkanController::class, 'index'])->name("ikan.index");
+            Route::get('/ikan/export', [IkanController::class, 'export'])->name('ikan.export');
+            // Asistensi Relawan
+            Route::get('/asistensi-relawan', [AsistensiRelawanController::class, 'index'])->name("asistensi-relawan.index");
+            Route::get('/asistensi-relawan/export', [AsistensiRelawanController::class, 'export'])->name('asistensi-relawan.export');
             // Safari Religi
             Route::get('/pelatihan', [PelatihanController::class, 'index'])->name("pelatihan.index");
             Route::get('/pelatihan/export', [PelatihanController::class, 'export'])->name('pelatihan.export');
@@ -214,6 +222,10 @@ Route::middleware('auth')->group(function() {
             Route::resource('desa-kelurahan-bersinar', DesaKelurahanBersinarController::class)->except(['index', 'show']);
             // Safari Religi CRUD
             Route::resource('safari-religi', SafariReligiController::class)->except(['index', 'show']);
+            // IKAN
+            Route::resource('ikan', IkanController::class)->except(['index', 'show']);
+            // Asistensi Relawan
+            Route::resource('asistensi-relawan', AsistensiRelawanController::class)->except(['index', 'show']);
             // Pelatihan CRUD
             Route::resource('pelatihan', PelatihanController::class)->except(['index', 'show']);
              // Ketahanan Keluarga CRUD

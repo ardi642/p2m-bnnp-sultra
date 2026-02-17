@@ -50,8 +50,13 @@ return new class extends Migration
             
             // History Satker saat input
             $table->unsignedBigInteger('saved_satuan_kerja_id')->nullable();
+            $table->foreign('saved_satuan_kerja_id')
+                ->references('id')
+                ->on('satuan_kerja')
+                ->onDelete('set null');
             
             $table->timestamps();
+            $table->unique(['p2m_pemetaan_sdm_sda_id', 'pegawai_nip'], 'unique_kegiatan_pegawai');
         });
     }
 

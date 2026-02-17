@@ -74,6 +74,7 @@ return new class extends Migration
                 ->onDelete('set null');
 
             $table->timestamps();
+            $table->unique(['p2m_desa_kelurahan_bersinar_id', 'pegawai_nip'], 'unique_kegiatan_pegawai');
         });
     }
 

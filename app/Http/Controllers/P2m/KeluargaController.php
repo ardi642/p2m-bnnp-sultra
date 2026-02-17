@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers\P2m;
 
-use App\Models\P2mOnline;
-use App\Exports\OnlineExport;
-use App\Models\DokumentasiKegiatan;
 use App\Http\Controllers\Controller;
-use App\Models\P2mSosialisasi;
+use App\Models\P2mKeluarga;
 use App\Models\SatuanKerja;
 use App\Models\Pegawai;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
-use App\Exports\SosialisasiExport;
+use App\Exports\KeluargaExport;
 use App\Helpers\SearchHelper;
 use App\Models\Dokumen;
 use App\Models\TemporaryFile;
@@ -23,71 +20,105 @@ use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
 
-
-class OnlineController extends Controller
+class KeluargaController extends Controller
 {
+    // --- QUERY BUILDER (SAMA PERSIS) ---
     private function getFilteredQuery(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
+        
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
         
-        $query = P2mOnline::with('satuanKerja');
+        $query = P2mKeluarga::with('pegawai.satuanKerja', 'satuanKerja');
 
+        // Filter Satker
         if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
             }
         } else {
-            $query->where('satuan_kerja_id', $user->getSatkerId());
+            $satkerId = $user->getSatkerId();
+            $query->where('satuan_kerja_id', $satkerId);
         }
 
+        // Filter Bulan
         if ($request->filled('bulan')) {
             $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
-                    $q->orWhereMonth('tanggal_mulai_pelaksanaan', $b);
+                    $q->orWhereMonth('tanggal_pelaksanaan', $b);
                 }
             });
         }
 
+        // Filter Tahun
         $query->where(function($q) use ($activeYears) {
             foreach ($activeYears as $y) {
-                $q->orWhereYear('tanggal_mulai_pelaksanaan', $y);
+                $q->orWhereYear('tanggal_pelaksanaan', $y);
             }
         });
 
+        // Filter Anggaran
         if ($request->filled('anggaran_pelaksanaan')) {
             $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
         }
 
-        if ($request->filled('jenis_media')) {
-            $query->whereIn('jenis_media', $request->jenis_media);
+        // Filter Sasaran
+        if ($request->filled('sasaran_kegiatan')) {
+            $query->whereIn('sasaran_kegiatan', $request->sasaran_kegiatan);
+        }
+        
+        // Filter Pegawai
+        if ($request->filled('pegawai_nips')) {
+            $nips = $request->pegawai_nips;
+            $logic = $request->input('pegawai_logic', 'OR');
+            if ($logic === 'AND') {
+                foreach ($nips as $nip) {
+                    $query->whereHas('pegawai', function($q) use ($nip) {
+                        $q->where('pegawai.nip', $nip);
+                    });
+                }
+            } else {
+                $query->whereHas('pegawai', function($q) use ($nips) {
+                    $q->whereIn('pegawai.nip', $nips);
+                });
+            }
         }
 
+        // Search
         if ($request->filled('search')) {
             $search = $request->search;
             $searchDate = SearchHelper::translateDateInput($search);
             $query->where(function($q) use ($search, $searchDate) {
-                $q->where('nama_media', 'LIKE', "%{$search}%")
-                    ->orWhere('jenis_media', 'LIKE', "%{$search}%")
+                $q->where('nama_kegiatan', 'LIKE', "%{$search}%")
+                    ->orWhere('tempat_kegiatan', 'LIKE', "%{$search}%")
+                    ->orWhere('sasaran_kegiatan', 'LIKE', "%{$search}%")
                     ->orWhere('anggaran_pelaksanaan', 'LIKE', "%{$search}%")
-                    ->orWhere('durasi_pelaksanaan', 'LIKE', "%{$search}%")
-                    ->orWhereHas('satuanKerja', function($subQ) use ($search) { 
-                        $subQ->where('satuan_kerja', 'LIKE', "%{$search}%"); 
+                    ->orWhere('jumlah_peserta', 'LIKE', "%{$search}%")
+                    ->orWhereHas('satuanKerja', function($subQ) use ($search) {
+                        $subQ->where('satuan_kerja', 'LIKE', "%{$search}%");
+                    })
+                    ->orWhereHas('pegawai', function($subQ) use ($search) {
+                        $subQ->where('nama', 'LIKE', "%{$search}%");
                     });
-                $q->orWhereRaw("LOWER(DATE_FORMAT(tanggal_mulai_pelaksanaan, '%W, %d %M %Y')) LIKE ?", ["%{$searchDate}%"]);
+
+                // Search Date
+                $q->orWhereRaw("LOWER(DATE_FORMAT(tanggal_pelaksanaan, '%W, %d %M %Y')) LIKE ?", ["%{$searchDate}%"]);
             });
         }
 
+        // Sorting
         $sortBy = $request->input('sort_by', 'created_at');
-        $sortOrder = $request->input('sort_order', 'desc');
-        $allowSort = ['jenis_media', 'nama_media', 'tanggal_mulai_pelaksanaan', 'durasi_pelaksanaan', 'created_at', 'satuan_kerja', 'anggaran_pelaksanaan'];
+        $rawSortOrder = $request->input('sort_order', 'desc');
+        $sortOrder = in_array(strtolower($rawSortOrder), ['asc', 'desc']) ? strtolower($rawSortOrder) : 'desc';
+
+        $allowSort = ['anggaran_pelaksanaan', 'nama_kegiatan', 'sasaran_kegiatan', 'tanggal_pelaksanaan', 'tempat_kegiatan', 'jumlah_peserta', 'created_at', 'satuan_kerja'];
 
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {
-                $query->join('satuan_kerja', 'p2m_online.satuan_kerja_id', '=', 'satuan_kerja.id')
+                $query->join('satuan_kerja', 'p2m_keluarga.satuan_kerja_id', '=', 'satuan_kerja.id')
                         ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
-                        ->select('p2m_online.*');
+                        ->select('p2m_keluarga.*');
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }
@@ -98,66 +129,78 @@ class OnlineController extends Controller
         return $query;
     }
 
-    public function index(Request $request): View {
+    public function index(Request $request): View 
+    {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
         if ($user->hasRole('admin')) {
+            $pegawais = Pegawai::orderBy('nama', 'asc')->get(['nip', 'nama']);
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
         } else {
+            $satkerId = $user->getSatkerId();
+            $pegawais = Pegawai::where('satuan_kerja_id', $satkerId)->orderBy('nama', 'asc')->get(['nip', 'nama']);
             $satuanKerjas = [];
         }
 
-        $yearQuery = P2mOnline::selectRaw('YEAR(tanggal_mulai_pelaksanaan) as year');
-        if ($user->hasRole(['operator_satker', 'operator_p2m'])) { $yearQuery->where('satuan_kerja_id', $user->getSatkerId()); }
+        $yearQuery = P2mKeluarga::selectRaw('YEAR(tanggal_pelaksanaan) as year');
+
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
+            $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
+        }
+
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
 
         $query = $this->getFilteredQuery($request);
 
         $statsQuery = clone $query;
         $totalKegiatan = $statsQuery->count();
-        $totalDurasi = $statsQuery->sum('durasi_pelaksanaan');
+        $totalPeserta = $statsQuery->sum('jumlah_peserta');
 
+        // PENTING: Eager load dokumentasi
         $query->with('dokumen');
 
-        $perPage = $request->input('per_page', 10);
-        if (!in_array($perPage, [10, 25, 50, 100])) { $perPage = 10; }
-        
-        $datas = $query->paginate($perPage)->withQueryString(); 
-        $mediaOptions = P2mOnline::getJenisMediaOptions();
+        $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : 10;
+        $keluargas = $query->paginate($perPage)->withQueryString();
 
-        return view('p2m.online.index', compact('datas', 'satuanKerjas', 'years', 'user', 'mediaOptions', 'totalKegiatan', 'totalDurasi'));
+        $satkerLookup = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
+                        
+        return view('p2m.keluarga.index', compact('keluargas', 'satuanKerjas', 'years', 'pegawais', 'user', 'satkerLookup', 'totalKegiatan', 'totalPeserta'));
     }
 
-    public function export(Request $request) 
+    public function create(): View 
     {
-        $query = $this->getFilteredQuery($request);
-        return Excel::download(new OnlineExport($query), 'Laporan_P2M_Media_Online.xlsx');
-    }
-
-    public function create(): View {
         /** @var \App\Models\User $user */
         $user = Auth::user();
+
         if ($user->isAdmin()) {
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+            $pegawais = Pegawai::with('satuanKerja')->orderBy('nama', 'asc')->get();
         } else {
             $satuanKerjas = [];
+            $satkerId = $user->getSatkerId();
+            $pegawais = Pegawai::with('satuanKerja')->where('satuan_kerja_id', $satkerId)->orderBy('nama', 'asc')->get();
         }
-        $mediaOptions = P2mOnline::getJenisMediaOptions();
-        return view('p2m.online.create', compact('satuanKerjas', 'mediaOptions'));
+
+        return view('p2m.keluarga.create', compact('satuanKerjas', 'pegawais'));
     }
 
-      public function store(Request $request, DokumenService $dokumenService) {
+    // --- STORE METHOD (UPDATED) ---
+    public function store(Request $request, DokumenService $dokumenService) {
+        
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
         $rules = [
-            'anggaran_pelaksanaan'      => 'required',
-            'jenis_media'               => 'required',
-            'nama_media'                => 'required',
-            'tanggal_mulai_pelaksanaan' => 'required|date',
-            'durasi_pelaksanaan'        => 'required|numeric|min:1', 
-             // Validasi File Upload
+            'anggaran_pelaksanaan' => 'required',
+            'nama_kegiatan'        => 'required',
+            'sasaran_kegiatan'     => 'required',
+            'tanggal_pelaksanaan'  => 'required|date',
+            'tempat_kegiatan'      => 'required',
+            'jumlah_peserta'       => 'required|numeric',
+            'pegawai_nips'         => 'required|array',
+            
+            // Validasi File Upload
             'dokumentasi'          => 'nullable|array', 
             'lampiran'             => 'nullable|array',
 
@@ -171,18 +214,34 @@ class OnlineController extends Controller
             'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ];
 
-        if ($user->isAdmin()) { $rules['satuan_kerja_id'] = 'required'; }
+        if ($user->isAdmin()) {
+            $rules['satuan_kerja_id'] = 'required';
+        }
 
         $validasi = $request->validate($rules);
         $uploadedPaths = []; 
 
-        DB::beginTransaction();
+        DB::beginTransaction(); 
+
         try {
-            $dataInsert = collect($validasi)->except(['dokumentasi', 'lampiran', 'dokumentasi_links', 'lampiran_links'])->toArray();
-            if ($user->hasRole(['operator_satker', 'operator_p2m'])) { $dataInsert['satuan_kerja_id'] = $user->getSatkerId(); }
+            $dataKegiatan = collect($validasi)->except(['dokumentasi', 'lampiran', 'pegawai_nips', 'dokumentasi_links', 'lampiran_links'])->toArray();
 
-            $kegiatan = P2mOnline::create($dataInsert);
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
+                $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
+            }
 
+            // 1. Simpan Kegiatan
+            $kegiatan = P2mKeluarga::create($dataKegiatan);
+
+            // 2. Simpan Pegawai
+            $listPegawai = Pegawai::whereIn('nip', $validasi['pegawai_nips'])->get();
+            $attachData = [];
+            foreach ($listPegawai as $pgw) {
+                $attachData[$pgw->nip] = ['saved_satuan_kerja_id' => $pgw->satuan_kerja_id];
+            }
+            $kegiatan->pegawai()->attach($attachData);
+
+            // 3. Handle Upload File
             if ($request->filled('dokumentasi')) {
                 $dokumenService->moveToPermanent($request->input('dokumentasi'), $kegiatan, 'dokumentasi', $uploadedPaths);
             }
@@ -199,51 +258,64 @@ class OnlineController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('p2m.online.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data.');
+            return redirect()->route('p2m.keluarga.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data.');
+
         } catch (\Exception $e) {
             DB::rollBack();
-
             foreach ($uploadedPaths as $path) {
-            Storage::disk(config('filesystems.default'))->delete($path);
+                Storage::disk(config('filesystems.default'))->delete($path);
             }
             Log::error('Gagal simpan: ' . $e->getMessage());
             abort(500, 'Server Error.');
         }
     }
 
-    public function edit($id): View {
+    public function edit($id): View 
+    {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $kegiatan = P2mOnline::findOrFail($id);
+        $kegiatan = P2mKeluarga::with('pegawai')->findOrFail($id);
 
-        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) { abort(403); }
+        if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
+            abort(403, 'Akses Ditolak');
+        }
 
         if ($user->isAdmin()) {
             $satuanKerjas = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+            $pegawais = Pegawai::orderBy('nama', 'asc')->get();
         } else {
-            $satuanKerjas = [];
+            $satuanKerjas = []; 
+            $satkerId = $user->getSatkerId();
+            $pegawaiAktif = Pegawai::where('satuan_kerja_id', $satkerId)->get();
+            $pegawaiExisting = $kegiatan->pegawai;
+            $pegawais = $pegawaiAktif->merge($pegawaiExisting)->unique('nip')->sortBy('nama');
         }
-        $mediaOptions = P2mOnline::getJenisMediaOptions();
 
-        return view('p2m.online.edit', compact('kegiatan', 'satuanKerjas', 'mediaOptions'));
+        $selectedPegawaiNips = $kegiatan->pegawai->pluck('nip')->toArray();
+
+        return view('p2m.keluarga.edit', compact('kegiatan', 'satuanKerjas', 'pegawais', 'selectedPegawaiNips'));
     }
 
-     public function update(Request $request, DokumenService $dokumenService, $id) {
+    // --- UPDATE METHOD (UPDATED) ---
+    public function update(Request $request, DokumenService $dokumenService, $id) 
+    {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $kegiatan = P2mOnline::findOrFail($id);
+        $kegiatan = P2mKeluarga::findOrFail($id);
+
         if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403);
         }
 
         $rules = [
-            'anggaran_pelaksanaan'      => 'required',
-            'jenis_media'               => 'required',
-            'nama_media'                => 'required',
-            'tanggal_mulai_pelaksanaan' => 'required|date',
-            'durasi_pelaksanaan'        => 'required|numeric|min:1',
-            'delete_files'              => 'nullable|array',
-
+            'anggaran_pelaksanaan' => 'required',
+            'nama_kegiatan'        => 'required',
+            'sasaran_kegiatan'     => 'required',
+            'tanggal_pelaksanaan'  => 'required|date',
+            'tempat_kegiatan'      => 'required',
+            'jumlah_peserta'       => 'required|numeric',
+            'pegawai_nips'         => 'required|array',
+            
             // Validasi File & Link
             'delete_files'         => 'nullable|array', 
             'dokumentasi'          => 'nullable|array',
@@ -256,9 +328,9 @@ class OnlineController extends Controller
             'lampiran_links'        => 'nullable|array',
             'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
             'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
-           
         ];
-        if ($user->isAdmin()) { $rules['satuan_kerja_id'] = 'required'; }
+
+        if ($user->isAdmin()) $rules['satuan_kerja_id'] = 'required';
 
         $validasi = $request->validate($rules);
         $newFilesMoved = [];
@@ -267,12 +339,22 @@ class OnlineController extends Controller
         DB::beginTransaction();
 
         try {
-            $dataUpdate = collect($validasi)->except(['dokumentasi', 'lampiran', 'delete_files', 'dokumentasi_links', 'lampiran_links'])->toArray();
-            if ($user->hasRole(['operator_satker', 'operator_p2m'])) { unset($dataUpdate['satuan_kerja_id']); }
-            
+            $dataUpdate = collect($validasi)->except(['dokumentasi', 'lampiran', 'pegawai_nips', 'delete_files', 'dokumentasi_links', 'lampiran_links'])->toArray();
+            if ($user->hasRole(['operator_satker', 'operator_p2m'])) unset($dataUpdate['satuan_kerja_id']);
+
             $kegiatan->update($dataUpdate);
 
-             // Hapus Dokumen Lama (File atau Link)
+            // Sync Pegawai
+            $oldPivotData = DB::table('pegawai_p2m_keluarga')->where('p2m_keluarga_id', $id)->get()->keyBy('pegawai_nip');
+            $masterPegawais = Pegawai::whereIn('nip', $validasi['pegawai_nips'])->get()->keyBy('nip');
+            $syncData = [];
+            foreach ($validasi['pegawai_nips'] as $nip) {
+                $satkerToSave = (isset($oldPivotData[$nip]) && $oldPivotData[$nip]->saved_satuan_kerja_id) ? $oldPivotData[$nip]->saved_satuan_kerja_id : ($masterPegawais[$nip]->satuan_kerja_id ?? null);
+                $syncData[$nip] = ['saved_satuan_kerja_id' => $satkerToSave];
+            }
+            $kegiatan->pegawai()->sync($syncData);
+
+            // Hapus Dokumen Lama (File atau Link)
             if ($request->has('delete_files')) {
                 $filesToRemove = Dokumen::whereIn('id', $request->delete_files)->get();
                 foreach ($filesToRemove as $file) {
@@ -298,13 +380,14 @@ class OnlineController extends Controller
             }
 
             DB::commit();
-           
+
+            
             foreach ($filesToDelete as $path) {
                 if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
 
-            return redirect()->route('p2m.online.index')->with('success', 'update')->with('message', 'Data diperbarui');
-           
+            return redirect()->route('p2m.keluarga.index')->with('success', 'update')->with('message', 'Data diperbarui');
+
         } catch (\Exception $e) {
             DB::rollBack();
             foreach ($newFilesMoved as $path) {
@@ -315,9 +398,9 @@ class OnlineController extends Controller
         }
     }
 
-    public function destroy($id) 
+public function destroy($id) 
     {
-        $kegiatan = P2mOnline::findOrFail($id);
+        $kegiatan = P2mKeluarga::findOrFail($id);
         
         $filesToDelete = [];
         
@@ -338,7 +421,6 @@ class OnlineController extends Controller
             DB::rollBack();
             return back()->with('error', 'destroy')->with('message', 'Gagal menghapus data: ' . $e->getMessage());
         }
-
         // Hapus file fisik
         foreach ($filesToDelete as $path) {
             // Double check: Pastikan $path adalah string (bukan null) sebelum akses Storage
@@ -349,4 +431,12 @@ class OnlineController extends Controller
 
         return redirect()->back()->with('success', 'destroy')->with('message', 'Data dan file berhasil dihapus.');
     }
+
+    public function export(Request $request) 
+    {
+        $query = $this->getFilteredQuery($request);
+        return Excel::download(new KeluargaExport($query), 'Laporan_P2M_Ketahanan-Keluarga.xlsx');
+    }
+
+
 }

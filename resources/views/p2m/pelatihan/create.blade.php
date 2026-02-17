@@ -3,20 +3,21 @@
 @section('content')
     <main class="admin-main">
         <div class="container-fluid p-4 p-lg-5">
+            
+            {{-- Header Title (SAMA DENGAN EDIT) --}}
             <div class="row justify-content-center mb-4">
                 <div class="col-12 col-lg-10">
-                     <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center">
                         <div>
-                           <h1 class="h3 mb-1 fw-bold text-dark">Input Kegiatan P2M</h1>
-                            <p class="text-muted mb-0">Kegiatan Car Free Day (CFD)</p>
+                            <h1 class="h3 mb-1 fw-bold text-dark">Input Kegiatan P2M</h1>
+                            <p class="text-muted mb-0">Kegiatan P2M Pelatihan Soft Skill</p>
                         </div>
-                        <a href="{{ route('p2m.cfd.index') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+                        <a href="{{ route('p2m.pelatihan.index') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
                     </div>
                 </div>
             </div>
-            
 
             <div class="row justify-content-center">
                 <div class="col-12 col-lg-10">
@@ -26,29 +27,19 @@
                         </div>
 
                         <div class="card-body p-4 p-lg-5">
-                            <form action="{{ route('p2m.cfd.store') }}" method="POST" enctype="multipart/form-data" id="form-create">
+                            
+                            <form action="{{ route('p2m.pelatihan.store') }}" method="POST" enctype="multipart/form-data" id="form-create">
                                 @csrf
                                 
-                                <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">Data Pelaksanaan CFD</h6>
+                                {{-- ==================================================== --}}
+                                {{-- SECTION 1: DATA KEGIATAN --}}
+                                {{-- ==================================================== --}}
+                                <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">
+                                    Data Pelatihan Soft Skill
+                                </h6>
 
                                 <div class="row g-4 mb-5">
-
-                                    <div class="col-12 col-lg-{{ auth()->user()->isAdmin() ? '6' : '12' }}">
-                                        <label class="form-label fw-semibold text-secondary small">
-                                            Sumber Anggaran <span class="text-danger">*</span>
-                                        </label>
-                                        <select class="form-select @error('anggaran_pelaksanaan') is-invalid @enderror" 
-                                                name="anggaran_pelaksanaan">
-                                            <option value="" disabled selected>-- Pilih Sumber --</option>
-                                            <option value="DIPA" @selected(old('anggaran_pelaksanaan') == 'DIPA')>DIPA</option>
-                                            <option value="NON DIPA" @selected(old('anggaran_pelaksanaan') == 'NON DIPA')>NON DIPA</option>
-                                        </select>
-                                        @error('anggaran_pelaksanaan') 
-                                            <div class="invalid-feedback">{{ $message }}</div> 
-                                        @enderror
-                                    </div>
-
-                                    @if (auth()->user()->isAdmin())     
+                                    @if (auth()->user()->isAdmin())    
                                     <div class="col-12 col-lg-6">
                                         <label class="form-label fw-semibold text-secondary small">Satuan Kerja <span class="text-danger">*</span></label>
                                         <select class="form-select @error('satuan_kerja_id') is-invalid @enderror" name="satuan_kerja_id">
@@ -62,12 +53,31 @@
                                     @endif
 
                                     <div class="col-12 col-lg-{{ auth()->user()->isAdmin() ? '6' : '12' }}">
-                                        <label class="form-label fw-semibold text-secondary small">Nama Kegiatan <span class="text-danger">*</span></label>
-                                        {{-- Placeholder Diubah --}}
-                                        <input type="text" class="form-control @error('nama_kegiatan') is-invalid @enderror" name="nama_kegiatan" value="{{ old('nama_kegiatan') }}" placeholder="Masukkan nama kegiatan">
-                                        @error('nama_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        <label class="form-label fw-semibold text-secondary small">Sumber Anggaran <span class="text-danger">*</span></label>
+                                        <select class="form-select @error('anggaran_pelaksanaan') is-invalid @enderror" name="anggaran_pelaksanaan">
+                                            <option value="" disabled selected>-- Pilih Sumber --</option>
+                                            <option value="DIPA" @selected(old('anggaran_pelaksanaan') == 'DIPA')>DIPA</option>
+                                            <option value="NON DIPA" @selected(old('anggaran_pelaksanaan') == 'NON DIPA')>NON DIPA</option>
+                                        </select>
+                                        @error('anggaran_pelaksanaan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
 
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold text-secondary small">Nama Kegiatan <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-lg @error('nama_kegiatan') is-invalid @enderror" name="nama_kegiatan" value="{{ old('nama_kegiatan') }}" placeholder="Masukkan nama kegiatan">
+                                        @error('nama_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    </div>
+                                </div>
+
+
+                                {{-- ==================================================== --}}
+                                {{-- SECTION 2: DETAIL PELAKSANAAN --}}
+                                {{-- ==================================================== --}}
+                                <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">
+                                    Detail Pelaksanaan
+                                </h6>
+
+                                <div class="row g-4 mb-5">
                                     <div class="col-12 col-md-6">
                                         <label class="form-label fw-semibold text-secondary small">Tanggal Pelaksanaan <span class="text-danger">*</span></label>
                                         <input type="date" class="form-control @error('tanggal_pelaksanaan') is-invalid @enderror" name="tanggal_pelaksanaan" value="{{ old('tanggal_pelaksanaan') }}">
@@ -75,22 +85,31 @@
                                     </div>
 
                                     <div class="col-12 col-md-6">
-                                        <label class="form-label fw-semibold text-secondary small">Jumlah Peserta (Masyarakat) <span class="text-danger">*</span></label>
-                                        <div class="input-group">
-                                            <input type="number" class="form-control @error('jumlah_peserta') is-invalid @enderror" name="jumlah_peserta" value="{{ old('jumlah_peserta') }}" placeholder="0">
-                                            <span class="input-group-text bg-light text-secondary">Orang</span>
-                                        </div>
-                                        @error('jumlah_peserta') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                        <label class="form-label fw-semibold text-secondary small">Target Sasaran <span class="text-danger">*</span></label>
+                                        <select class="form-select @error('sasaran_kegiatan') is-invalid @enderror" name="sasaran_kegiatan">
+                                            <option value="" selected disabled>-- Pilih Lingkungan --</option>
+                                            <option value="lingkungan pemerintah" @selected(old('sasaran_kegiatan') == 'lingkungan pemerintah')>Lingkungan Pemerintah</option>
+                                            <option value="lingkungan pendidikan" @selected(old('sasaran_kegiatan') == 'lingkungan pendidikan')>Lingkungan Pendidikan</option>
+                                            <option value="lingkungan masyarakat" @selected(old('sasaran_kegiatan') == 'lingkungan masyarakat')>Lingkungan Masyarakat</option>
+                                            <option value="lingkungan swasta" @selected(old('sasaran_kegiatan') == 'lingkungan swasta')>Lingkungan Swasta</option>
+                                        </select>
+                                        @error('sasaran_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
 
                                     <div class="col-12">
-                                        <label class="form-label fw-semibold text-secondary small">Tempat Kegiatan <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control @error('tempat_kegiatan') is-invalid @enderror" name="tempat_kegiatan" value="{{ old('tempat_kegiatan') }}" placeholder="Masukkan lokasi CFD">
+                                        <label class="form-label fw-semibold text-secondary small">Lokasi / Tempat Kegiatan <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control @error('tempat_kegiatan') is-invalid @enderror" name="tempat_kegiatan" value="{{ old('tempat_kegiatan') }}" placeholder="Masukkan lokasi kegiatan">
                                         @error('tempat_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
 
-                                <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">Personil & Bukti Fisik</h6>
+
+                                {{-- ==================================================== --}}
+                                {{-- SECTION 3: TIM PELAKSANA & KELENGKAPAN --}}
+                                {{-- ==================================================== --}}
+                                <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">
+                                    Tim Pelaksana & Kelengkapan
+                                </h6>
 
                                 <div class="row g-4 mb-4">
                                     <div class="col-12 col-lg-8">
@@ -98,12 +117,26 @@
                                         <select id="select-pegawai" name="pegawai_nips[]" multiple placeholder="Pilih pegawai..." autocomplete="off">
                                             <option value="">Pilih pegawai...</option>
                                             @foreach ($pegawais as $pgw)
-                                                <option value="{{ $pgw->nip }}" @selected(collect(old('pegawai_nips'))->contains($pgw->nip))>{{ $pgw->nama }} ({{ $pgw->nip }})</option>
+                                                <option value="{{ $pgw->nip }}" @selected(collect(old('pegawai_nips'))->contains($pgw->nip))>
+                                                    {{ $pgw->nama }} ({{ $pgw->nip }})
+                                                </option>
                                             @endforeach
                                         </select>
                                         @error('pegawai_nips') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
 
+                                    <div class="col-12 col-lg-4">
+                                        <label class="form-label fw-semibold text-secondary small">Jumlah Peserta <span class="text-danger">*</span></label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control @error('jumlah_peserta') is-invalid @enderror" name="jumlah_peserta" value="{{ old('jumlah_peserta') }}" placeholder="0">
+                                            <span class="input-group-text bg-light text-secondary">Orang</span>
+                                        </div>
+                                        @error('jumlah_peserta') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
+                                    </div>
+
+                                    {{-- ========================================== --}}
+                                    {{-- AREA UPLOAD FILE & LINK (HYBRID) --}}
+                                    {{-- ========================================== --}}
                                     <div class="col-12 mt-5">
                                         <div class="bg-light p-4 rounded-3 border border-dashed">
                                             
@@ -219,13 +252,17 @@
                                         </div>
                                     </div>
 
-
                                 </div> 
 
                                 <div class="d-flex flex-column-reverse flex-lg-row justify-content-end gap-2 pt-3 border-top mt-4">
-                                    <button type="button" onclick="window.location.reload()" class="btn btn-light border text-secondary px-4"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</button>
-                                    <button type="submit" id="btn-submit" class="btn btn-primary px-5 shadow-sm"><i class="bi bi-save me-1"></i> Simpan Data</button>
+                                    <button type="button" onclick="window.location.reload()" class="btn btn-light border text-secondary px-4">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                                    </button>
+                                    <button type="submit" id="btn-submit" class="btn btn-primary px-5 shadow-sm">
+                                        <i class="bi bi-save me-1"></i> Simpan Data
+                                    </button>
                                 </div>
+
                             </form>
                         </div>
                     </div>
@@ -237,6 +274,7 @@
 
 @push('styles')
     @vite(['resources/css/filepond.css'])
+    
     <style>
         .dashed-border { border-style: dashed !important; border-width: 1px !important; }
         .ts-control { border: 1px solid #dee2e6; padding: 0.5rem 0.75rem; border-radius: 0.375rem; box-shadow: none; }
@@ -248,6 +286,7 @@
 @endpush
 
 @push('scripts')
+{{-- Load JS FilePond via Vite --}}
 @vite(['resources/js/filepond.js'])
 
 <script type="module">

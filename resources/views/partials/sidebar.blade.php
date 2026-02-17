@@ -40,6 +40,8 @@
                     ['route' => 'p2m.tes-urine.index', 'label' => 'Tes Urine', 'url' => 'p2m/tes-urine*'],
                     ['route' => 'p2m.desa-kelurahan-bersinar.index', 'label' => 'Desa / Kelurahan Bersinar', 'url' => 'p2m/desa-kelurahan-bersinar*'],
                     ['route' => 'p2m.safari-religi.index', 'label' => 'Safari Religi', 'url' => 'p2m/safari-religi*'],
+                    ['route' => 'p2m.pelatihan.index', 'label' => 'Pelatihan Soft Skill', 'url' => 'p2m/pelatihan*'],
+                    ['route' => 'p2m.keluarga.index', 'label' => 'Ketahanan Keluarga', 'url' => 'p2m/keluarga*'],
                     ['route' => 'p2m.monev.index', 'label' => 'Monev', 'url' => 'p2m/monev*'],
                     ['route' => 'p2m.pemetaan-sdm-sda.index', 'label' => 'Pemetaan SDM dan SDA', 'url' => 'p2m/pemetaan-sdm-sda*'],
                 ] as $menu)

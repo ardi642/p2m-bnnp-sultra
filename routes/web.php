@@ -17,10 +17,12 @@ use App\Http\Controllers\P2m\KieController;
 use App\Http\Controllers\P2m\LingkunganController;
 use App\Models\P2mSosialisasi;
 use App\Http\Controllers\P2m\CfdController;
+use App\Http\Controllers\P2m\PelatihanController;
 use App\Http\Controllers\P2m\DesaKelurahanBersinarController;
 use App\Models\p2mcfd;
 
 use App\Http\Controllers\P2m\ElektronikController;
+use App\Http\Controllers\P2m\KeluargaController;
 use App\Http\Controllers\P2m\LingkunganBersinarController;
 use App\Http\Controllers\P2m\MediaNonElektronikController;
 use App\Http\Controllers\P2m\NonElektronikController;
@@ -170,6 +172,12 @@ Route::middleware('auth')->group(function() {
             // Safari Religi
             Route::get('/safari-religi', [SafariReligiController::class, 'index'])->name("safari-religi.index");
             Route::get('/safari-religi/export', [SafariReligiController::class, 'export'])->name('safari-religi.export');
+            // Safari Religi
+            Route::get('/pelatihan', [PelatihanController::class, 'index'])->name("pelatihan.index");
+            Route::get('/pelatihan/export', [PelatihanController::class, 'export'])->name('pelatihan.export');
+             // Safari Religi
+            Route::get('/keluarga', [KeluargaController::class, 'index'])->name("keluarga.index");
+            Route::get('/keluarga/export', [KeluargaController::class, 'export'])->name('keluarga.export');
             // Monev
             Route::get('/monev', [MonevController::class, 'index'])->name("monev.index");
             Route::get('/monev/export', [MonevController::class, 'export'])->name('monev.export');
@@ -206,6 +214,10 @@ Route::middleware('auth')->group(function() {
             Route::resource('desa-kelurahan-bersinar', DesaKelurahanBersinarController::class)->except(['index', 'show']);
             // Safari Religi CRUD
             Route::resource('safari-religi', SafariReligiController::class)->except(['index', 'show']);
+            // Pelatihan CRUD
+            Route::resource('pelatihan', PelatihanController::class)->except(['index', 'show']);
+             // Ketahanan Keluarga CRUD
+            Route::resource('keluarga', KeluargaController::class)->except(['index', 'show']);
             // Monev CRUD
             Route::resource('monev', MonevController::class)->except(['index', 'show']);
             // Pemetaan SDM & SDA CRUD

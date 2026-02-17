@@ -322,6 +322,8 @@ class DashboardController extends Controller
             'Car Free Day' => $sum('p2m_cfd', 'jumlah_peserta', 'tanggal_pelaksanaan'),
             'Penggiat P4GN' => $sum('p2m_lingkungan_bersinar', 'jumlah_penggiat_p4gn', 'tanggal_pencanangan'),
             'Jemaah Safari Religi' => $sum('p2m_safari_religi', 'jumlah_masyarakat', 'tanggal_pelaksanaan'),
+            'Pelatihan Soft Skill' => $sum('p2m_pelatihan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
+            'Ketahanan Keluarga' => $sum('p2m_keluarga', 'jumlah_peserta', 'tanggal_pelaksanaan'),
         ];
         $totalOrang = 0; foreach($listOrang as $v) $totalOrang += (is_array($v) ? $v['val'] : $v);
 
@@ -351,6 +353,8 @@ class DashboardController extends Controller
             'Safari Religi' => $count('p2m_safari_religi', 'tanggal_pelaksanaan'),
             'Desa Bersinar' => $listWilayah['Desa Bersinar'],
             'Lingkungan Bersinar' => $listWilayah['Lingkungan Bersinar'],
+            'Pelatihan Soft Skill' => $count('p2m_pelatihan', 'tanggal_pelaksanaan'),
+            'Ketahanan Keluarga' => $count('p2m_keluarga', 'tanggal_pelaksanaan'),
         ];
         $totalGiat = array_sum($allActivities);
         arsort($allActivities);
@@ -426,7 +430,17 @@ class DashboardController extends Controller
                     'Lingk. Swasta'     => ['lingkungan swasta'], 
                     'Lingk. Masyarakat' => ['lingkungan masyarakat']
                 ];
-            } else {
+            } 
+            
+            elseif ($type === 'pelatihan' || $type === 'keluarga') {
+                $sasaranMap = [
+                    'Lingk. Pendidikan' => ['lingkungan pendidikan'],
+                    'Lingk. Pemerintah' => ['lingkungan pemerintah'],
+                    'Lingk. Swasta'     => ['lingkungan swasta'], 
+                    'Lingk. Masyarakat' => ['lingkungan masyarakat']
+                ];
+            } 
+            else {
                 $sasaranMap = [
                     'Pendidikan' => ['lingkungan pendidikan'],
                     'Kerja/Swasta' => ['lingkungan kerja', 'instansi pemerintah', 'pekerja swasta', 'lingkungan swasta'],
@@ -489,6 +503,10 @@ class DashboardController extends Controller
                 return ['table' => 'p2m_desa_bersinar', 'date_col' => 'tanggal_pencanangan', 'val_col' => null, 'unit_label' => '-'];
             case 'lingkungan_bersinar': 
                 return ['table' => 'p2m_lingkungan_bersinar', 'date_col' => 'tanggal_pencanangan', 'val_col' => 'jumlah_penggiat_p4gn', 'unit_label' => 'Penggiat (Orang)'];
+            case 'pelatihan': 
+                return ['table' => 'p2m_pelatihan', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];
+            case 'keluarga': 
+                return ['table' => 'p2m_keluarga', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta (Orang)'];
             default: 
                 return ['table' => 'p2m_sosialisasi', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta'];
         }

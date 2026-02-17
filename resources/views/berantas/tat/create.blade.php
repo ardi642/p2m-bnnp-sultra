@@ -400,7 +400,7 @@
                                                 @error('lampiran') <div class="text-danger small">{{ $message }}</div> @enderror
                                             </div>
 
-                                            <hr class="border-secondary-subtle my-3">
+                                            <hr class="border-secondary-subtle my-3">   
 
                                             <div x-data="linkManager( {{ \Illuminate\Support\Js::from(array_values(old('lampiran_links', []))) }} )">
                                                 <label class="form-label fw-bold small text-danger mb-2">

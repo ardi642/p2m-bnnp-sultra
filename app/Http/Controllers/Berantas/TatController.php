@@ -24,23 +24,61 @@ use Illuminate\Support\Facades\Log;
 
 class TatController extends Controller
 {
+    
     private function getFilteredQuery(Request $request)
     {
         $user = Auth::user();
         
+        // 1. EAGER LOADING (Menyiapkan data relasi untuk ditampilkan)
         $query = BerantasTat::with([
             'satuanKerja', 
             'tersangka', 
             'barangBukti.narkotika',
             'dokumen',
             'barangBukti' => function($q) use ($request) {
+                // Filter tampilan BB di tabel berdasarkan kategori
                 if ($request->filled('kategori_bb')) {
                     $q->whereIn('kategori', (array)$request->kategori_bb);
                 }
             }
         ]);
 
-        // Filter Satker
+        // 2. FILTER BARANG BUKTI (Ini yang menyembunyikan kasus TAT jika tidak sesuai filter)
+        if ($request->filled('kategori_bb') || $request->filled('narkotika_ids') || $request->filled('search_non_narkotika')) {
+            $query->whereHas('barangBukti', function ($q) use ($request) {
+                
+                // Filter Kategori (Narkotika / Non-Narkotika)
+                if ($request->filled('kategori_bb')) {
+                    $q->whereIn('kategori', (array) $request->kategori_bb);
+                }
+
+                $hasNarkotika = $request->filled('narkotika_ids');
+                $hasNonNarkotika = $request->filled('search_non_narkotika');
+
+                // Filter Spesifik Jenis Narkotika atau Nama Barang Non-Narkotika
+                if ($hasNarkotika || $hasNonNarkotika) {
+                    $q->where(function ($subQ) use ($request, $hasNarkotika, $hasNonNarkotika) {
+                        
+                        if ($hasNarkotika) {
+                            $subQ->orWhere(function ($qNarkotika) use ($request) {
+                                $qNarkotika->where('kategori', 'Narkotika')
+                                        ->whereIn('narkotika_id', (array) $request->narkotika_ids);
+                            });
+                        }
+
+                        if ($hasNonNarkotika) {
+                            $subQ->orWhere(function ($qNonNarkotika) use ($request) {
+                                $qNonNarkotika->where('kategori', 'Non-Narkotika')
+                                            ->whereIn('nama_barang_non_narkotika', (array) $request->search_non_narkotika);
+                            });
+                        }
+                        
+                    });
+                }
+            });
+        }
+
+        // 3. Filter Satker
         if (!$user->hasRole('admin')) {
             $query->where('satuan_kerja_id', $user->getSatkerId());
         } else {
@@ -49,7 +87,7 @@ class TatController extends Controller
             }
         }
 
-        // Filter Waktu
+        // 4. Filter Waktu
         if ($request->filled('bulan')) {
             $query->whereIn(DB::raw('MONTH(tanggal_pelaksanaan)'), (array)$request->bulan);
         }
@@ -57,20 +95,20 @@ class TatController extends Controller
         $years = $request->filled('tahun') ? (array)$request->tahun : [date('Y')];
         $query->whereIn(DB::raw('YEAR(tanggal_pelaksanaan)'), $years);
 
-        // Filter Pencarian
+        // 5. Filter Pencarian
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(function($q) use ($s) {
                 $q->where('no_register', 'LIKE', "%{$s}%")
-                  ->orWhere('instansi_pengirim', 'LIKE', "%{$s}%")
-                  ->orWhere('pasal_disangkakan', 'LIKE', "%{$s}%")
-                  ->orWhereHas('tersangka', function($sq) use ($s) {
-                      $sq->where('nama_tersangka', 'LIKE', "%{$s}%");
-                  });
+                ->orWhere('instansi_pengirim', 'LIKE', "%{$s}%")
+                ->orWhere('pasal_disangkakan', 'LIKE', "%{$s}%")
+                ->orWhereHas('tersangka', function($sq) use ($s) {
+                    $sq->where('nama_tersangka', 'LIKE', "%{$s}%");
+                });
             });
         }
         
-        // Sorting
+        // 6. Sorting
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
         $allowedSorts = [
@@ -91,44 +129,121 @@ class TatController extends Controller
 
     public function index(Request $request)
     {
+        // 1. Data Dropdown (Ringan)
         $years = BerantasTat::selectRaw('YEAR(tanggal_pelaksanaan) as year')
-            ->distinct()
-            ->orderBy('year', 'desc')
-            ->pluck('year');
-        
+            ->distinct()->orderBy('year', 'desc')->pluck('year');
         $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
 
+        // 2. Query Utama untuk Tabel (Pagination)
+        // Tetap gunakan ini untuk tampilan tabel karena pagination melimit data yg diambil
         $query = $this->getFilteredQuery($request);
-
-        // Agregat Dasar
-        $tatIdSubquery = (clone $query)->select('berantas_tat.id');
-
-        $totalKasus = (clone $query)->count();
         
-        $totalTersangka = BerantasTatTersangka::whereIn('berantas_tat_id', $tatIdSubquery)
-            ->count();
-            
-        $totalBBNarkotika = BerantasTatBarangBukti::whereIn('berantas_tat_id', $tatIdSubquery)
-            ->where('kategori', 'Narkotika')
-            ->count();
+        $perPage = $request->input('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100])) $perPage = 10;
+        
+        $data = $query->paginate($perPage)->withQueryString();
 
-        // Agregat Berat
-        $totalBeratGram = BerantasTatBarangBukti::whereIn('berantas_tat_id', $tatIdSubquery)
-            ->where('kategori', 'Narkotika')
+
+        // --- MULAI OPTIMALISASI AGREGASI (GANTI whereIn DENGAN JOIN) ---
+
+        /**
+         * Helper Closure untuk menerapkan Filter Parent ke Query Statistik.
+         * Ini mencegah duplikasi kode filter antara Stats Tersangka & Stats BB.
+         */
+        $applyParentFilters = function($q) use ($request) {
+            // Filter Satker
+            if (!Auth::user()->hasRole('admin')) {
+                $q->where('parent.satuan_kerja_id', Auth::user()->getSatkerId());
+            } elseif ($request->filled('satuan_kerja_id')) {
+                $q->whereIn('parent.satuan_kerja_id', (array)$request->satuan_kerja_id);
+            }
+
+            // Filter Waktu
+            if ($request->filled('bulan')) {
+                $q->whereIn(DB::raw('MONTH(parent.tanggal_pelaksanaan)'), (array)$request->bulan);
+            }
+            $yearFilter = $request->filled('tahun') ? (array)$request->tahun : [date('Y')];
+            $q->whereIn(DB::raw('YEAR(parent.tanggal_pelaksanaan)'), $yearFilter);
+
+            // Filter Search (Hanya bagian Parent/Header)
+            if ($request->filled('search')) {
+                $s = $request->search;
+                $q->where(function($sq) use ($s) {
+                    $sq->where('parent.no_register', 'LIKE', "%{$s}%")
+                       ->orWhere('parent.instansi_pengirim', 'LIKE', "%{$s}%")
+                       ->orWhere('parent.pasal_disangkakan', 'LIKE', "%{$s}%");
+                       // Catatan: Pencarian nama tersangka di-handle berbeda tiap query di bawah
+                });
+            }
+        };
+
+        // --- A. HITUNG TOTAL TERSANGKA ---
+        // Start dari Tabel Tersangka -> JOIN ke Parent
+        $statsTersangka = BerantasTatTersangka::query()
+            ->join('berantas_tat as parent', 'berantas_tat_tersangka.berantas_tat_id', '=', 'parent.id');
+        
+        $applyParentFilters($statsTersangka);
+
+        // Tambahan filter search khusus nama tersangka (karena kita sedang di tabel tersangka)
+        if ($request->filled('search')) {
+            $statsTersangka->orWhere('nama_tersangka', 'LIKE', "%{$request->search}%");
+        }
+        
+        // Kita juga perlu memfilter Tersangka berdasarkan filter Barang Bukti (Relasi tidak langsung)
+        // Jika user filter "Sabu", maka hanya tersangka dari kasus Sabu yang dihitung.
+        if ($request->filled('kategori_bb') || $request->filled('narkotika_ids') || $request->filled('search_non_narkotika')) {
+            $statsTersangka->whereHas('parent.barangBukti', function($q) use ($request) {
+                // ... (Copy logika filter BB dari getFilteredQuery di sini agar akurat) ...
+                // Atau sederhananya: Memastikan Parent punya BB sesuai kriteria
+                if ($request->filled('kategori_bb')) $q->whereIn('kategori', (array)$request->kategori_bb);
+                if ($request->filled('narkotika_ids')) $q->whereIn('narkotika_id', (array)$request->narkotika_ids);
+            });
+        }
+
+        $totalTersangka = $statsTersangka->count();
+
+
+        // --- B. HITUNG TOTAL BB & BERAT ---
+        // Start dari Tabel BB -> JOIN ke Parent
+        $statsBB = BerantasTatBarangBukti::query()
+            ->join('berantas_tat as parent', 'berantas_tat_barang_bukti.berantas_tat_id', '=', 'parent.id');
+
+        $applyParentFilters($statsBB);
+
+        // Filter Search Global (Jika search match nama tersangka, BB-nya juga harus ikut terhitung)
+        if ($request->filled('search')) {
+            $statsBB->orWhereHas('parent.tersangka', fn($q) => $q->where('nama_tersangka', 'LIKE', "%{$request->search}%"));
+        }
+
+        // Filter Spesifik BB (Langsung di tabel ini)
+        if ($request->filled('kategori_bb')) {
+            $statsBB->whereIn('kategori', (array)$request->kategori_bb);
+        }
+        if ($request->filled('narkotika_ids')) {
+            $statsBB->whereIn('narkotika_id', (array)$request->narkotika_ids);
+        }
+        if ($request->filled('search_non_narkotika')) {
+            $statsBB->whereIn('nama_barang_non_narkotika', (array)$request->search_non_narkotika);
+        }
+
+        // Eksekusi Hitung BB (Sekali jalan untuk Count dan Sum)
+        $resultBB = $statsBB->where('kategori', 'Narkotika')
+            ->selectRaw('COUNT(*) as total_items')
             ->selectRaw("SUM(CASE 
                 WHEN satuan_narkotika = 'Kg' THEN kuantitas * 1000 
                 WHEN satuan_narkotika = 'Ton' THEN kuantitas * 1000000 
                 ELSE kuantitas 
-            END) as total")
-            ->value('total') ?? 0;
+            END) as total_berat")
+            ->first();
 
-        $perPage = $request->input('per_page', 10);
-        if (!in_array($perPage, [10, 25, 50, 100])) {
-            $perPage = 10;
-        }
+        $totalBBNarkotika = $resultBB->total_items ?? 0;
+        $totalBeratGram   = $resultBB->total_berat ?? 0;
 
-        $data = $query->paginate($perPage)->withQueryString();
+        // Total Kasus (Header) diambil dari metadata pagination
+        $totalKasus = $data->total();
+
+        // --- END OPTIMALISASI ---
 
         return view('berantas.tat.index', compact(
             'data', 
@@ -442,7 +557,6 @@ class TatController extends Controller
     public function destroy($id) 
     {
         $tat = BerantasTat::findOrFail($id);
-        
         $filesToDelete = [];
         foreach ($tat->dokumen()->cursor() as $doc) {
             if (!$doc->is_link && !empty($doc->path_file)) {
@@ -456,6 +570,7 @@ class TatController extends Controller
             DB::commit(); 
         } catch (\Exception $e) {
             DB::rollBack();
+            dd($e);
             return back()
                 ->with('error', 'destroy')
                 ->with('message', 'Gagal menghapus data: ' . $e->getMessage());
@@ -468,7 +583,7 @@ class TatController extends Controller
         }
 
         return redirect()->back()
-            ->with('success', 'destroy')
+            ->with('success', 'Data dan file berhasil dihapus')
             ->with('message', 'Data dan file berhasil dihapus.');
     }
 

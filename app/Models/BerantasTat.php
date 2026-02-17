@@ -22,18 +22,6 @@ class BerantasTat extends Model
         'tim_medis' => 'array', 
     ];
 
-    protected static function boot() {
-        parent::boot();
-        static::deleting(function ($model) {
-            foreach ($model->dokumentasi as $doc) {
-                if (Storage::disk('public')->exists($doc->path_file)) {
-                    Storage::disk('public')->delete($doc->path_file);
-                }
-                $doc->delete();
-            }
-        });
-    }
-
     public function tersangka() { 
         return $this->hasMany(BerantasTatTersangka::class, 'berantas_tat_id'); 
     }

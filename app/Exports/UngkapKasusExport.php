@@ -138,8 +138,17 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
     public function headings(): array
     {
         return [
-            'NO', 'NOMOR LKN/ TGL', 'NAMA TERSANGKA', 'JENIS KELAMIN', 'PEKERJAAN', 
-            'ALAMAT TKP', 'JENIS BARANG BUKTI', 'JUMLAH BB (BERAT/SATUAN)', 'FOTO TERSANGKA', 'TAHAP'
+            'NO',                       // A
+            'NOMOR LKN/ TGL',           // B
+            'NAMA TERSANGKA',           // C
+            'JENIS KELAMIN',            // D
+            'PEKERJAAN',                // E
+            'LOKASI TKP & KOORDINAT',   // F
+            'JENIS BARANG BUKTI',       // G
+            'JUMLAH BB (BERAT/SATUAN)', // H
+            'FOTO TERSANGKA',           // I
+            'TAHAP',                    // J
+            'KRONOLOGIS KEJADIAN'       // K
         ];
     }
 
@@ -156,6 +165,12 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
         $tgl = $row->kasus->tanggal_kejadian ? $row->kasus->tanggal_kejadian->format('d M Y') : '-';
         $lknStr = $row->kasus->nomor_lkn . "\n" . ($row->kasus->satuanKerja->satuan_kerja ?? '') . ", Tgl " . $tgl;
 
+        // Gabungkan Alamat dan Koordinat TKP
+        $lokasiTkp = $row->kasus->alamat_tkp ?? '-';
+        if (!empty($row->kasus->latitude) && !empty($row->kasus->longitude)) {
+            $lokasiTkp .= "\nLatitude: " . $row->kasus->latitude . "\nLongitude: " . $row->kasus->longitude;
+        }
+
         $items = [];
         
         foreach ($row->barangBukti as $bb) {
@@ -171,7 +186,7 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
             $satuan = $bb->satuan;
             $kuantitas = (float)$bb->kuantitas;
             
-            // --- PERBAIKAN LOGIKA SATUAN ---
+            // --- LOGIKA SATUAN ---
             $tampilanJumlah = "";
             $gramValueForTotal = 0; // Hanya hitung total jika Narkotika
 
@@ -189,7 +204,6 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                 }
             } else {
                 // NON-NARKOTIKA: Gunakan Satuan Asli (Unit, Buah, Lembar, dll)
-                // Tidak dikonversi ke Gram
                 $tampilanJumlah = $kuantitas . " " . ucfirst($satuan);
             }
 
@@ -230,9 +244,17 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
         }
 
         return [
-            $no, $lknStr, $row->nama_tersangka, $row->jenis_kelamin, 
-            $row->pekerjaan ?? '-', $row->kasus->alamat_tkp, 
-            implode("\n", $strJenis), implode("\n", $strBerat), '', $row->tahap 
+            $no, 
+            $lknStr, 
+            $row->nama_tersangka, 
+            $row->jenis_kelamin, 
+            $row->pekerjaan ?? '-', 
+            $lokasiTkp,                     // Kolom F (Lokasi & Koordinat)
+            implode("\n", $strJenis), 
+            implode("\n", $strBerat), 
+            '',                             // Kolom I (Foto Tersangka)
+            $row->tahap, 
+            $row->kasus->kronologis ?? '-'  // Kolom K (Kronologis)
         ];
     }
 
@@ -257,31 +279,40 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                 $rowCount = $data->count();
                 $startRow = 2;
 
-                // --- SETTING LEBAR KOLOM ---
+                // --- SETTING LEBAR KOLOM (Termasuk Kolom K) ---
                 $sheet->getColumnDimension('B')->setWidth(35);
-                $sheet->getColumnDimension('F')->setWidth(40);
+                $sheet->getColumnDimension('F')->setWidth(45); // Alamat TKP
                 $sheet->getColumnDimension('G')->setWidth(35);
                 $sheet->getColumnDimension('H')->setWidth(25);
                 $sheet->getColumnDimension('I')->setWidth(22);
-                
-                $sheet->getStyle("A1:J" . ($rowCount + 10))->getAlignment()->setWrapText(true);
-                $sheet->getStyle("A1:J" . ($rowCount + 10))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+                $sheet->getColumnDimension('K')->setWidth(55); // Kronologis
+
+                // Jangkauan styling diperluas ke Kolom K
+                $sheet->getStyle("A1:K" . ($rowCount + 10))->getAlignment()->setWrapText(true);
+                $sheet->getStyle("A1:K" . ($rowCount + 10))->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
                 $sheet->getStyle("A2:A" . ($rowCount + 10))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle("B2:B" . ($rowCount + 10))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle("D2:D" . ($rowCount + 10))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle("H2:H" . ($rowCount + 10))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle("J2:J" . ($rowCount + 10))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("I2:I" . ($rowCount + 10))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $mergeStart = $startRow;
                 for ($i = 0; $i < $rowCount; $i++) {
                     $currentRow = $startRow + $i;
                     
-                    // --- HITUNG TINGGI BARIS (TEKS) ---
-                    $contentG = $sheet->getCell('G' . $currentRow)->getValue();
-                    $contentH = $sheet->getCell('H' . $currentRow)->getValue();
+                    // --- HITUNG TINGGI BARIS (TEKS TERMASUK KRONOLOGIS & TKP) ---
+                    $contentF = $sheet->getCell('F' . $currentRow)->getValue(); // Lokasi TKP
+                    $contentG = $sheet->getCell('G' . $currentRow)->getValue(); // BB
+                    $contentH = $sheet->getCell('H' . $currentRow)->getValue(); // BB Kuantitas
+                    $contentK = $sheet->getCell('K' . $currentRow)->getValue(); // Kronologis
+
+                    $linesF = substr_count((string)$contentF, "\n") + 1;
                     $linesG = substr_count((string)$contentG, "\n") + 1;
                     $linesH = substr_count((string)$contentH, "\n") + 1;
-                    $maxLines = max($linesG, $linesH);
+                    $linesK = substr_count((string)$contentK, "\n") + 1;
+                    
+                    // Memastikan tinggi baris menyesuaikan konten yang paling panjang
+                    $maxLines = max($linesF, $linesG, $linesH, $linesK);
                     $textHeight = ($maxLines * 18) + 10; 
 
                     // --- LOGIKA FOTO ---
@@ -304,14 +335,17 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                     $sheet->getRowDimension($currentRow)->setRowHeight($finalHeight);
 
                     // --- LOGIKA MERGE ---
+                    // Cek jika ini adalah akhir dari list tersangka untuk Kasus ini
                     if (($i === $rowCount - 1) || ($data[$i]->kasus->nomor_lkn !== $data[$i+1]->kasus->nomor_lkn)) {
                         $endRow = $currentRow;
                         if ($mergeStart < $endRow) {
-                            $sheet->mergeCells("A{$mergeStart}:A{$endRow}"); 
-                            $sheet->mergeCells("B{$mergeStart}:B{$endRow}"); 
-                            $sheet->mergeCells("F{$mergeStart}:F{$endRow}"); 
+                            $sheet->mergeCells("A{$mergeStart}:A{$endRow}"); // No
+                            $sheet->mergeCells("B{$mergeStart}:B{$endRow}"); // LKN
+                            $sheet->mergeCells("F{$mergeStart}:F{$endRow}"); // Lokasi TKP
+                            $sheet->mergeCells("K{$mergeStart}:K{$endRow}"); // Kronologis
                         }
                         
+                        // Smart merge untuk data yang mungkin sama berulang (BB & Pekerjaan)
                         $this->smartMergeInner($sheet, 'G', $mergeStart, $endRow);
                         $this->smartMergeInner($sheet, 'H', $mergeStart, $endRow);
                         $this->smartMergeInner($sheet, 'E', $mergeStart, $endRow);
@@ -335,9 +369,10 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
                 $footerLines = count($totalString);
                 $sheet->getRowDimension($footerRow)->setRowHeight(max(30, ($footerLines * 18) + 10));
 
-                $sheet->getStyle("A{$footerRow}:J{$footerRow}")->getFont()->setBold(true);
-                $sheet->getStyle("A{$footerRow}:J{$footerRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E0E0E0');
-                $sheet->getStyle("A1:J{$footerRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                // Jangkauan footer diperluas ke Kolom K
+                $sheet->getStyle("A{$footerRow}:K{$footerRow}")->getFont()->setBold(true);
+                $sheet->getStyle("A{$footerRow}:K{$footerRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E0E0E0');
+                $sheet->getStyle("A1:K{$footerRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
                 $sheet->getStyle("H{$footerRow}")->getAlignment()->setWrapText(true);
             },
         ];

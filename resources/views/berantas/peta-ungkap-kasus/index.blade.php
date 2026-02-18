@@ -167,10 +167,11 @@
                     </div>
 
                     {{-- Gradient Bar --}}
-                    <div class="d-flex rounded-1 overflow-hidden border border-light" style="height: 12px; background: linear-gradient(to right, #22c55e, #ffeb3b, #dc3545);"></div>
+                    {{-- KUNING -> MERAH --}}
+                    <div class="d-flex rounded-1 overflow-hidden border border-light" style="height: 12px; background: linear-gradient(to right, #ffff00, #ff8800, #ff0000);"></div>
                     <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 0.65rem;">
-                        <span>Sedikit</span>
-                        <span>Max</span>
+                        <span>Waspada</span>
+                        <span>Bahaya</span>
                     </div>
                 </div>
             </div>
@@ -225,7 +226,7 @@
                 </div>
                 <div class="modal-body bg-light">
                     
-                    {{-- 1. RINGKASAN UTAMA --}}
+                    {{-- 1. RINGKASAN UTAMA (3 KARTU) --}}
                     <div class="row g-3 mb-3">
                         <div class="col-4">
                             <div class="card border-0 shadow-sm h-100">
@@ -246,7 +247,7 @@
                         <div class="col-4">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-body text-center p-2">
-                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">TOTAL ITEM BB</div>
+                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">TOTAL ITEM NARKOTIKA</div>
                                     <div class="fs-5 fw-bold text-primary" x-text="regionStats.total_item + ' Item'"></div>
                                 </div>
                             </div>
@@ -257,7 +258,7 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <div class="card border-0 shadow-sm">
-                                <div class="card-body text-center p-2 bg-primary bg-opacity-10">
+                                <div class="card-body text-center p-3 bg-primary bg-opacity-10">
                                     <div class="text-muted small fw-bold">TOTAL KASUS</div>
                                     <div class="display-6 fw-bold text-primary lh-1" x-text="regionStats.total_cases"></div>
                                 </div>
@@ -537,13 +538,15 @@
                 this.choroplethLayer.addLayer(geoLayer);
             },
 
+            // LOGIKA WARNA KUNING -> MERAH
             getColor(val, max) {
                 if (val === 0) return '#2196F3'; 
                 if (max <= 0) return '#2196F3';
                 let ratio = val / max;
                 if (ratio > 1) ratio = 1;
-                const hue = ((1 - ratio) * 120).toString(10);
-                return `hsl(${hue}, 90%, 45%)`;
+                // Hue 60 (Kuning) -> Hue 0 (Merah)
+                const hue = ((1 - ratio) * 60).toString(10);
+                return `hsl(${hue}, 100%, 50%)`;
             },
 
             showRegionDashboard(feature, turfPoints) {

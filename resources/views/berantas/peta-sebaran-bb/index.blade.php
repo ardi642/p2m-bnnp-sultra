@@ -162,7 +162,7 @@
                     </div>
                 </div>
 
-                {{-- LEGENDA GRADASI WILAYAH --}}
+                {{-- LEGENDA GRADASI WILAYAH (UPDATED) --}}
                 <div class="mt-2 pt-2 border-top">
                     <div class="fw-bold text-dark mb-1">Densitas Barang Bukti</div>
                     
@@ -172,11 +172,11 @@
                         <span class="text-muted" style="font-size: 0.7rem;">Tidak Ada Data</span>
                     </div>
 
-                    {{-- Gradient Bar --}}
-                    <div class="d-flex rounded-1 overflow-hidden border border-light" style="height: 12px; background: linear-gradient(to right, #22c55e, #ffeb3b, #dc3545);"></div>
+                    {{-- Gradient Bar: KUNING -> MERAH --}}
+                    <div class="d-flex rounded-1 overflow-hidden border border-light" style="height: 12px; background: linear-gradient(to right, #ffff00, #ff8800, #ff0000);"></div>
                     <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 0.65rem;">
-                        <span>Sedikit</span>
-                        <span>Banyak</span>
+                        <span>Waspada</span>
+                        <span>Bahaya</span>
                     </div>
                 </div>
             </div>
@@ -225,29 +225,48 @@
                 </div>
                 <div class="modal-body bg-light">
                     
-                    {{-- 1. RINGKASAN UTAMA --}}
-                    <div class="row g-3 mb-3">
+                    {{-- 1. RINGKASAN UTAMA (4 KARTU / 2 BARIS) --}}
+                    <div class="row g-2 mb-3">
+                        {{-- Baris 1: Berat --}}
                         <div class="col-4">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-body text-center p-2">
-                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">TOTAL BERAT (NARKOTIKA)</div>
-                                    <div class="fs-5 fw-bold text-danger" x-text="formatNumber(regionStats.total_berat) + ' g'"></div>
+                                    <div class="text-muted small fw-bold" style="font-size: 0.6rem;">TOTAL BERAT (NARKO)</div>
+                                    <div class="fw-bold text-dark" style="font-size: 0.9rem;" x-text="formatNumber(regionStats.total_berat) + ' g'"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-body text-center p-2">
-                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">BERAT BB TANGKAP</div>
-                                    <div class="fs-5 fw-bold text-dark" x-text="formatNumber(regionStats.berat_tangkap) + ' g'"></div>
+                                    <div class="text-muted small fw-bold" style="font-size: 0.6rem;">BERAT TANGKAP</div>
+                                    <div class="fw-bold text-danger" style="font-size: 0.9rem;" x-text="formatNumber(regionStats.berat_tangkap) + ' g'"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-body text-center p-2">
-                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">TOTAL ITEM NARKOTIKA</div>
+                                    <div class="text-muted small fw-bold" style="font-size: 0.6rem;">BERAT TEMUAN</div>
+                                    <div class="fw-bold text-warning" style="font-size: 0.9rem;" x-text="formatNumber(regionStats.berat_temuan) + ' g'"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {{-- Baris 2: Item & Total Reg --}}
+                        <div class="col-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body text-center p-2">
+                                    <div class="text-muted small fw-bold" style="font-size: 0.6rem;">TOTAL ITEM NARKOTIKA</div>
                                     <div class="fs-5 fw-bold text-primary" x-text="regionStats.total_item + ' Item'"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body text-center p-2 bg-primary bg-opacity-10">
+                                    <div class="text-muted small fw-bold" style="font-size: 0.6rem;">TOTAL REGISTER</div>
+                                    <div class="fs-5 fw-bold text-primary" x-text="regionStats.total_regs"></div>
                                 </div>
                             </div>
                         </div>
@@ -255,16 +274,6 @@
 
                     {{-- 2. RINCIAN DATA --}}
                     <div class="row g-3">
-                        <div class="col-12">
-                            <div class="card border-0 shadow-sm">
-                                <div class="card-body text-center p-3 bg-primary bg-opacity-10">
-                                    <div class="text-muted small fw-bold">TOTAL REGISTER</div>
-                                    <div class="display-6 fw-bold text-primary lh-1" x-text="regionStats.total_regs"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {{-- Kiri: Rincian Narkotika --}}
                         <div class="col-md-6">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-header bg-white fw-bold small text-secondary">RINCIAN NARKOTIKA</div>
@@ -374,7 +383,7 @@
             regionModal: null, 
             regionStats: { 
                 name: '', total_regs: 0, 
-                total_berat: 0, berat_tangkap: 0, total_item: 0,
+                total_berat: 0, berat_tangkap: 0, berat_temuan: 0, total_item: 0,
                 narkotika: [], 
                 sumber: { tangkap:0, temuan:0, pct_tangkap:0, pct_temuan:0 } 
             },
@@ -421,7 +430,7 @@
                 const radioLayers = {
                     "Titik (Biasa)": this.uniformLayer,
                     "Titik (Bobot BB)": this.weightedLayer,
-                    "Tanpa Titik": this.noMarkerLayer // Pilihan Tanpa Titik
+                    "Tanpa Titik": this.noMarkerLayer // Tambahkan Opsi Kosong
                 };
                 const overlayLayers = {
                     "Titik Cluster": this.markerCluster,
@@ -552,13 +561,15 @@
                 this.choroplethLayer.addLayer(geoLayer);
             },
 
+            // KUNING -> MERAH
             getColor(val, max) {
                 if (val === 0) return '#2196F3'; 
                 if (max <= 0) return '#2196F3';
                 let ratio = val / max;
                 if (ratio > 1) ratio = 1;
-                const hue = ((1 - ratio) * 120).toString(10);
-                return `hsl(${hue}, 90%, 45%)`;
+                // Hue 60 (Kuning) -> 0 (Merah)
+                const hue = ((1 - ratio) * 60).toString(10);
+                return `hsl(${hue}, 100%, 50%)`;
             },
 
             showRegionDashboard(feature, turfPoints) {
@@ -568,6 +579,7 @@
                 
                 // Aggregator Variables
                 let beratTangkapAll = 0;
+                let beratTemuanAll = 0;
                 let totalItemAll = 0;
                 
                 pts.features.forEach(f => {
@@ -576,6 +588,7 @@
                     // Sum Properties
                     totalBeratAll += parseFloat(props.berat_gram || 0);
                     beratTangkapAll += parseFloat(props.berat_tangkap || 0);
+                    beratTemuanAll += parseFloat(props.berat_temuan || 0);
                     totalItemAll += parseInt(props.jml_item_narko || 0);
 
                     for (const [nama, berat] of Object.entries(props.raw_narkoba || {})) {
@@ -604,6 +617,7 @@
                     total_regs: totalRegs,
                     total_berat: totalBeratAll,
                     berat_tangkap: beratTangkapAll,
+                    berat_temuan: beratTemuanAll,
                     total_item: totalItemAll,
                     narkotika: narkoArray,
                     sumber: { 

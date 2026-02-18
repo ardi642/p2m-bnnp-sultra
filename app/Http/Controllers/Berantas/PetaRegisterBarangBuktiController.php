@@ -93,6 +93,7 @@ class PetaRegisterBarangBuktiController extends Controller
             $totalBeratGram = 0;
             $totalItemNarko = 0;
             $beratTangkap = 0; // Berat Khusus Tangkap
+            $beratTemuan = 0;  // Berat Khusus Temuan
             $rawNarkoba = [];
             
             $hasTangkap = false;
@@ -103,20 +104,21 @@ class PetaRegisterBarangBuktiController extends Controller
                 if($item->kategori === 'Narkotika') {
                     $totalItemNarko++;
                     
-                    // Hitung Berat
+                    // Konversi Berat
                     $qty = $item->kuantitas;
                     if($item->satuan_narkotika === 'Kg') $qty *= 1000;
                     if($item->satuan_narkotika === 'Ton') $qty *= 1000000;
                     
                     $totalBeratGram += $qty;
 
-                    // Cek Sumber untuk pewarnaan marker & statistik dashboard
+                    // Cek Sumber & Hitung Berat per Sumber
                     if ($item->sumber_perolehan === 'Hasil Tangkap') {
                         $hasTangkap = true;
-                        $beratTangkap += $qty; // Tambah ke berat tangkap
+                        $beratTangkap += $qty; 
                     }
                     if ($item->sumber_perolehan === 'Temuan') {
                         $hasTemuan = true;
+                        $beratTemuan += $qty;
                     }
                     
                     $nama = $item->narkotika->nama_narkotika ?? 'Lainnya';
@@ -168,7 +170,8 @@ class PetaRegisterBarangBuktiController extends Controller
                     // DATA UTAMA UNTUK DASHBOARD
                     'berat_gram' => $totalBeratGram,
                     'jml_item_narko' => $totalItemNarko,
-                    'berat_tangkap' => $beratTangkap, // Data baru untuk dashboard
+                    'berat_tangkap' => $beratTangkap, 
+                    'berat_temuan' => $beratTemuan, 
                     
                     'marker_color' => $markerColor,
                     'popup_html' => $htmlBarang . $htmlInfo,

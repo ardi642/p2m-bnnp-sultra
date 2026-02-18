@@ -5,7 +5,7 @@
     
     <div class="container-fluid p-0 position-relative" style="height: calc(100vh - 70px); overflow: hidden;">
         
-        {{-- 1. TOMBOL TOGGLE FILTER --}}
+        {{-- 1. TOMBOL TOGGLE SIDEBAR FILTER --}}
         <button class="btn btn-light shadow position-absolute top-0 start-0 m-3 z-3 border fw-bold text-secondary" 
                 type="button" @click="showFilter = !showFilter">
             <i class="bi bi-funnel-fill me-2 text-primary"></i>Filter Data
@@ -126,6 +126,8 @@
         <div class="card position-absolute bottom-0 start-0 m-3 z-1 shadow border-0 bg-white bg-opacity-90 mb-5 pb-4" style="width: 260px;">
             <div class="card-body p-2 px-3 small">
                 <h6 class="fw-bold mb-2 border-bottom pb-1">Legenda</h6>
+                
+                {{-- Warna Marker --}}
                 <div class="d-flex align-items-center mb-2">
                     <div class="d-flex align-items-center justify-content-center me-2" style="width: 24px;">
                         <div style="width: 14px; height: 14px; background: #dc3545; border: 2px solid #fff; border-radius: 50%;"></div>
@@ -142,7 +144,7 @@
                     <div class="d-flex align-items-center justify-content-center me-2" style="width: 24px;">
                         <div style="width: 14px; height: 14px; background: #6f42c1; border: 2px solid #fff; border-radius: 50%;"></div>
                     </div>
-                    <div class="lh-1"><div class="fw-bold text-dark">Campuran</div><div class="text-muted" style="font-size:0.6rem;">(Tangkap & Temuan)</div></div>
+                    <div class="lh-1"><div class="fw-bold text-dark">Campuran</div></div>
                 </div>
 
                 <div class="mt-2 pt-2 border-top">
@@ -160,15 +162,21 @@
                     </div>
                 </div>
 
+                {{-- LEGENDA GRADASI WILAYAH --}}
                 <div class="mt-2 pt-2 border-top">
-                    <div class="fw-bold text-dark mb-1">Kerawanan Wilayah</div>
-                    <div class="d-flex rounded-1 overflow-hidden" style="height: 8px;">
-                        <div class="flex-fill" style="background: #22c55e;"></div>
-                        <div class="flex-fill" style="background: #ffc107;"></div>
-                        <div class="flex-fill" style="background: #dc3545;"></div>
+                    <div class="fw-bold text-dark mb-1">Densitas Barang Bukti</div>
+                    
+                    {{-- 0 Kasus --}}
+                    <div class="d-flex align-items-center mb-1">
+                        <span class="d-inline-block border border-light me-2" style="width: 30px; height: 12px; background: #2196F3; border-radius: 2px;"></span>
+                        <span class="text-muted" style="font-size: 0.7rem;">Tidak Ada Data</span>
                     </div>
+
+                    {{-- Gradient Bar --}}
+                    <div class="d-flex rounded-1 overflow-hidden border border-light" style="height: 12px; background: linear-gradient(to right, #22c55e, #ffeb3b, #dc3545);"></div>
                     <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 0.65rem;">
-                        <span>Rendah</span><span>Sedang</span><span>Tinggi</span>
+                        <span>Sedikit</span>
+                        <span>Banyak</span>
                     </div>
                 </div>
             </div>
@@ -247,7 +255,7 @@
                             </div>
                         </div>
 
-                        {{-- Kanan: Statistik Sumber (DIHITUNG ULANG) --}}
+                        {{-- Kanan: Statistik Sumber --}}
                         <div class="col-md-6">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-header bg-white fw-bold small text-secondary">SUMBER PEROLEHAN</div>
@@ -319,7 +327,16 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('mapComponent', () => ({
             showFilter: true, isLoading: false,
-            map: null, markerCluster: null, markersLayer: null, choroplethLayer: null, heatLayer: null,
+            map: null, 
+            
+            // --- LAYER DEFINITIONS ---
+            markerCluster: null, 
+            weightedLayer: null,    // Layer Titik Berbobot
+            uniformLayer: null,     // Layer Titik Biasa
+            noMarkerLayer: null,    // Layer Kosong (NEW)
+            choroplethLayer: null, 
+            heatLayer: null,
+            
             geoJsonData: null, features: [], 
             stats: { total_register: 0, total_berat_gram: 0 },
             
@@ -349,27 +366,37 @@
                 L.control.zoom({ position: 'topright' }).addTo(this.map);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', maxZoom: 19 }).addTo(this.map);
 
-                // --- PERBAIKAN: MEMBUAT PANE KHUSUS UNTUK WILAYAH (PALING BAWAH) ---
+                // Setup Panes
                 this.map.createPane('choroplethPane');
-                this.map.getPane('choroplethPane').style.zIndex = 250; // Lebih rendah dari marker (600) tapi di atas tile (200)
-                // ------------------------------------------------------------------
-
-                this.map.createPane('heatmapPane'); this.map.getPane('heatmapPane').style.zIndex = 500; this.map.getPane('heatmapPane').style.pointerEvents = 'none'; 
+                this.map.getPane('choroplethPane').style.zIndex = 250; 
+                this.map.createPane('heatmapPane'); 
+                this.map.getPane('heatmapPane').style.zIndex = 500; 
+                this.map.getPane('heatmapPane').style.pointerEvents = 'none'; 
                 
+                // --- SETUP LAYERS ---
                 this.markerCluster = L.markerClusterGroup({ showCoverageOnHover: false, zoomToBoundsOnClick: true, spiderfyOnMaxZoom: true });
-                this.markersLayer = L.layerGroup(); 
+                this.weightedLayer = L.layerGroup();
+                this.uniformLayer = L.layerGroup();
+                this.noMarkerLayer = L.layerGroup(); // Init Layer Kosong
                 this.heatLayer = L.layerGroup(); 
                 this.choroplethLayer = L.layerGroup(); 
 
-                this.map.addLayer(this.markersLayer);
+                // Default layers aktif
+                this.map.addLayer(this.uniformLayer); // Titik Biasa default
                 this.map.addLayer(this.choroplethLayer);
 
-                L.control.layers(null, { 
-                    "Titik Sebaran": this.markersLayer,
+                // --- LAYER CONTROL ---
+                const radioLayers = {
+                    "Titik (Biasa)": this.uniformLayer,
+                    "Titik (Bobot BB)": this.weightedLayer,
+                    "Tanpa Titik": this.noMarkerLayer // Tambahkan Opsi Kosong
+                };
+                const overlayLayers = {
                     "Titik Cluster": this.markerCluster,
                     "Heatmap": this.heatLayer,
                     "Peta Kerawanan": this.choroplethLayer
-                }, { position: 'topright' }).addTo(this.map);
+                };
+                L.control.layers(radioLayers, overlayLayers, { position: 'topright' }).addTo(this.map);
 
                 fetch("{{ asset('maps/sultra_kabupaten.geojson') }}").then(r => r.json()).then(data => {
                     this.geoJsonData = data; this.loadMapData();
@@ -396,8 +423,11 @@
             },
 
             renderMap(featuresToRender) {
+                // Bersihkan Layer
+                this.weightedLayer.clearLayers();
+                this.uniformLayer.clearLayers();
+                this.noMarkerLayer.clearLayers(); // Pastikan bersih
                 this.markerCluster.clearLayers();
-                this.markersLayer.clearLayers();
                 this.choroplethLayer.clearLayers();
                 this.heatLayer.clearLayers();
 
@@ -407,32 +437,28 @@
                 featuresToRender.forEach(f => {
                     const props = f.properties;
                     const coords = f.geometry.coordinates; 
-                    const radius = this.calculateRadius(props.berat_gram, maxWeight);
                     
-                    const marker = L.circleMarker([coords[1], coords[0]], {
-                        radius: radius, 
+                    // --- 1. MARKER BERBOBOT ---
+                    const radiusW = this.calculateRadius(props.berat_gram, maxWeight);
+                    const markerW = L.circleMarker([coords[1], coords[0]], {
+                        radius: radiusW, 
                         fillColor: props.marker_color, 
                         color: "#fff", weight: 1, opacity: 1, fillOpacity: 0.8
                     });
+                    this.bindPopupAction(markerW, props);
+                    this.weightedLayer.addLayer(markerW);
 
-                    marker.bindPopup(`
-                        <div class='text-center'>
-                            <h6 class='fw-bold mb-1'>${props.lokasi}</h6>
-                            <div class='text-muted small mb-2'>${props.tanggal}</div>
-                            <div class='text-start border-top pt-2'>${props.popup_html}</div>
-                            <div class='mt-2 pt-2 border-top'>
-                                <button class='btn btn-xs btn-primary w-100 detail-btn' data-id='${props.id}'><i class='bi bi-search me-1'></i>Detail</button>
-                            </div>
-                        </div>
-                    `);
-                    
-                    marker.on('popupopen', () => {
-                        const btn = document.querySelector(`.detail-btn[data-id='${props.id}']`);
-                        if(btn) btn.onclick = () => this.fetchDetail(props.id);
+                    // --- 2. MARKER BIASA (UNIFORM) ---
+                    const markerU = L.circleMarker([coords[1], coords[0]], {
+                        radius: 6, 
+                        fillColor: props.marker_color, 
+                        color: "#fff", weight: 1, opacity: 1, fillOpacity: 0.8
                     });
+                    this.bindPopupAction(markerU, props);
+                    this.uniformLayer.addLayer(markerU);
+                    this.markerCluster.addLayer(markerU); // Cluster ikut marker biasa
 
-                    this.markerCluster.addLayer(marker);
-                    this.markersLayer.addLayer(marker);
+                    // Heatmap Data
                     heatPoints.push([coords[1], coords[0], 0.2]);
                 });
 
@@ -442,6 +468,23 @@
                 }
 
                 if(this.geoJsonData) this.processChoropleth(featuresToRender);
+            },
+
+            bindPopupAction(marker, props) {
+                marker.bindPopup(`
+                    <div class='text-center'>
+                        <h6 class='fw-bold mb-1'>${props.lokasi}</h6>
+                        <div class='text-muted small mb-2'>${props.tanggal}</div>
+                        <div class='text-start border-top pt-2'>${props.popup_html}</div>
+                        <div class='mt-2 pt-2 border-top'>
+                            <button class='btn btn-xs btn-primary w-100 detail-btn' data-id='${props.id}'><i class='bi bi-search me-1'></i>Detail</button>
+                        </div>
+                    </div>
+                `);
+                marker.on('popupopen', () => {
+                    const btn = document.querySelector(`.detail-btn[data-id='${props.id}']`);
+                    if(btn) btn.onclick = () => this.fetchDetail(props.id);
+                });
             },
 
             processChoropleth(casePoints) {
@@ -455,10 +498,9 @@
                 });
 
                 const geoLayer = L.geoJson(this.geoJsonData, {
-                    // --- PERBAIKAN: MENGGUNAKAN PANE KHUSUS ---
                     pane: 'choroplethPane',
-                    // ------------------------------------------
                     style: (feature) => ({
+                        // Logika Gradasi Halus (HSL)
                         fillColor: this.getColor(regionCounts[feature.properties.code] || 0, maxCount),
                         weight: 1, opacity: 1, color: 'white', dashArray: '3', fillOpacity: 0.6
                     }),
@@ -478,24 +520,29 @@
                 this.choroplethLayer.addLayer(geoLayer);
             },
 
+            getColor(val, max) {
+                if (val === 0) return '#2196F3'; 
+                if (max <= 0) return '#2196F3';
+                let ratio = val / max;
+                if (ratio > 1) ratio = 1;
+                // Hue 120 (Hijau) -> 0 (Merah)
+                const hue = ((1 - ratio) * 120).toString(10);
+                return `hsl(${hue}, 90%, 45%)`;
+            },
+
             showRegionDashboard(feature, turfPoints) {
                 const pts = turf.pointsWithinPolygon(turfPoints, feature);
                 let totalNarko = {}, totalBeratAll = 0;
                 let srcTangkap = 0, srcTemuan = 0;
                 
-                // --- FIX LOGIKA: HITUNG 1-1 JIKA CAMPURAN ---
                 pts.features.forEach(f => {
                     const props = f.properties;
-                    // Narkotika
                     for (const [nama, berat] of Object.entries(props.raw_narkoba || {})) {
                         if (!totalNarko[nama]) totalNarko[nama] = 0;
                         totalNarko[nama] += berat; totalBeratAll += berat;
                     }
-                    
-                    // Sumber
                     if (props.status_code === 'campuran') {
-                        srcTangkap++; // Tambah 1 ke Tangkap
-                        srcTemuan++;  // Tambah 1 ke Temuan
+                        srcTangkap++; srcTemuan++;
                     } else if (props.status_code === 'tangkap') {
                         srcTangkap++;
                     } else if (props.status_code === 'temuan') {
@@ -546,7 +593,6 @@
             stopPlay() { this.isPlaying = false; clearInterval(this.playInterval); },
             getSliderLabel() { const m = ["SEMUA DATA", "JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"]; return m[this.sliderValue]; },
             calculateRadius(val, max) { return max <= 0 ? 6 : 6 + (Math.sqrt(val) / Math.sqrt(max) * 20); },
-            getColor(val, max) { if (val === 0) return '#22c55e'; const r = val/max; return r > 0.66 ? '#dc3545' : (r > 0.33 ? '#ffc107' : '#22c55e'); },
             formatNumber(num) { return parseFloat(num).toLocaleString('id-ID'); },
             async fetchDetail(id) {
                 const modal = document.getElementById('modal-content-body');

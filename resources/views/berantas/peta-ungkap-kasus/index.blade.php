@@ -115,8 +115,6 @@
         {{-- 3. KONTAINER PETA --}}
         <div id="map" class="w-100 h-100 z-0 bg-secondary-subtle"></div>
 
-        {{-- (TOMBOL TOGGLE HAPUS: Dikontrol penuh oleh Layer Control) --}}
-
         {{-- 4. SMART SLIDER --}}
         <div class="position-absolute bottom-0 start-50 translate-middle-x mb-5 z-3 w-75 w-md-50" 
              x-show="showSlider" x-transition style="bottom: 80px !important;">
@@ -149,27 +147,30 @@
                     </div>
                     <div class="lh-1"><div class="fw-bold text-dark">Cluster</div><div class="text-muted" style="font-size: 0.7rem;">Grup Titik</div></div>
                 </div>
+                
+                {{-- LEGENDA TITIK --}}
                 <div class="d-flex align-items-center mb-2">
                     <div class="d-flex align-items-center justify-content-center me-2" style="width: 24px;">
                         <div style="width: 14px; height: 14px; background: rgba(220, 53, 69, 0.6); border: 2px solid #dc3545; border-radius: 50%;"></div>
                     </div>
                     <div class="lh-1"><div class="fw-bold text-dark">Titik Kasus</div><div class="text-muted" style="font-size: 0.7rem;">Lokasi Spesifik</div></div>
                 </div>
-                <div class="d-flex align-items-center mb-2">
-                    <div class="d-flex align-items-center justify-content-center me-2" style="width: 24px;">
-                        <div style="width: 14px; height: 14px; background: linear-gradient(to right, blue, lime, red); border-radius: 3px;"></div>
-                    </div>
-                    <div class="lh-1"><div class="fw-bold text-dark">Heatmap</div><div class="text-muted" style="font-size: 0.7rem;">Frekuensi</div></div>
-                </div>
+                
+                {{-- LEGENDA GRADASI WILAYAH --}}
                 <div class="mt-2 pt-2 border-top">
                     <div class="fw-bold text-dark mb-1">Kerawanan Wilayah</div>
-                    <div class="d-flex rounded-1 overflow-hidden" style="height: 8px;">
-                        <div class="flex-fill" style="background: #22c55e;"></div>
-                        <div class="flex-fill" style="background: #ffc107;"></div>
-                        <div class="flex-fill" style="background: #dc3545;"></div>
+                    
+                    {{-- 0 Kasus --}}
+                    <div class="d-flex align-items-center mb-1">
+                        <span class="d-inline-block border border-light me-2" style="width: 30px; height: 12px; background: #2196F3; border-radius: 2px;"></span>
+                        <span class="text-muted" style="font-size: 0.7rem;">0 Kasus (Aman)</span>
                     </div>
+
+                    {{-- Gradient Bar --}}
+                    <div class="d-flex rounded-1 overflow-hidden border border-light" style="height: 12px; background: linear-gradient(to right, #22c55e, #ffeb3b, #dc3545);"></div>
                     <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 0.65rem;">
-                        <span>Rendah</span><span>Sedang</span><span>Tinggi</span>
+                        <span>Sedikit</span>
+                        <span>Max</span>
                     </div>
                 </div>
             </div>
@@ -198,7 +199,7 @@
 
     </div>
 
-    {{-- 6. MODAL DETAIL --}}
+    {{-- MODAL DETAIL --}}
     <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow">
@@ -214,7 +215,7 @@
         </div>
     </div>
 
-    {{-- 7. MODAL REGION DASHBOARD --}}
+    {{-- MODAL REGION DASHBOARD --}}
     <div class="modal fade" id="regionModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -308,13 +309,22 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('mapComponent', () => ({
             showFilter: true, isLoading: false,
-            map: null, markerCluster: null, markersLayer: null, choroplethLayer: null, heatLayer: null,
+            map: null, 
+            
+            // --- LAYER DEFINITIONS ---
+            markerCluster: null,    
+            weightedLayer: null,    
+            uniformLayer: null,
+            noMarkerLayer: null, // Layer Kosong untuk opsi "Tanpa Titik"     
+            choroplethLayer: null, 
+            heatLayer: null,
+            
             geoJsonData: null, features: [], 
             stats: { total_kasus: 0, total_tersangka: 0, total_berat_gram: 0 },
             regionModal: null, regionStats: { name: '', total_cases: 0, narkotika: [], pekerjaan: [] },
             showSlider: false, sliderValue: 0, isPlaying: false, playInterval: null,
             detailModal: null, detailRouteUrl: "{{ route('berantas.peta-ungkap-kasus.show', ':id') }}",
-
+            
             init() {
                 const config = { plugins: ['remove_button', 'clear_button', 'dropdown_input'], maxOptions: null, create: false, persist: false };
                 ['select-tahun','select-bulan','select-satker','select-narkotika','select-pekerjaan'].forEach(id => {
@@ -329,35 +339,44 @@
             initMap() {
                 this.map = L.map('map', { zoomControl: false }).setView([-4.10, 122.10], 7);
                 L.control.zoom({ position: 'topright' }).addTo(this.map);
+                
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', maxZoom: 19 }).addTo(this.map);
 
-                // --- PERBAIKAN: MEMBUAT PANE KHUSUS UNTUK WILAYAH (PALING BAWAH) ---
+                // Setup Panes
                 this.map.createPane('choroplethPane');
-                this.map.getPane('choroplethPane').style.zIndex = 250; // Lebih rendah dari marker (600) tapi di atas tile (200)
-                // ------------------------------------------------------------------
-
+                this.map.getPane('choroplethPane').style.zIndex = 250; 
                 this.map.createPane('heatmapPane'); 
                 this.map.getPane('heatmapPane').style.zIndex = 500; 
                 this.map.getPane('heatmapPane').style.pointerEvents = 'none'; 
                 
-                // Init Layers (Semua didaftarkan agar bisa di-toggle di Layer Control)
+                // --- SETUP LAYERS ---
                 this.markerCluster = L.markerClusterGroup({ showCoverageOnHover: false, zoomToBoundsOnClick: true, spiderfyOnMaxZoom: true });
-                this.markersLayer = L.layerGroup(); 
+                this.weightedLayer = L.layerGroup();
+                this.uniformLayer = L.layerGroup();
+                this.noMarkerLayer = L.layerGroup(); // Init Layer Kosong
                 this.heatLayer = L.layerGroup(); 
                 this.choroplethLayer = L.layerGroup(); 
 
-                // Default Aktif: Scatter & Choropleth
-                this.map.addLayer(this.markersLayer);
+                // --- DEFAULT ACTIVE LAYERS ---
+                this.map.addLayer(this.uniformLayer);
                 this.map.addLayer(this.choroplethLayer);
 
-                // DAFTARKAN SEMUA KE CONTROL
-                const overlays = {
-                    "Titik Sebaran (Scatter)": this.markersLayer,
+                // --- KONFIGURASI CONTROL LAYER ---
+                // Base Layers (Radio Button)
+                const radioLayers = {
+                    "Titik (Biasa)": this.uniformLayer,
+                    "Titik (Bobot BB)": this.weightedLayer,
+                    "Tanpa Titik": this.noMarkerLayer // Tambahkan Opsi Kosong
+                };
+
+                // Overlays (Checkbox)
+                const overlayLayers = {
                     "Titik Group (Cluster)": this.markerCluster,
                     "Heatmap": this.heatLayer,
                     "Peta Kerawanan": this.choroplethLayer
                 };
-                L.control.layers(null, overlays, { position: 'topright' }).addTo(this.map);
+
+                L.control.layers(radioLayers, overlayLayers, { position: 'topright' }).addTo(this.map);
 
                 fetch("{{ asset('maps/sultra_kabupaten.geojson') }}").then(r => r.json()).then(data => {
                     this.geoJsonData = data; this.loadMapData();
@@ -384,9 +403,11 @@
             },
 
             renderMap(featuresToRender) {
-                // Clear semua layer (meskipun sedang hidden) agar data fresh
+                // Clear semua layer
+                this.weightedLayer.clearLayers();
+                this.uniformLayer.clearLayers();
+                this.noMarkerLayer.clearLayers(); // Pastikan layer kosong tetap bersih
                 this.markerCluster.clearLayers();
-                this.markersLayer.clearLayers();
                 this.choroplethLayer.clearLayers();
                 this.heatLayer.clearLayers();
 
@@ -396,31 +417,24 @@
                 featuresToRender.forEach(f => {
                     const props = f.properties;
                     const coords = f.geometry.coordinates; 
-                    const radius = this.calculateRadius(props.berat_gram, maxWeight);
                     
-                    const marker = L.circleMarker([coords[1], coords[0]], {
-                        radius: radius, fillColor: "#dc3545", color: "#fff", weight: 1, opacity: 1, fillOpacity: 0.8
+                    // --- 1. MARKER BERBOBOT ---
+                    const radiusW = this.calculateRadius(props.berat_gram, maxWeight);
+                    const markerW = L.circleMarker([coords[1], coords[0]], {
+                        radius: radiusW, fillColor: "#dc3545", color: "#fff", weight: 1, opacity: 1, fillOpacity: 0.8
                     });
+                    this.bindPopupAction(markerW, props);
+                    this.weightedLayer.addLayer(markerW);
 
-                    marker.bindPopup(`
-                        <div class='text-center'>
-                            <h6 class='fw-bold mb-1'>${props.tkp}</h6>
-                            <div class='text-muted small mb-2'>${props.tanggal} - ${props.lkn}</div>
-                            <div class='text-start border-top pt-2'>${props.popup_html}</div>
-                            <div class='mt-2 pt-2 border-top'>
-                                <button class='btn btn-xs btn-primary w-100 detail-btn' data-id='${props.id}'><i class='bi bi-search me-1'></i>Detail</button>
-                            </div>
-                        </div>
-                    `);
-                    
-                    marker.on('popupopen', () => {
-                        const btn = document.querySelector(`.detail-btn[data-id='${props.id}']`);
-                        if(btn) btn.onclick = () => this.fetchDetail(props.id);
+                    // --- 2. MARKER BIASA ---
+                    const markerU = L.circleMarker([coords[1], coords[0]], {
+                        radius: 6, fillColor: "#dc3545", color: "#fff", weight: 1, opacity: 1, fillOpacity: 0.8
                     });
+                    this.bindPopupAction(markerU, props);
+                    this.uniformLayer.addLayer(markerU);
+                    this.markerCluster.addLayer(markerU); 
 
-                    // Add to BOTH layers (Visibility diatur user via checkbox)
-                    this.markerCluster.addLayer(marker);
-                    this.markersLayer.addLayer(marker);
+                    // Heatmap Data
                     heatPoints.push([coords[1], coords[0], 0.2]);
                 });
 
@@ -430,6 +444,23 @@
                 }
 
                 if(this.geoJsonData) this.processChoropleth(featuresToRender);
+            },
+
+            bindPopupAction(marker, props) {
+                marker.bindPopup(`
+                    <div class='text-center'>
+                        <h6 class='fw-bold mb-1'>${props.tkp}</h6>
+                        <div class='text-muted small mb-2'>${props.tanggal} - ${props.lkn}</div>
+                        <div class='text-start border-top pt-2'>${props.popup_html}</div>
+                        <div class='mt-2 pt-2 border-top'>
+                            <button class='btn btn-xs btn-primary w-100 detail-btn' data-id='${props.id}'><i class='bi bi-search me-1'></i>Detail</button>
+                        </div>
+                    </div>
+                `);
+                marker.on('popupopen', () => {
+                    const btn = document.querySelector(`.detail-btn[data-id='${props.id}']`);
+                    if(btn) btn.onclick = () => this.fetchDetail(props.id);
+                });
             },
 
             processChoropleth(casePoints) {
@@ -443,18 +474,16 @@
                 });
 
                 const geoLayer = L.geoJson(this.geoJsonData, {
-                    // --- PERBAIKAN: MENGGUNAKAN PANE KHUSUS ---
                     pane: 'choroplethPane',
-                    // ------------------------------------------
                     style: (feature) => ({
                         fillColor: this.getColor(regionCounts[feature.properties.code] || 0, maxCount),
-                        weight: 1, opacity: 1, color: 'white', dashArray: '3', fillOpacity: 0.6
+                        weight: 1, opacity: 1, color: 'white', dashArray: '3', fillOpacity: 0.7
                     }),
                     onEachFeature: (feature, layer) => {
                         const count = regionCounts[feature.properties.code] || 0;
                         layer.bindTooltip(`<div class="text-center"><strong>${feature.properties.name}</strong><br><span class="badge ${count > 0 ? 'bg-danger' : 'bg-success'}">${count} Kasus</span></div>`, { sticky: true, className: 'custom-tooltip' });
                         layer.on({
-                            mouseover: (e) => e.target.setStyle({ weight: 3, color: '#666', fillOpacity: 0.8, dashArray: '' }),
+                            mouseover: (e) => e.target.setStyle({ weight: 3, color: '#666', fillOpacity: 0.9, dashArray: '' }),
                             mouseout: (e) => geoLayer.resetStyle(e.target),
                             click: (e) => {
                                 if (count > 0) this.showRegionDashboard(feature, turfPoints);
@@ -464,6 +493,15 @@
                     }
                 });
                 this.choroplethLayer.addLayer(geoLayer);
+            },
+
+            getColor(val, max) {
+                if (val === 0) return '#2196F3'; 
+                if (max <= 0) return '#2196F3';
+                let ratio = val / max;
+                if (ratio > 1) ratio = 1;
+                const hue = ((1 - ratio) * 120).toString(10);
+                return `hsl(${hue}, 90%, 45%)`;
             },
 
             showRegionDashboard(feature, turfPoints) {
@@ -486,7 +524,6 @@
                     name, weight, percent: totalBeratAll > 0 ? ((weight/totalBeratAll)*100).toFixed(1) : 0
                 })).sort((a,b) => b.weight - a.weight);
 
-                const totalOrg = pts.features.length; 
                 const totalTskReal = Object.values(totalPekerjaan).reduce((a, b) => a + b, 0);
 
                 const pekArray = Object.entries(totalPekerjaan).map(([name, count]) => ({
@@ -525,7 +562,6 @@
             stopPlay() { this.isPlaying = false; clearInterval(this.playInterval); },
             getSliderLabel() { const m = ["SEMUA DATA", "JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"]; return m[this.sliderValue]; },
             calculateRadius(val, max) { return max <= 0 ? 6 : 6 + (Math.sqrt(val) / Math.sqrt(max) * 20); },
-            getColor(val, max) { if (val === 0) return '#22c55e'; const r = val/max; return r > 0.66 ? '#dc3545' : (r > 0.33 ? '#ffc107' : '#22c55e'); },
             formatNumber(num) { return parseFloat(num).toLocaleString('id-ID'); },
             async fetchDetail(id) {
                 const modal = document.getElementById('modal-content-body');

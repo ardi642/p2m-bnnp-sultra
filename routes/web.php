@@ -34,6 +34,7 @@ use App\Http\Controllers\P2m\SafariReligiController;
 use App\Http\Controllers\P2m\TesUrineController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Rehab\RehabLaporanController;
+use App\Http\Controllers\Rehab\RehabPasienController;
 use App\Http\Controllers\TemporaryFileController;
 use App\Http\Controllers\DokumenController;
 use App\Http\Controllers\P2m\AsistensiRelawanController;
@@ -53,7 +54,7 @@ use Illuminate\Support\Facades\Storage;
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'index'])->name('login');
     Route::post('/login', [LoginController::class, 'authenticate'])->name('login.authenticate');
-    
+
     // Forgot Password Routes
     Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
     Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
@@ -62,8 +63,8 @@ Route::middleware('guest')->group(function () {
 });
 
 // --- AUTHENTICATED ROUTES ---
-Route::middleware('auth')->group(function() {
-    
+Route::middleware('auth')->group(function () {
+
     // Dashboard & Umum
     // Route::get('/', function () { return view('welcome'); })->name('dashboard');
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
@@ -76,7 +77,7 @@ Route::middleware('auth')->group(function() {
 
     // Group Route Dokumen
     Route::prefix('dokumen')->name('dokumen.')->group(function () {
-        
+
         // 1. Download Satuan (GET)
         Route::get('/{id}/download', [DokumenController::class, 'download'])
             ->name('download');
@@ -93,7 +94,7 @@ Route::middleware('auth')->group(function() {
 
     // Profile Management
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update'); 
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
     Route::get('/profile/verify-email/{token}', [ProfileController::class, 'verifyNewEmail'])->name('profile.email.verify');
     Route::delete('/profile/cancel-email', [ProfileController::class, 'cancelEmailChange'])->name('profile.email.cancel');
@@ -104,9 +105,9 @@ Route::middleware('auth')->group(function() {
     // =========================================================================
     // Catatan: Admin Bidang (P2M/Berantas) juga butuh akses 'users' untuk manage operator mereka sendiri.
     // Jadi kita tambahkan role mereka di sini.
-    Route::middleware(['role:admin,admin_satker,admin_p2m,admin_berantas,admin_rehab'])->group(function() {
-        Route::prefix('admin')->name('admin.')->group(function() {
-            
+    Route::middleware(['role:admin,admin_satker,admin_p2m,admin_berantas,admin_rehab'])->group(function () {
+        Route::prefix('admin')->name('admin.')->group(function () {
+
             // User Controller (Create Operator, Reset Password, List User)
             Route::resource('users', UserController::class);
             Route::put('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset_password');
@@ -117,27 +118,28 @@ Route::middleware('auth')->group(function() {
     });
 
     // Hanya Admin Pusat dan Admin Satker yang boleh menambah/mengedit fisik pegawai
-    Route::middleware(['role:admin,admin_satker'])->group(function() {
-        Route::prefix('admin')->name('admin.')->group(function() {
-            
+    Route::middleware(['role:admin,admin_satker'])->group(function () {
+        Route::prefix('admin')->name('admin.')->group(function () {
+
             // Resource Pegawai (Kecuali Index & Show yang sudah ada di atas)
             // Ini menangani: create, store, edit, update, destroy
             Route::resource('pegawai', PegawaiController::class)->except(['index', 'show']);
-
         });
     });
 
     // =========================================================================
     // 2. MODUL P2M (Pencegahan)
     // =========================================================================
-    Route::prefix('p2m')->name('p2m.')->group(function() {
-        
+    Route::prefix('p2m')->name('p2m.')->group(function () {
+
         // Halaman Utama P2M
-        Route::get('/', function() { return view('p2m.index'); })->name("index");
-        
+        Route::get('/', function () {
+            return view('p2m.index');
+        })->name("index");
+
         // A. READ/VIEW ACCESS (Admin Pusat, Admin Satker, Admin P2M, Operator P2M, Operator Satker)
         // Tambahkan 'admin_p2m' disini
-        Route::middleware(['role:admin,admin_satker,admin_p2m,operator_satker,operator_p2m'])->group(function() {
+        Route::middleware(['role:admin,admin_satker,admin_p2m,operator_satker,operator_p2m'])->group(function () {
             // Informasi & Edukasi
             Route::get('/informasi-edukasi', [InformasiEdukasiController::class, 'index'])->name("informasi-edukasi.index");
             Route::get('/informasi-edukasi/export', [InformasiEdukasiController::class, 'export'])->name('informasi-edukasi.export');
@@ -184,7 +186,7 @@ Route::middleware('auth')->group(function() {
             // Safari Religi
             Route::get('/pelatihan', [PelatihanController::class, 'index'])->name("pelatihan.index");
             Route::get('/pelatihan/export', [PelatihanController::class, 'export'])->name('pelatihan.export');
-             // Safari Religi
+            // Safari Religi
             Route::get('/keluarga', [KeluargaController::class, 'index'])->name("keluarga.index");
             Route::get('/keluarga/export', [KeluargaController::class, 'export'])->name('keluarga.export');
             // Monev
@@ -197,8 +199,8 @@ Route::middleware('auth')->group(function() {
 
         // B. WRITE/CREATE/EDIT ACCESS (Hanya Operator P2M & Operator Satker)
         // Admin P2M biasanya hanya memantau, tapi jika boleh input, tambahkan 'admin_p2m' disini
-        Route::middleware(['role:operator_satker,operator_p2m'])->group(function() {
-            
+        Route::middleware(['role:operator_satker,operator_p2m'])->group(function () {
+
             // Informasi & Edukasi CRUD
             Route::resource('informasi-edukasi', InformasiEdukasiController::class)->except(['index', 'show']);
             // Sosialisasi CRUD
@@ -229,7 +231,7 @@ Route::middleware('auth')->group(function() {
             Route::resource('asistensi-relawan', AsistensiRelawanController::class)->except(['index', 'show']);
             // Pelatihan CRUD
             Route::resource('pelatihan', PelatihanController::class)->except(['index', 'show']);
-             // Ketahanan Keluarga CRUD
+            // Ketahanan Keluarga CRUD
             Route::resource('keluarga', KeluargaController::class)->except(['index', 'show']);
             // Monev CRUD
             Route::resource('monev', MonevController::class)->except(['index', 'show']);
@@ -241,10 +243,10 @@ Route::middleware('auth')->group(function() {
     // =========================================================================
     // 3. MODUL BERANTAS (Pemberantasan)
     // =========================================================================
-    Route::prefix('berantas')->name('berantas.')->group(function() {
-        
+    Route::prefix('berantas')->name('berantas.')->group(function () {
+
         // A. READ/VIEW ACCESS (Tambahkan 'admin_berantas')
-        Route::middleware(['role:admin,admin_satker,admin_berantas,operator_satker,operator_berantas'])->group(function() {
+        Route::middleware(['role:admin,admin_satker,admin_berantas,operator_satker,operator_berantas'])->group(function () {
             // Ungkap Kasus
             Route::get('/ungkap-kasus', [UngkapKasusController::class, 'index'])->name("ungkap-kasus.index");
             Route::get('/ungkap-kasus/export', [UngkapKasusController::class, 'export'])->name('ungkap-kasus.export');
@@ -269,7 +271,7 @@ Route::middleware('auth')->group(function() {
             Route::get('peta-sebaran-bb/{id}', [PetaRegisterBarangBuktiController::class, 'show'])->name('peta-sebaran-bb.show');
 
             // // --- PETA SEBARAN (GIS) ---
-        
+
             // // 1. Peta Ungkap Kasus (Crime Map)
             // Route::get('/peta/ungkap-kasus', [MapController::class, 'ungkapKasusIndex'])
             //     ->name('peta.ungkap-kasus.index');
@@ -284,37 +286,43 @@ Route::middleware('auth')->group(function() {
         });
 
         // B. WRITE ACCESS (Hanya Operator Berantas & Operator Satker)
-        Route::middleware(['role:operator_satker,operator_berantas'])->group(function() {
+        Route::middleware(['role:operator_satker,operator_berantas'])->group(function () {
             Route::resource('ungkap-kasus', UngkapKasusController::class)->except(['index', 'show']);
             Route::resource('tat', TatController::class)->except(['index', 'show']);
             // Narkotika & BB (Biasanya pakai resource juga atau manual seperti kode lama)
             Route::post('/narkotika', [NarkotikaController::class, 'store'])->name('narkotika.store');
             Route::put('/narkotika/{id}', [NarkotikaController::class, 'update'])->name('narkotika.update');
             Route::delete('/narkotika/{id}', [NarkotikaController::class, 'destroy'])->name('narkotika.destroy');
-            
+
             Route::resource('register-barang-bukti', RegisterBarangBuktiController::class)->except(['index', 'show']);
         });
-
     });
 
 
     // =========================================================================
     // 4. MODUL REHABILITASI
     // =========================================================================
-    Route::prefix('rehab')->name('rehab.')->group(function() {
-        
+    Route::prefix('rehab')->name('rehab.')->group(function () {
+
         // A. READ/VIEW ACCESS
-        Route::middleware(['role:admin,admin_satker,admin_rehab,operator_satker,operator_rehab'])->group(function() {
+        Route::middleware(['role:admin,admin_satker,admin_rehab,operator_satker,operator_rehab'])->group(function () {
+            // LAPORAN    
             Route::get('/laporan', [RehabLaporanController::class, 'index'])->name('laporan.index');
             Route::get('/laporan/export', [RehabLaporanController::class, 'export'])->name('laporan.export');
+            // PASIEN    
+            Route::get('/pasien', [RehabPasienController::class, 'index'])->name('pasien.index');
+            Route::get('/pasien/export', [RehabPasienController::class, 'export'])->name('pasien.export');
         });
 
+
         // B. WRITE ACCESS (Target & Laporan Harian)
-        Route::middleware(['role:operator_satker,operator_rehab,admin,admin_satker'])->group(function() {
-            
+        Route::middleware(['role:operator_satker,operator_rehab,admin,admin_satker'])->group(function () {
+            // PASIEN
+            Route::resource('pasien', RehabPasienController::class)->except(['index']);
+
             // Route Simpan/Update Target
             Route::post('/laporan/target', [RehabLaporanController::class, 'storeTarget'])->name('laporan.store_target');
-            
+
             // Route Hapus Target (BARU)
             Route::delete('/laporan/target/{id}', [RehabLaporanController::class, 'destroyTarget'])->name('laporan.destroy_target');
 
@@ -322,5 +330,4 @@ Route::middleware('auth')->group(function() {
             Route::resource('laporan', RehabLaporanController::class)->except(['index', 'show']);
         });
     });
-
 });

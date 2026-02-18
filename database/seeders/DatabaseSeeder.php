@@ -41,6 +41,11 @@ class DatabaseSeeder extends Seeder
             P2mPemetaanSdmSdaSeeder::class
         ]);
 
+        $this->call([
+            BerantasUngkapKasusSeeder::class,
+            BerantasRegisterBarangBuktiSeeder::class,
+        ]);
+
 
         // Buat User Login
         $this->call([

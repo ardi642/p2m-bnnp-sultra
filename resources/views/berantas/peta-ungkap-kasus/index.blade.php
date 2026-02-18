@@ -215,7 +215,7 @@
         </div>
     </div>
 
-    {{-- MODAL REGION DASHBOARD --}}
+    {{-- MODAL REGION DASHBOARD (UPDATED) --}}
     <div class="modal fade" id="regionModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -224,12 +224,42 @@
                     <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body bg-light">
+                    
+                    {{-- 1. RINGKASAN UTAMA --}}
+                    <div class="row g-3 mb-3">
+                        <div class="col-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body text-center p-2">
+                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">BERAT BB (NARKOTIKA)</div>
+                                    <div class="fs-5 fw-bold text-danger" x-text="formatNumber(regionStats.total_berat) + ' g'"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body text-center p-2">
+                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">TOTAL TERSANGKA</div>
+                                    <div class="fs-5 fw-bold text-dark" x-text="regionStats.total_tersangka + ' Org'"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body text-center p-2">
+                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">TOTAL ITEM BB</div>
+                                    <div class="fs-5 fw-bold text-primary" x-text="regionStats.total_item + ' Item'"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- 2. RINCIAN DATA --}}
                     <div class="row g-3">
                         <div class="col-12">
                             <div class="card border-0 shadow-sm">
-                                <div class="card-body text-center p-3">
+                                <div class="card-body text-center p-2 bg-primary bg-opacity-10">
                                     <div class="text-muted small fw-bold">TOTAL KASUS</div>
-                                    <div class="display-6 fw-bold text-primary" x-text="regionStats.total_cases"></div>
+                                    <div class="display-6 fw-bold text-primary lh-1" x-text="regionStats.total_cases"></div>
                                 </div>
                             </div>
                         </div>
@@ -315,13 +345,25 @@
             markerCluster: null,    
             weightedLayer: null,    
             uniformLayer: null,
-            noMarkerLayer: null, // Layer Kosong untuk opsi "Tanpa Titik"     
+            noMarkerLayer: null,    // Layer Kosong
             choroplethLayer: null, 
             heatLayer: null,
             
             geoJsonData: null, features: [], 
             stats: { total_kasus: 0, total_tersangka: 0, total_berat_gram: 0 },
-            regionModal: null, regionStats: { name: '', total_cases: 0, narkotika: [], pekerjaan: [] },
+            
+            // Dashboard Logic (UPDATED)
+            regionModal: null, 
+            regionStats: { 
+                name: '', 
+                total_cases: 0, 
+                total_berat: 0, 
+                total_tersangka: 0, 
+                total_item: 0,
+                narkotika: [], 
+                pekerjaan: [] 
+            },
+            
             showSlider: false, sliderValue: 0, isPlaying: false, playInterval: null,
             detailModal: null, detailRouteUrl: "{{ route('berantas.peta-ungkap-kasus.show', ':id') }}",
             
@@ -353,7 +395,7 @@
                 this.markerCluster = L.markerClusterGroup({ showCoverageOnHover: false, zoomToBoundsOnClick: true, spiderfyOnMaxZoom: true });
                 this.weightedLayer = L.layerGroup();
                 this.uniformLayer = L.layerGroup();
-                this.noMarkerLayer = L.layerGroup(); // Init Layer Kosong
+                this.noMarkerLayer = L.layerGroup(); 
                 this.heatLayer = L.layerGroup(); 
                 this.choroplethLayer = L.layerGroup(); 
 
@@ -366,7 +408,7 @@
                 const radioLayers = {
                     "Titik (Biasa)": this.uniformLayer,
                     "Titik (Bobot BB)": this.weightedLayer,
-                    "Tanpa Titik": this.noMarkerLayer // Tambahkan Opsi Kosong
+                    "Tanpa Titik": this.noMarkerLayer
                 };
 
                 // Overlays (Checkbox)
@@ -406,7 +448,7 @@
                 // Clear semua layer
                 this.weightedLayer.clearLayers();
                 this.uniformLayer.clearLayers();
-                this.noMarkerLayer.clearLayers(); // Pastikan layer kosong tetap bersih
+                this.noMarkerLayer.clearLayers(); 
                 this.markerCluster.clearLayers();
                 this.choroplethLayer.clearLayers();
                 this.heatLayer.clearLayers();
@@ -507,12 +549,20 @@
             showRegionDashboard(feature, turfPoints) {
                 const pts = turf.pointsWithinPolygon(turfPoints, feature);
                 let totalNarko = {}, totalBeratAll = 0, totalPekerjaan = {};
+                let totalTskAll = 0;
+                let totalItemAll = 0;
                 
                 pts.features.forEach(f => {
                     const props = f.properties;
+                    
+                    // Aggregation Data dari Properties
+                    totalBeratAll += parseFloat(props.berat_gram || 0);
+                    totalItemAll += parseInt(props.jml_item_narko || 0);
+                    totalTskAll += parseInt(props.raw_pekerjaan.length || 0);
+
                     for (const [nama, berat] of Object.entries(props.raw_narkoba || {})) {
                         if (!totalNarko[nama]) totalNarko[nama] = 0;
-                        totalNarko[nama] += berat; totalBeratAll += berat;
+                        totalNarko[nama] += berat; 
                     }
                     (props.raw_pekerjaan || []).forEach(p => {
                         if (!totalPekerjaan[p]) totalPekerjaan[p] = 0;
@@ -533,6 +583,9 @@
                 this.regionStats = {
                     name: feature.properties.name,
                     total_cases: pts.features.length,
+                    total_berat: totalBeratAll,
+                    total_tersangka: totalTskAll,
+                    total_item: totalItemAll,
                     narkotika: narkoArray,
                     pekerjaan: pekArray
                 };

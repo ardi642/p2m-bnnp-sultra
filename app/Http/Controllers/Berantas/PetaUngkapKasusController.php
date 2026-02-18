@@ -107,11 +107,14 @@ class PetaUngkapKasusController extends Controller
         // 6. Formatting GeoJSON
         $features = $kasusCollection->map(function($item) {
             $totalBeratGram = 0;
+            $totalItemNarko = 0; // Tambahan: Hitung Item
             $rawNarkoba = []; 
             
-            // Proses BB
+            // Proses BB (HANYA NARKOTIKA)
             foreach($item->barangBukti as $bb) {
                 if($bb->kategori === 'Narkotika') {
+                    $totalItemNarko++; // Increment Item Count
+                    
                     $qty = $bb->kuantitas;
                     if($bb->satuan_narkotika === 'Kg') $qty *= 1000;
                     if($bb->satuan_narkotika === 'Ton') $qty *= 1000000;
@@ -137,7 +140,7 @@ class PetaUngkapKasusController extends Controller
                     $htmlBarang .= "<li>• <strong>{$k}</strong>: " . number_format($v, 0, ',', '.') . " g</li>";
                 }
             } else {
-                $htmlBarang .= "<li class='text-muted fst-italic'>- Tidak ada BB -</li>";
+                $htmlBarang .= "<li class='text-muted fst-italic'>- Tidak ada BB Narkotika -</li>";
             }
             $htmlBarang .= '</ul>';
 
@@ -166,7 +169,11 @@ class PetaUngkapKasusController extends Controller
                     'tkp' => $item->alamat_tkp,
                     'tanggal' => $item->tanggal_kejadian->format('d/m/Y'),
                     'bulan_angka' => (int)$item->tanggal_kejadian->format('m'),
+                    
+                    // DATA UTAMA
                     'berat_gram' => $totalBeratGram,
+                    'jml_item_narko' => $totalItemNarko, // Dikirim ke JS
+                    
                     'popup_html' => $htmlBarang . $htmlTersangka,
                     'raw_narkoba' => $rawNarkoba,
                     'raw_pekerjaan' => $rawPekerjaan

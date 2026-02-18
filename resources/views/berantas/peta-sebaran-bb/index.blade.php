@@ -215,7 +215,7 @@
         </div>
     </div>
 
-    {{-- MODAL REGION DASHBOARD --}}
+    {{-- MODAL REGION DASHBOARD (UPDATED) --}}
     <div class="modal fade" id="regionModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -224,12 +224,42 @@
                     <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body bg-light">
+                    
+                    {{-- 1. RINGKASAN UTAMA --}}
+                    <div class="row g-3 mb-3">
+                        <div class="col-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body text-center p-2">
+                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">TOTAL BERAT (NARKOTIKA)</div>
+                                    <div class="fs-5 fw-bold text-danger" x-text="formatNumber(regionStats.total_berat) + ' g'"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body text-center p-2">
+                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">BERAT BB TANGKAP</div>
+                                    <div class="fs-5 fw-bold text-dark" x-text="formatNumber(regionStats.berat_tangkap) + ' g'"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body text-center p-2">
+                                    <div class="text-muted small fw-bold" style="font-size: 0.65rem;">TOTAL ITEM NARKOTIKA</div>
+                                    <div class="fs-5 fw-bold text-primary" x-text="regionStats.total_item + ' Item'"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- 2. RINCIAN DATA --}}
                     <div class="row g-3">
                         <div class="col-12">
                             <div class="card border-0 shadow-sm">
-                                <div class="card-body text-center p-3">
+                                <div class="card-body text-center p-3 bg-primary bg-opacity-10">
                                     <div class="text-muted small fw-bold">TOTAL REGISTER</div>
-                                    <div class="display-6 fw-bold text-primary" x-text="regionStats.total_regs"></div>
+                                    <div class="display-6 fw-bold text-primary lh-1" x-text="regionStats.total_regs"></div>
                                 </div>
                             </div>
                         </div>
@@ -343,7 +373,9 @@
             // Dashboard Logic
             regionModal: null, 
             regionStats: { 
-                name: '', total_regs: 0, narkotika: [], 
+                name: '', total_regs: 0, 
+                total_berat: 0, berat_tangkap: 0, total_item: 0,
+                narkotika: [], 
                 sumber: { tangkap:0, temuan:0, pct_tangkap:0, pct_temuan:0 } 
             },
             
@@ -377,7 +409,7 @@
                 this.markerCluster = L.markerClusterGroup({ showCoverageOnHover: false, zoomToBoundsOnClick: true, spiderfyOnMaxZoom: true });
                 this.weightedLayer = L.layerGroup();
                 this.uniformLayer = L.layerGroup();
-                this.noMarkerLayer = L.layerGroup(); // Init Layer Kosong
+                this.noMarkerLayer = L.layerGroup(); 
                 this.heatLayer = L.layerGroup(); 
                 this.choroplethLayer = L.layerGroup(); 
 
@@ -389,7 +421,7 @@
                 const radioLayers = {
                     "Titik (Biasa)": this.uniformLayer,
                     "Titik (Bobot BB)": this.weightedLayer,
-                    "Tanpa Titik": this.noMarkerLayer // Tambahkan Opsi Kosong
+                    "Tanpa Titik": this.noMarkerLayer // Pilihan Tanpa Titik
                 };
                 const overlayLayers = {
                     "Titik Cluster": this.markerCluster,
@@ -426,7 +458,7 @@
                 // Bersihkan Layer
                 this.weightedLayer.clearLayers();
                 this.uniformLayer.clearLayers();
-                this.noMarkerLayer.clearLayers(); // Pastikan bersih
+                this.noMarkerLayer.clearLayers();
                 this.markerCluster.clearLayers();
                 this.choroplethLayer.clearLayers();
                 this.heatLayer.clearLayers();
@@ -525,7 +557,6 @@
                 if (max <= 0) return '#2196F3';
                 let ratio = val / max;
                 if (ratio > 1) ratio = 1;
-                // Hue 120 (Hijau) -> 0 (Merah)
                 const hue = ((1 - ratio) * 120).toString(10);
                 return `hsl(${hue}, 90%, 45%)`;
             },
@@ -535,11 +566,21 @@
                 let totalNarko = {}, totalBeratAll = 0;
                 let srcTangkap = 0, srcTemuan = 0;
                 
+                // Aggregator Variables
+                let beratTangkapAll = 0;
+                let totalItemAll = 0;
+                
                 pts.features.forEach(f => {
                     const props = f.properties;
+                    
+                    // Sum Properties
+                    totalBeratAll += parseFloat(props.berat_gram || 0);
+                    beratTangkapAll += parseFloat(props.berat_tangkap || 0);
+                    totalItemAll += parseInt(props.jml_item_narko || 0);
+
                     for (const [nama, berat] of Object.entries(props.raw_narkoba || {})) {
                         if (!totalNarko[nama]) totalNarko[nama] = 0;
-                        totalNarko[nama] += berat; totalBeratAll += berat;
+                        totalNarko[nama] += berat; 
                     }
                     if (props.status_code === 'campuran') {
                         srcTangkap++; srcTemuan++;
@@ -561,6 +602,9 @@
                 this.regionStats = {
                     name: feature.properties.name,
                     total_regs: totalRegs,
+                    total_berat: totalBeratAll,
+                    berat_tangkap: beratTangkapAll,
+                    total_item: totalItemAll,
                     narkotika: narkoArray,
                     sumber: { 
                         tangkap: srcTangkap, temuan: srcTemuan,

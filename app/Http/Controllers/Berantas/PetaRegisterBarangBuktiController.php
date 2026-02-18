@@ -19,11 +19,9 @@ class PetaRegisterBarangBuktiController extends Controller
         $satuanKerjas = $user->hasRole('admin') ? SatuanKerja::orderBy('satuan_kerja')->get() : [];
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika', 'asc')->get();
         
-        // Ambil tahun dari tanggal_perolehan
         $years = BerantasRegisterBarangBukti::selectRaw('YEAR(tanggal_perolehan) as year')
             ->distinct()->orderByDesc('year')->pluck('year');
 
-        // Logic Default: Tahun Sekarang jika Fresh Load
         $isFreshLoad = empty($request->all());
         $selectedTahun = $isFreshLoad ? [date('Y')] : $request->input('tahun', []);
 
@@ -35,8 +33,6 @@ class PetaRegisterBarangBuktiController extends Controller
     public function data(Request $request)
     {
         $user = Auth::user();
-        
-        // Eager Load Items & Narkotika
         $query = BerantasRegisterBarangBukti::with(['items.narkotika']);
 
         // 1. Filter Satker
@@ -53,7 +49,7 @@ class PetaRegisterBarangBuktiController extends Controller
             $query->whereIn(DB::raw('MONTH(tanggal_perolehan)'), (array)$request->bulan);
         }
 
-        // 3. Filter Tahun (Default Current Year)
+        // 3. Filter Tahun
         $isFreshLoad = empty($request->all());
         if ($isFreshLoad) {
             $query->whereIn(DB::raw('YEAR(tanggal_perolehan)'), [date('Y')]);
@@ -64,27 +60,25 @@ class PetaRegisterBarangBuktiController extends Controller
             }
         }
 
-        // 4. Filter Narkotika (Multiple dengan Logic AND/OR)
+        // 4. Filter Narkotika
         if ($request->filled('narkotika_ids')) {
             $ids = (array)$request->narkotika_ids;
             $logic = $request->input('narkotika_logic', 'OR');
 
             if ($logic === 'AND') {
-                // Harus mengandung SEMUA jenis narkotika yang dipilih dalam satu register
                 foreach ($ids as $id) {
                     $query->whereHas('items', function($q) use ($id) {
                         $q->where('kategori', 'Narkotika')->where('narkotika_id', $id);
                     });
                 }
             } else {
-                // Mengandung SALAH SATU jenis
                 $query->whereHas('items', function($q) use ($ids) {
                     $q->where('kategori', 'Narkotika')->whereIn('narkotika_id', $ids);
                 });
             }
         }
 
-        // 5. Filter Sumber Perolehan (Checkbox)
+        // 5. Filter Sumber
         if ($request->filled('sumber')) {
             $sumber = (array)$request->sumber; 
             $query->whereHas('items', function($q) use ($sumber) {
@@ -97,23 +91,33 @@ class PetaRegisterBarangBuktiController extends Controller
         // 6. Formatting GeoJSON
         $features = $collection->map(function($reg) {
             $totalBeratGram = 0;
+            $totalItemNarko = 0;
+            $beratTangkap = 0; // Berat Khusus Tangkap
             $rawNarkoba = [];
             
-            // Flags untuk Warna Marker
             $hasTangkap = false;
             $hasTemuan = false;
             
             foreach($reg->items as $item) {
-                // Cek Sumber
-                if ($item->sumber_perolehan === 'Hasil Tangkap') $hasTangkap = true;
-                if ($item->sumber_perolehan === 'Temuan') $hasTemuan = true;
-
-                // Hitung Berat Narkotika
+                // Proses HANYA NARKOTIKA
                 if($item->kategori === 'Narkotika') {
+                    $totalItemNarko++;
+                    
+                    // Hitung Berat
                     $qty = $item->kuantitas;
                     if($item->satuan_narkotika === 'Kg') $qty *= 1000;
                     if($item->satuan_narkotika === 'Ton') $qty *= 1000000;
+                    
                     $totalBeratGram += $qty;
+
+                    // Cek Sumber untuk pewarnaan marker & statistik dashboard
+                    if ($item->sumber_perolehan === 'Hasil Tangkap') {
+                        $hasTangkap = true;
+                        $beratTangkap += $qty; // Tambah ke berat tangkap
+                    }
+                    if ($item->sumber_perolehan === 'Temuan') {
+                        $hasTemuan = true;
+                    }
                     
                     $nama = $item->narkotika->nama_narkotika ?? 'Lainnya';
                     if(!isset($rawNarkoba[$nama])) $rawNarkoba[$nama] = 0;
@@ -121,7 +125,7 @@ class PetaRegisterBarangBuktiController extends Controller
                 }
             }
 
-            // LOGIKA WARNA (Opsi 1)
+            // LOGIKA WARNA MARKER
             $markerColor = '#dc3545'; // Default Merah (Tangkap)
             $statusLabel = 'Hasil Tangkap';
             $statusCode = 'tangkap'; 
@@ -136,7 +140,7 @@ class PetaRegisterBarangBuktiController extends Controller
                 $statusCode = 'temuan';
             }
 
-            // HTML Popup Marker
+            // HTML Popup
             arsort($rawNarkoba);
             $htmlBarang = '<ul class="mb-2 ps-3 text-start small list-unstyled">';
             if(!empty($rawNarkoba)) {
@@ -147,7 +151,6 @@ class PetaRegisterBarangBuktiController extends Controller
                 $htmlBarang .= "<li class='text-muted fst-italic'>- Tidak ada BB Narkotika -</li>";
             }
             $htmlBarang .= '</ul>';
-            
             $htmlInfo = "<div class='border-top pt-1 mt-1 text-center fw-bold' style='color:{$markerColor}; font-size:0.7rem;'>{$statusLabel}</div>";
 
             return [
@@ -161,11 +164,14 @@ class PetaRegisterBarangBuktiController extends Controller
                     'lokasi' => $reg->lokasi_perolehan ?? 'Lokasi tidak tercatat',
                     'tanggal' => $reg->tanggal_perolehan->format('d/m/Y'),
                     'bulan_angka' => (int)$reg->tanggal_perolehan->format('m'),
-                    'berat_gram' => $totalBeratGram,
-                    'marker_color' => $markerColor, // Warna dikirim ke JS
-                    'popup_html' => $htmlBarang . $htmlInfo,
                     
-                    // Raw Data untuk Kalkulasi Dashboard Wilayah di JS
+                    // DATA UTAMA UNTUK DASHBOARD
+                    'berat_gram' => $totalBeratGram,
+                    'jml_item_narko' => $totalItemNarko,
+                    'berat_tangkap' => $beratTangkap, // Data baru untuk dashboard
+                    
+                    'marker_color' => $markerColor,
+                    'popup_html' => $htmlBarang . $htmlInfo,
                     'raw_narkoba' => $rawNarkoba,
                     'status_code' => $statusCode 
                 ]

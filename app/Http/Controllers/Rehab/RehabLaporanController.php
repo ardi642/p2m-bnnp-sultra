@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 use App\Exports\RehabLaporanExport;
+use App\Models\Dokumen;
+use App\Services\DokumenService;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
 class RehabLaporanController extends Controller
@@ -25,7 +28,7 @@ class RehabLaporanController extends Controller
     private function getFilteredQuery(Request $request)
     {
         $user = Auth::user();
-        $query = RehabLaporan::with(['satuanKerja', 'dokumentasi']);
+        $query = RehabLaporan::with(['satuanKerja', 'dokumen']);
 
         // 1. Filter Satuan Kerja
         if ($user->isAdmin()) {
@@ -240,7 +243,7 @@ class RehabLaporanController extends Controller
         return view('rehab.laporan.create', compact('satuanKerjas'));
     }
 
-    public function store(Request $request) {
+    public function store(Request $request, DokumenService $dokumenService) {
         $user = Auth::user();
         $satkerId = $user->isAdmin() ? $request->satuan_kerja_id : $user->getSatkerId();
         
@@ -250,111 +253,165 @@ class RehabLaporanController extends Controller
 
         $request->validate([
             'tanggal' => 'required|date',
-            'satuan_kerja_id' => $user->isAdmin() ? 'required' : 'nullable',
             'realisasi_rawat_jalan' => 'required|integer|min:0',
             'realisasi_pasca_rehab' => 'required|integer|min:0',
             'realisasi_skhpn' => 'required|integer|min:0',
+
+            'dokumentasi'          => 'nullable|array', 
+            'lampiran'             => 'nullable|array',
+            'dokumentasi_links'    => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+            'lampiran_links'       => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ]);
+
+        $uploadedPaths = []; 
 
         DB::beginTransaction();
         try {
-            $data = $request->except(['dokumentasi', 'satuan_kerja_id']);
+            $data = $request->except(['dokumentasi', 'lampiran', 'dokumentasi_links', 'lampiran_links']);
             $data['satuan_kerja_id'] = $satkerId;
             $laporan = RehabLaporan::create($data);
 
             if ($request->filled('dokumentasi')) {
-                foreach ($request->input('dokumentasi') as $folder) {
-                    $tempFile = TemporaryFile::where('folder', $folder)->first();
-                    if ($tempFile) {
-                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        if (Storage::exists($sourcePath)) {
-                            $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                            $cleanName = time() . '_' . uniqid() . '_rehab.' . $ext;
-                            $destPath = 'dokumentasi/rehab/' . date('Y') . '/' . $cleanName;
-                            Storage::disk('public')->put($destPath, Storage::readStream($sourcePath));
-                            $laporan->dokumentasi()->create([
-                                'nama_file_asli' => $tempFile->filename, 'path_file' => $destPath,
-                                'tipe_file' => Storage::mimeType($sourcePath), 'ukuran_file' => Storage::size($sourcePath)
-                            ]);
-                            Storage::deleteDirectory('public/tmp/' . $folder);
-                            $tempFile->delete();
-                        }
-                    }
-                }
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $laporan, 'dokumentasi', $uploadedPaths);
             }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $laporan, 'lampiran', $uploadedPaths);
+            }
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $laporan, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $laporan, 'lampiran');
+            }
+
             DB::commit();
+
             return redirect()->route('rehab.laporan.index')->with('success', 'Laporan berhasil disimpan.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal menyimpan: ' . $e->getMessage())->withInput();
+            foreach ($uploadedPaths as $path) {
+                Storage::disk(config('filesystems.default'))->delete($path);
+            }
+            Log::error('Gagal simpan: ' . $e->getMessage());
+            abort(500, 'Server Error.');
         }
     }
 
     public function edit($id) {
-        $laporan = RehabLaporan::with(['dokumentasi', 'satuanKerja'])->findOrFail($id);
+        $laporan = RehabLaporan::with(['dokumen', 'satuanKerja'])->findOrFail($id);
         if (!Auth::user()->isAdmin() && $laporan->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
         return view('rehab.laporan.edit', compact('laporan'));
     }
 
-    public function update(Request $request, $id) {
+    public function update(Request $request, DokumenService $dokumenService, $id) {
         $laporan = RehabLaporan::findOrFail($id);
         if (!Auth::user()->isAdmin() && $laporan->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
-
-        $request->validate([
+        $rules = [
             'realisasi_rawat_jalan' => 'required|integer|min:0',
             'realisasi_pasca_rehab' => 'required|integer|min:0',
             'realisasi_skhpn' => 'required|integer|min:0',
-        ]);
+
+            'delete_files'         => 'nullable|array', 
+            'dokumentasi'          => 'nullable|array',
+            'lampiran'             => 'nullable|array',
+            'dokumentasi_links'    => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+            'lampiran_links'       => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
+        ];
+
+        $validasi = $request->validate($rules);
+        $newFilesMoved = [];
+        $filesToDelete = [];
 
         DB::beginTransaction();
         try {
-            $laporan->update($request->only(['realisasi_rawat_jalan', 'realisasi_pasca_rehab', 'realisasi_skhpn']));
+            $dataUpdate = collect($validasi)
+                        ->except(['dokumentasi', 'lampiran', 'pegawai_nips', 'delete_files', 
+                        'dokumentasi_links', 'lampiran_links'])
+                        ->toArray();
+            unset($dataUpdate['satuan_kerja_id']);
+            $laporan->update($dataUpdate);
             
             if ($request->has('delete_files')) {
-                $files = DokumentasiKegiatan::whereIn('id', $request->delete_files)->get();
-                foreach ($files as $file) {
-                    if (Storage::disk('public')->exists($file->path_file)) Storage::disk('public')->delete($file->path_file);
+                $filesToRemove = Dokumen::whereIn('id', $request->delete_files)->get();
+                foreach ($filesToRemove as $file) {
+                    if (!$file->is_link) $filesToDelete[] = $file->path_file; 
                     $file->delete();
                 }
             }
 
             if ($request->filled('dokumentasi')) {
-                foreach ($request->input('dokumentasi') as $folder) {
-                    $tempFile = TemporaryFile::where('folder', $folder)->first();
-                    if ($tempFile) {
-                        $sourcePath = 'public/tmp/' . $folder . '/' . $tempFile->filename;
-                        if (Storage::exists($sourcePath)) {
-                            $ext = pathinfo($tempFile->filename, PATHINFO_EXTENSION);
-                            $cleanName = time() . '_' . uniqid() . '_rehab_upd.' . $ext;
-                            $destPath = 'dokumentasi/rehab/' . date('Y') . '/' . $cleanName;
-                            Storage::disk('public')->put($destPath, Storage::readStream($sourcePath));
-                            $laporan->dokumentasi()->create([
-                                'nama_file_asli' => $tempFile->filename, 'path_file' => $destPath,
-                                'tipe_file' => Storage::mimeType($sourcePath), 'ukuran_file' => Storage::size($sourcePath)
-                            ]);
-                            Storage::deleteDirectory('public/tmp/' . $folder);
-                            $tempFile->delete();
-                        }
-                    }
-                }
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $laporan, 'dokumentasi', $newFilesMoved);
             }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $laporan, 'lampiran', $newFilesMoved);
+            }
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $laporan, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $laporan, 'lampiran');
+            }
+
             DB::commit();
+
+            foreach ($filesToDelete as $path) {
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            }
+
             return redirect()->route('rehab.laporan.index')->with('success', 'Laporan diperbarui.');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal update: ' . $e->getMessage());
+            foreach ($newFilesMoved as $path) {
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            }
+            Log::error('Update error: ' . $e->getMessage());
+            return back()->with('error', 'update')->withInput();
         }
     }
 
-    public function destroy($id) {
-        $laporan = RehabLaporan::with('dokumentasi')->findOrFail($id);
-        if (!Auth::user()->isAdmin() && $laporan->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
+
+    public function destroy($id) 
+    {
+        $laporan = RehabLaporan::with('dokumen')->findOrFail($id);
         
-        $filesToDelete = $laporan->dokumentasi->pluck('path_file')->toArray();
-        $laporan->delete();
-        foreach ($filesToDelete as $path) { if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path); }
+        $filesToDelete = [];
         
-        return back()->with('success', 'Laporan dihapus.');
+        // Loop dokumen, tapi filter isinya
+        foreach ($laporan->dokumen()->cursor() as $doc) {
+            // Cek 1: Pastikan bukan Link (karena link tidak punya file fisik)
+            // Cek 2: Pastikan path_file TIDAK NULL dan TIDAK KOSONG
+            if (!$doc->is_link && !empty($doc->path_file)) {
+                $filesToDelete[] = $doc->path_file;
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            $laporan->delete(); 
+            DB::commit(); 
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'destroy')->with('message', 'Gagal menghapus data: ' . $e->getMessage());
+        }
+
+        // Hapus file fisik
+        foreach ($filesToDelete as $path) {
+            // Double check: Pastikan $path adalah string (bukan null) sebelum akses Storage
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+
+        return redirect()->back()->with('success', 'Data dan file berhasil dihapus.');
     }
 
     // =========================================================================

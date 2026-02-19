@@ -263,7 +263,7 @@
                                     </div>
                                 </td>
                             </tr>
-                            <tr x-show="isExpanded({{ $row->id }})" x-transition>
+                            <tr x-show="isExpanded({{ $row->id }})" x-transition x-data="fileDownloader">
                                 <td colspan="8" class="p-0 border-0">
                                     <div class="bg-body-tertiary p-4 border-bottom shadow-inner text-start">
                                         <div class="card border-0 shadow-sm">
@@ -274,17 +274,120 @@
                                                     <div class="col-md-4"><div class="p-3 border rounded bg-success bg-opacity-10 text-center"><div class="small text-muted fw-bold">Pasca Rehab</div><div class="fs-4 fw-bold text-success">{{ number_format($row->realisasi_pasca_rehab) }}</div></div></div>
                                                     <div class="col-md-4"><div class="p-3 border rounded bg-warning bg-opacity-10 text-center"><div class="small text-muted fw-bold">SKHPN</div><div class="fs-4 fw-bold text-warning-emphasis">{{ number_format($row->realisasi_skhpn) }}</div></div></div>
                                                 </div>
-                                                <h6 class="fw-bold text-secondary small text-uppercase mb-2">File Dokumentasi:</h6>
-                                                <ul class="list-group">
-                                                    @forelse($row->dokumentasi as $doc)
-                                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                            <a href="{{ asset('storage/'.$doc->path_file) }}" target="_blank" class="text-decoration-none text-dark d-flex align-items-center"><i class="bi bi-file-earmark-image me-2 text-muted"></i> {{ $doc->nama_file_asli }}</a>
-                                                            <a href="{{ asset('storage/'.$doc->path_file) }}" download class="btn btn-xs btn-outline-secondary"><i class="bi bi-download"></i></a>
-                                                        </li>
-                                                    @empty
-                                                        <li class="list-group-item text-muted fst-italic">Tidak ada dokumentasi.</li>
-                                                    @endforelse
-                                                </ul>
+
+                                                <form class="row" action="{{ route('dokumen.zip.selected') }}" method="POST" x-ref="formZip">
+                                                    @csrf
+                                                    <div class="col-12 mt-4 text-start">
+                                                        <div class="row g-4">
+                                                            
+                                                            @php
+                                                                $fotos = $row->dokumen->where('kategori', 'dokumentasi');
+                                                                $lampirans = $row->dokumen->where('kategori', 'lampiran');
+                                                                $fotoIds = $fotos->where('is_link', false)->pluck('id')->values()->toArray();
+                                                                $lampiranIds = $lampirans->where('is_link', false)->pluck('id')->values()->toArray();
+                                                            @endphp
+                                                            
+                                                            <div class="col-lg-6">
+                                                                <div class="card h-100 border bg-light shadow-none">
+                                                                    <div class="card-header bg-transparent border-bottom fw-bold text-primary d-flex justify-content-between align-items-center">
+                                                                        <div class="form-check">
+                                                                            @if(count($fotoIds) > 0)
+                                                                                <input class="form-check-input cursor-pointer" type="checkbox" @change="toggleAll({{ json_encode($fotoIds) }})" :checked="isAllSelected({{ json_encode($fotoIds) }})">
+                                                                            @endif
+                                                                            <label class="form-check-label cursor-pointer select-none"><i class="bi bi-images me-2"></i>Dokumentasi</label>
+                                                                        </div>
+                                                                        <span class="badge bg-primary rounded-pill">{{ $fotos->count() }}</span>
+                                                                    </div>
+                                                                    <div class="card-body p-2" style="max-height: 30vh; min-height: 100px; overflow-y: auto;">
+                                                                        @forelse($fotos as $doc)
+                                                                            <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-primary bg-primary bg-opacity-10' : ''">
+                                                                                @if(!$doc->is_link)
+                                                                                    <div class="form-check me-2 d-flex align-items-center">
+                                                                                        <input class="form-check-input shadow-none cursor-pointer" type="checkbox" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                    </div>
+                                                                                @endif
+                                                                                <div class="flex-grow-1 text-truncate small cursor-pointer" @if(!$doc->is_link) @click="toggle({{ $doc->id }})" @endif>
+                                                                                    <div class="d-flex align-items-center">
+                                                                                        <div class="flex-shrink-0 me-2 text-primary bg-primary bg-opacity-10 p-1 rounded">
+                                                                                            @if($doc->is_link) <i class="bi bi-link-45deg"></i> @else <i class="bi bi-file-image"></i> @endif
+                                                                                        </div>
+                                                                                        <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="d-flex gap-1 flex-shrink-0 ms-2">
+                                                                                    @if(!$doc->is_link)
+                                                                                        <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                                                                        <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-primary"><i class="bi bi-download"></i></a>
+                                                                                    @else
+                                                                                        <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-xs btn-outline-info w-100"><i class="bi bi-box-arrow-up-right me-1"></i>Buka</a>
+                                                                                    @endif
+                                                                                </div>
+                                                                            </div>
+                                                                        @empty
+                                                                            <div class="text-center py-3 text-muted small fst-italic">Tidak ada dokumentasi.</div>
+                                                                        @endforelse
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div class="col-lg-6">
+                                                                <div class="card h-100 border bg-light shadow-none">
+                                                                    <div class="card-header bg-transparent border-bottom fw-bold text-danger d-flex justify-content-between align-items-center">
+                                                                        <div class="form-check">
+                                                                            @if(count($lampiranIds) > 0)
+                                                                                <input class="form-check-input cursor-pointer" type="checkbox" @change="toggleAll({{ json_encode($lampiranIds) }})" :checked="isAllSelected({{ json_encode($lampiranIds) }})">
+                                                                            @endif
+                                                                            <label class="form-check-label cursor-pointer select-none"><i class="bi bi-paperclip me-2"></i>Lampiran</label>
+                                                                        </div>
+                                                                        <span class="badge bg-danger rounded-pill">{{ $lampirans->count() }}</span>
+                                                                    </div>
+                                                                    <div class="card-body p-2" style="max-height: 40vh; min-height: 100px; overflow-y: auto;">
+                                                                        @forelse($lampirans as $doc)
+                                                                            <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-danger bg-danger bg-opacity-10' : ''">
+                                                                                @if(!$doc->is_link)
+                                                                                    <div class="form-check me-2 d-flex align-items-center">
+                                                                                        <input class="form-check-input shadow-none cursor-pointer" type="checkbox" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                    </div>
+                                                                                @endif
+                                                                                <div class="flex-grow-1 text-truncate small cursor-pointer" @if(!$doc->is_link) @click="toggle({{ $doc->id }})" @endif>
+                                                                                    <div class="d-flex align-items-center">
+                                                                                        <div class="flex-shrink-0 me-2 text-danger bg-danger bg-opacity-10 p-1 rounded">
+                                                                                            @if($doc->is_link) <i class="bi bi-link-45deg"></i>
+                                                                                            @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf"></i>
+                                                                                            @elseif(Str::contains($doc->tipe_file, ['word', 'office'])) <i class="bi bi-file-word"></i>
+                                                                                            @else <i class="bi bi-file-earmark-text"></i> @endif
+                                                                                        </div>
+                                                                                        <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="d-flex gap-1 flex-shrink-0 ms-2">
+                                                                                    @if(!$doc->is_link)
+                                                                                        <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a>
+                                                                                        <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-danger"><i class="bi bi-download"></i></a>
+                                                                                    @else
+                                                                                        <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-xs btn-outline-info w-100"><i class="bi bi-box-arrow-up-right me-1"></i>Buka</a>
+                                                                                    @endif
+                                                                                </div>
+                                                                            </div>
+                                                                        @empty
+                                                                            <div class="text-center py-3 text-muted small fst-italic">Tidak ada lampiran.</div>
+                                                                        @endforelse
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        @php $hasPhysicalFiles = $row->dokumen->where('is_link', false)->count() > 0; @endphp
+                                                        @if($hasPhysicalFiles)
+                                                            <div class="col-12 text-end border-top pt-3">
+                                                                <button type="button" @click="submitDownload" class="btn btn-dark btn-sm px-4 shadow-sm" :disabled="selected.length === 0">
+                                                                    <i class="bi bi-file-earmark-zip-fill me-2"></i>Download File Terpilih (.ZIP)
+                                                                </button>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                </form>
+
                                             </div>
                                         </div>
                                     </div>
@@ -469,14 +572,58 @@
             }
         }));
 
-        document.addEventListener("DOMContentLoaded", function() {
-            if(typeof TomSelect !== 'undefined'){
-                const config = { plugins: ['remove_button'], create: false };
-                ['select-satker', 'select-bulan', 'select-tahun'].forEach(id => { 
-                    if(document.getElementById(id)) new TomSelect('#'+id, config); 
-                });
+        Alpine.data('fileDownloader', () => ({
+            selected: [],
+
+            isSelected(id) {
+                return this.selected.includes(id.toString()) || this.selected.includes(id);
+            },
+
+            toggle(id) {
+                const strId = id.toString();
+                if (this.selected.includes(strId)) {
+                    this.selected = this.selected.filter(i => i !== strId);
+                } else {
+                    this.selected.push(strId);
+                }
+            },
+
+            toggleAll(ids) {
+                const stringIds = ids.map(String);
+                const allSelected = stringIds.every(id => this.selected.includes(id));
+
+                if (allSelected) {
+                    this.selected = this.selected.filter(id => !stringIds.includes(id));
+                } else {
+                    this.selected = [...new Set([...this.selected, ...stringIds])];
+                }
+            },
+
+            isAllSelected(ids) {
+                if (ids.length === 0) return false;
+                const stringIds = ids.map(String);
+                return stringIds.every(id => this.selected.includes(id));
+            },
+
+            submitDownload() {
+                if (this.selected.length === 0) {
+                    Swal.fire({icon: 'warning', title: 'Pilih File', text: 'Silakan centang minimal satu file.', confirmButtonColor: '#0d6efd'});
+                    return;
+                }
+                this.$refs.formZip.submit();
             }
-        });
+        }));
+
     });
+
+    document.addEventListener("DOMContentLoaded", function() {
+        if(typeof TomSelect !== 'undefined'){
+            const config = { plugins: ['remove_button'], create: false };
+            ['select-satker', 'select-bulan', 'select-tahun'].forEach(id => { 
+                if(document.getElementById(id)) new TomSelect('#'+id, config); 
+            });
+        }
+    });
+
 </script>
 @endpush

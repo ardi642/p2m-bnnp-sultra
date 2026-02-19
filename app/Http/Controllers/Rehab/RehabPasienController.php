@@ -9,6 +9,7 @@ use App\Models\BerantasNarkotika;
 use Illuminate\Http\Request;
 use App\Exports\RehabPasienExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class RehabPasienController extends Controller
@@ -238,7 +239,20 @@ class RehabPasienController extends Controller
 
     private function getFilteredQuery(Request $request)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
         $query = RehabPasien::with(['narkotikas', 'satuanKerja']);
+
+        // Filter Satker
+        if ($user->hasRole('admin')) {
+            if ($request->filled('satuan_kerja_id')) {
+                $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
+            }
+        } else {
+            $satkerId = $user->getSatkerId();
+            $query->where('satuan_kerja_id', $satkerId);
+        }
 
         if ($request->filled('search')) {
             $search = $request->search;

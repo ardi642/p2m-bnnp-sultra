@@ -262,7 +262,7 @@
                     plugins: ['remove_button', 'clear_button'],
                     render: {
                         option: function(data, escape) {
-                            return '<div class="d-flex align-items-center"><i class="bi bi-person me-2 text-muted"></i>' +
+                            return '<div class="d-flex align-items-center"><i class="bi bi-capsule me-2 text-muted"></i>' +
                                 escape(data.text) + '</div>';
                         },
                         item: function(data, escape) {

@@ -334,7 +334,7 @@
                                                     @if ($data->narkotikas->count())
                                                         @foreach ($data->narkotikas as $narkotika)
                                                             <span class="d-block mb-1 ms-3">
-                                                                {{-- <i class="bi bi-capsule text-danger me-2"></i> --}}
+                                                                <i class="bi bi-capsule text-muted me-2"></i>
                                                                 <span
                                                                     class="text-dark me-1">
                                                                     {{ $narkotika->nama_narkotika }}

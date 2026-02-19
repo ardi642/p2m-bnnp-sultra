@@ -43,7 +43,7 @@ class RehabPasien extends Model
         'SMA',
         'Diploma',
         'Strata 1',
-        'Strata 2',
+        'Strata 2 ke atas',
     ];
 
     public const Sumber_pasien = [

@@ -82,7 +82,7 @@
                 </div>
 
                 <a href="{{ route('rehab.laporan.index') }}" class="nav-link {{ Request::is('rehab/laporan*') ? 'active' : '' }}">
-                    Laporan Bulanan
+                    Laporan Layanan
                 </a>
             @endif
 

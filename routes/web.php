@@ -303,22 +303,29 @@ Route::middleware('auth')->group(function() {
     // =========================================================================
     Route::prefix('rehab')->name('rehab.')->group(function() {
         
-        // A. READ/VIEW ACCESS
+        // A. READ/VIEW ACCESS (Melihat Data & Export)
+        // Roles: Admin Pusat, Admin Satker, Admin Rehab, Operator Satker, Operator Rehab
         Route::middleware(['role:admin,admin_satker,admin_rehab,operator_satker,operator_rehab'])->group(function() {
-            Route::get('/laporan', [RehabLaporanController::class, 'index'])->name('laporan.index');
+            
+            // 1. Export Excel (Ditaruh sebelum resource agar tidak dianggap ID)
             Route::get('/laporan/export', [RehabLaporanController::class, 'export'])->name('laporan.export');
+            
+            // 2. Index Laporan
+            Route::get('/laporan', [RehabLaporanController::class, 'index'])->name('laporan.index');
         });
 
-        // B. WRITE ACCESS (Target & Laporan Harian)
-        Route::middleware(['role:operator_satker,operator_rehab,admin,admin_satker'])->group(function() {
+        // B. WRITE ACCESS (Input Data, Target, Edit, Hapus)
+        // Roles: Admin Pusat, Admin Satker, Operator Satker, Operator Rehab
+        Route::middleware(['role:admin,admin_satker,operator_satker,operator_rehab'])->group(function() {
             
-            // Route Simpan/Update Target
-            Route::post('/laporan/target', [RehabLaporanController::class, 'storeTarget'])->name('laporan.store_target');
-            
-            // Route Hapus Target (BARU)
-            Route::delete('/laporan/target/{id}', [RehabLaporanController::class, 'destroyTarget'])->name('laporan.destroy_target');
+            // 1. Routes Kelola Target Tahunan
+            // URL: /rehab/target (POST) -> Nama: rehab.target.store
+            Route::post('/target', [RehabLaporanController::class, 'storeTarget'])->name('target.store');
+            // URL: /rehab/target/{id} (DELETE) -> Nama: rehab.target.destroy
+            Route::delete('/target/{id}', [RehabLaporanController::class, 'destroyTarget'])->name('target.destroy');
 
-            // Resource Laporan Harian
+            // 2. Resource Laporan Harian (Create, Store, Edit, Update, Destroy)
+            // Menggunakan except 'index' & 'show' karena index sudah ada di grup READ di atas
             Route::resource('laporan', RehabLaporanController::class)->except(['index', 'show']);
         });
     });

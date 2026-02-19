@@ -1,43 +1,65 @@
 <table>
     <thead>
         <tr>
-            <th rowspan="2" style="vertical-align: middle; width: 30px; text-align: center;">Instansi Pemerintah</th>
+            <th colspan="{{ count($years) + 1 }}" style="font-weight: bold; font-size: 14px; text-align: center; height: 30px;">
+                LAPORAN REKAPITULASI {{ $title }}
+            </th>
+        </tr>
+        <tr>
+            <th colspan="{{ count($years) + 1 }}" style="font-weight: bold; font-size: 12px; text-align: center;">
+                PERIODE TAHUN: {{ implode(', ', $years) }}
+            </th>
+        </tr>
+        
+        <tr>
+            <th rowspan="2" style="width: 250px; text-align: center; vertical-align: middle; background-color: #92D050; color: white; border: 1px solid white;">
+                SATUAN KERJA
+            </th>
             @foreach($years as $year)
-                <th colspan="3" style="text-align: center;">{{ $year }}</th>
+                <th colspan="3" style="text-align: center; background-color: #92D050; color: white; border: 1px solid white;">
+                    TAHUN {{ $year }}
+                </th>
             @endforeach
         </tr>
         <tr>
             @foreach($years as $year)
-                <th style="text-align: center;">Target</th>
-                <th style="text-align: center;">Realisasi</th>
-                <th style="text-align: center;">%</th>
+                <th style="width: 80px; text-align: center; background-color: #EBF1DE; border: 1px solid white;">Target</th>
+                <th style="width: 80px; text-align: center; background-color: #EBF1DE; border: 1px solid white;">Realisasi</th>
+                <th style="width: 80px; text-align: center; background-color: #EBF1DE; border: 1px solid white;">%</th>
             @endforeach
         </tr>
     </thead>
+
     <tbody>
         @foreach($data as $row)
-            <tr>
-                <td>{{ $row['satker_nama'] }}</td>
-                @foreach($years as $year)
-                    @php $stats = $row['years'][$year] ?? ['target' => 0, 'realisasi' => 0, 'persen' => 0]; @endphp
-                    <td>{{ $stats['target'] }}</td>
-                    <td>{{ $stats['realisasi'] }}</td>
-                    <td>{{ number_format($stats['persen'], 2) }}</td>
-                @endforeach
-            </tr>
-        @endforeach
         <tr>
-            <td>Total</td>
+            <td style="vertical-align: middle;">{{ $row['satker_nama'] }}</td>
+            
             @foreach($years as $year)
-                @php
-                    $totalTarget = collect($data)->sum(fn($item) => $item['years'][$year]['target'] ?? 0);
-                    $totalRealisasi = collect($data)->sum(fn($item) => $item['years'][$year]['realisasi'] ?? 0);
-                    $totalPersen = $totalTarget > 0 ? ($totalRealisasi / $totalTarget) * 100 : 0;
+                @php 
+                    $curr = $row['years'][$year] ?? ['target' => 0, 'realisasi' => 0, 'persen' => 0];
                 @endphp
-                <td>{{ $totalTarget }}</td>
-                <td>{{ $totalRealisasi }}</td>
-                <td>{{ number_format($totalPersen, 2) }}</td>
+                <td style="text-align: center;">{{ $curr['target'] }}</td>
+                <td style="text-align: center;">{{ $curr['realisasi'] }}</td>
+                <td style="text-align: center;">{{ number_format($curr['persen'], 1) }}%</td>
             @endforeach
         </tr>
+        @endforeach
     </tbody>
+
+    <tfoot>
+        <tr>
+            <td style="font-weight: bold; background-color: #92D050; color: white; text-align: center;">TOTAL NASIONAL</td>
+            @foreach($years as $year)
+                @php
+                    $sumTarget = collect($data)->sum(fn($d) => $d['years'][$year]['target'] ?? 0);
+                    $sumReal = collect($data)->sum(fn($d) => $d['years'][$year]['realisasi'] ?? 0);
+                    $sumPersen = $sumTarget > 0 ? ($sumReal / $sumTarget) * 100 : 0;
+                @endphp
+                <td style="font-weight: bold; background-color: #92D050; color: white; text-align: center;">{{ $sumTarget }}</td>
+                <td style="font-weight: bold; background-color: #92D050; color: white; text-align: center;">{{ $sumReal }}</td>
+                <td style="font-weight: bold; background-color: #92D050; color: white; text-align: center;">{{ number_format($sumPersen, 1) }}%</td>
+            @endforeach
+        </tr>
+    </tfoot>
 </table>

@@ -308,9 +308,12 @@ Route::middleware('auth')->group(function() {
         Route::middleware(['role:admin,admin_satker,admin_rehab,operator_satker,operator_rehab'])->group(function() {
             
             // 1. Export Excel (Ditaruh sebelum resource agar tidak dianggap ID)
-            Route::get('/laporan/export', [RehabLaporanController::class, 'export'])->name('laporan.export');
+            Route::get('/laporan/export/{kategori}', [RehabLaporanController::class, 'export'])->name('laporan.export');
+
+            // 2. Export Excel Data Lengkap (Raw Table) - Letakkan sebelum yang {kategori}
+            Route::get('/laporan/export-full', [RehabLaporanController::class, 'exportFull'])->name('laporan.export_full');
             
-            // 2. Index Laporan
+            // 3. Index Laporan
             Route::get('/laporan', [RehabLaporanController::class, 'index'])->name('laporan.index');
         });
 

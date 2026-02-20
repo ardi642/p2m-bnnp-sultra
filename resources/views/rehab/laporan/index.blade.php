@@ -6,13 +6,27 @@
 {{-- LOGIKA PHP VIEW HELPER --}}
 {{-- ==================================================================== --}}
 @php
-    // 1. Logika Badge Filter
+    // 1. Setup Default Tahun
+    // KEMBALIKAN DEFAULT: Jika request kosong, gunakan tahun saat ini [date('Y')]
+    // Agar UI Dropdown langsung terpilih "2026" (bukan kosong)
+    $selectedTahun = request('tahun', [date('Y')]);
+
+    // Pastikan format array agar kompatibel dengan in_array
+    if (!is_array($selectedTahun)) {
+        $selectedTahun = (array) $selectedTahun;
+    }
+
+    // 2. Logika Badge Filter
     $activeFilters = 0;
     if (request()->filled('satuan_kerja_id')) $activeFilters++;
     if (request()->filled('bulan')) $activeFilters++;
-    if (request()->filled('tahun')) $activeFilters++; 
+    
+    // Hitung Badge Tahun:
+    // Cek berdasarkan $selectedTahun. Karena defaultnya terisi tahun ini, 
+    // maka badge akan terhitung 1 saat load awal (Sesuai request: "kalau ada tahun terselect hitung badge")
+    if (!empty($selectedTahun)) $activeFilters++; 
 
-    // 2. Helper Sorting Link
+    // 3. Helper Sorting Link
     $sortLink = function($col, $label) {
         $currCol = request('sort_by', 'tanggal');
         $currOrd = request('sort_order', 'desc');
@@ -27,7 +41,7 @@
         return '<a href="'.$url.'" class="text-decoration-none text-secondary fw-bold d-flex align-items-center justify-content-center gap-1">'.$label.' <i class="bi '.$icon.'"></i></a>';
     };
 
-    // 3. Logic Tahun Modal (Tahun Depan Paling Atas)
+    // 4. Logic Tahun Modal & Filter
     $currYear = date('Y');
     $modalYears = [];
     for($i = $currYear + 1; $i >= $currYear - 4; $i--) {
@@ -197,8 +211,16 @@
                                 </div>
                             @endif
                             <div class="{{ auth()->user()->isAdmin() ? 'col-lg-4' : 'col-md-6' }}">
-                                <label class="form-label fw-bold small text-secondary">Tahun (Tabel)</label>
-                                <div class="bg-white rounded shadow-sm"><select id="select-tahun" name="tahun[]" multiple placeholder="Pilih Tahun...">@foreach($allYears as $y) <option value="{{ $y }}" {{ in_array($y, request('tahun', [])) ? 'selected' : '' }}>{{ $y }}</option> @endforeach</select></div>
+                                <label class="form-label fw-bold small text-secondary">Tahun</label>
+                                <div class="bg-white rounded shadow-sm">
+                                    {{-- Menggunakan $selectedTahun yang SUDAH memiliki default tahun ini jika request kosong --}}
+                                    <select id="select-tahun" name="tahun[]" multiple placeholder="Pilih Tahun...">
+                                        @foreach($allYears as $y) 
+                                            {{-- Hanya selected jika value ada di array selectedTahun --}}
+                                            <option value="{{ $y }}" {{ in_array($y, $selectedTahun) ? 'selected' : '' }}>{{ $y }}</option> 
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
                             <div class="{{ auth()->user()->isAdmin() ? 'col-lg-4' : 'col-md-6' }}">
                                 <label class="form-label fw-bold small text-secondary">Bulan</label>
@@ -206,7 +228,7 @@
                             </div>
                             <div class="col-12 d-flex justify-content-end align-items-center pt-2 gap-2">
                                 <a href="{{ route('rehab.laporan.index') }}" class="btn btn-link btn-sm text-decoration-none text-muted">Reset</a>
-                                <button type="submit" class="btn btn-primary px-4 shadow-sm"><i class="bi bi-search me-1"></i> Terapkan</button>
+                                <button type="submit" class="btn btn-primary px-4 shadow-sm"><i class="bi bi-funnel-fill me-1"></i> Terapkan</button>
                             </div>
                         </div>
                     </form>
@@ -214,17 +236,39 @@
 
                 {{-- Action Bar & Export --}}
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="small text-muted">Total Data: <strong>{{ $data->total() }}</strong></div>
-                    <div class="btn-group position-relative" x-data="{ open: false }">
-                        <button type="button" @click="open = !open" @click.outside="open = false" class="btn btn-success btn-sm text-white dropdown-toggle shadow-sm">
+                    {{-- 1. TOMBOL EXPORT (KIRI) --}}
+                    <div class="dropdown">
+                        <button class="btn btn-success btn-sm text-white dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-file-excel"></i> Export Excel
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0" x-show="open" style="display: none; position: absolute; right: 0; top: 100%; z-index: 1050; margin-top: 5px; min-width: 180px;" x-transition.opacity>
-                            <li><button type="submit" form="form-filter" formaction="{{ route('rehab.laporan.export', ['kategori' => 'rawat_jalan']) }}" class="dropdown-item py-2">Laporan Rawat Jalan</button></li>
-                            <li><button type="submit" form="form-filter" formaction="{{ route('rehab.laporan.export', ['kategori' => 'pasca_rehab']) }}" class="dropdown-item py-2">Laporan Pasca Rehab</button></li>
-                            <li><button type="submit" form="form-filter" formaction="{{ route('rehab.laporan.export', ['kategori' => 'skhpn']) }}" class="dropdown-item py-2">Laporan SKHPN</button></li>
+                        <ul class="dropdown-menu shadow border-0" style="z-index: 2000;">
+                            <li>
+                                <a href="{{ route('rehab.laporan.export', array_merge(['kategori' => 'rawat_jalan'], request()->only(['tahun', 'satuan_kerja_id']))) }}" class="dropdown-item py-2">
+                                    Laporan Rawat Jalan
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('rehab.laporan.export', array_merge(['kategori' => 'pasca_rehab'], request()->only(['tahun', 'satuan_kerja_id']))) }}" class="dropdown-item py-2">
+                                    Laporan Pasca Rehab
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('rehab.laporan.export', array_merge(['kategori' => 'skhpn'], request()->only(['tahun', 'satuan_kerja_id']))) }}" class="dropdown-item py-2">
+                                    Laporan SKHPN
+                                </a>
+                            </li>
+                            {{-- MENU BARU: EXPORT DATA LENGKAP --}}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a href="{{ route('rehab.laporan.export_full', request()->query()) }}" class="dropdown-item py-2">
+                                    <i class="bi bi-table me-2"></i>Export Data Tabel
+                                </a>
+                            </li>
                         </ul>
                     </div>
+
+                    {{-- 2. TOTAL DATA (KANAN) --}}
+                    <div class="small text-muted">Total Data: <strong>{{ $data->total() }}</strong></div>
                 </div>
 
                 {{-- Tabel Data --}}
@@ -394,7 +438,7 @@
                                 </td>
                             </tr>
                             @empty
-                            <tr><td colspan="8" class="text-center py-5 text-muted fst-italic">Tidak ada data untuk filter yang dipilih.</td></tr>
+                            <tr><td colspan="8" class="text-center py-5 text-muted fst-italic">Tidak ada data.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -420,9 +464,10 @@
     </div>
 
     {{-- ==================================================================== --}}
-    {{-- MODAL TARGET TAHUNAN (BOOTSTRAP MODAL NATIVE - DIJAMIN AMAN) --}}
+    {{-- MODAL TARGET TAHUNAN --}}
     {{-- ==================================================================== --}}
     <div class="modal fade" id="targetModal" tabindex="-1" aria-hidden="true">
+        {{-- ... (Isi Modal Tetap Sama) ... --}}
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header bg-primary text-white">

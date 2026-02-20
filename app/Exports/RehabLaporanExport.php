@@ -9,7 +9,7 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class RehabLaporanExport implements FromView, ShouldAutoSize, WithStyles
 {
@@ -48,36 +48,32 @@ class RehabLaporanExport implements FromView, ShouldAutoSize, WithStyles
     {
         $sheet->getColumnDimension('A')->setWidth(35); 
 
-        $sheet->getStyle('A1:Z2')->applyFromArray([
-            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '92D050']], 
-            'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_CENTER, 
-                'vertical' => Alignment::VERTICAL_CENTER,
-                'wrapText' => true
-            ],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'FFFFFF']]],
-        ]);
-
+        // 1. Hitung Baris dan Kolom Dinamis (Efisiensi Memory)
         $lastRow = $sheet->getHighestRow();
+        
+        // Kolom A = 1, ditambah (Jumlah Tahun * 3 Kolom)
+        $totalCols = 1 + (count($this->years) * 3);
+        $lastCol = Coordinate::stringFromColumnIndex($totalCols);
 
-        $sheet->getStyle('A3:A' . $lastRow)->applyFromArray([
-            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '92D050']],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'FFFFFF']]],
-            'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'horizontal' => Alignment::HORIZONTAL_LEFT],
+        // 2. Berikan Border & Alignment HANYA pada area tabel yang aktif
+        // Ini menggantikan hardcode 'Z' yang membuat file lambat di-export
+        $sheet->getStyle("A1:{$lastCol}{$lastRow}")->applyFromArray([
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN, 
+                    'color' => ['rgb' => '000000'] // Border hitam tipis standar
+                ]
+            ],
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ]
         ]);
 
-        $sheet->getStyle('A' . $lastRow . ':Z' . $lastRow)->applyFromArray([
-            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '92D050']],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-        ]);
-
-        $sheet->getStyle('B3:Z' . ($lastRow - 1))->applyFromArray([
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'FFFFFF']]],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EBF1DE']], 
+        // 3. Posisikan text ke tengah mulai dari kolom B sampai kolom akhir
+        $sheet->getStyle("B1:{$lastCol}{$lastRow}")->applyFromArray([
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+            ]
         ]);
 
         return [];

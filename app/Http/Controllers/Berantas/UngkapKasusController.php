@@ -108,6 +108,12 @@ class UngkapKasusController extends Controller
         // Ambil tahun dari DB (optimasi distinct)
         $years = BerantasUngkapKasus::selectRaw('YEAR(tanggal_kejadian) as year')
             ->distinct()->orderByDesc('year')->pluck('year');
+        $currentYear = (int) date('Y');
+        // Cek apakah tahun sekarang sudah ada di koleksi
+        if (!$years->contains($currentYear)) {
+            // Tambahkan dan urutkan ulang hanya jika perlu
+            $years->push($currentYear)->sortDesc()->values();
+        }
 
         // 1. Query Utama untuk Tabel (Pagination)
         // Tetap gunakan getFilteredQuery karena ada limit per halaman (aman)

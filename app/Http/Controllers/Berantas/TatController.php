@@ -132,6 +132,13 @@ class TatController extends Controller
         // 1. Data Dropdown (Ringan)
         $years = BerantasTat::selectRaw('YEAR(tanggal_pelaksanaan) as year')
             ->distinct()->orderBy('year', 'desc')->pluck('year');
+        $currentYear = (int) date('Y');
+        // Cek apakah tahun sekarang sudah ada di koleksi
+        if (!$years->contains($currentYear)) {
+            // Tambahkan dan urutkan ulang hanya jika perlu
+            $years->push($currentYear)->sortDesc()->values();
+        }
+        
         $satuanKerjas = SatuanKerja::orderBy('satuan_kerja')->get();
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
 

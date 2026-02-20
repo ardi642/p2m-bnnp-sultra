@@ -21,6 +21,12 @@ class PetaRegisterBarangBuktiController extends Controller
         
         $years = BerantasRegisterBarangBukti::selectRaw('YEAR(tanggal_perolehan) as year')
             ->distinct()->orderByDesc('year')->pluck('year');
+        $currentYear = (int) date('Y');
+        // Cek apakah tahun sekarang sudah ada di koleksi
+        if (!$years->contains($currentYear)) {
+            // Tambahkan dan urutkan ulang hanya jika perlu
+            $years->push($currentYear)->sortDesc()->values();
+        }
 
         $isFreshLoad = empty($request->all());
         $selectedTahun = $isFreshLoad ? [date('Y')] : $request->input('tahun', []);

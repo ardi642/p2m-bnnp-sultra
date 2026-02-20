@@ -26,6 +26,12 @@ class PetaUngkapKasusController extends Controller
 
         $years = BerantasUngkapKasus::selectRaw('YEAR(tanggal_kejadian) as year')
             ->distinct()->orderByDesc('year')->pluck('year');
+        $currentYear = (int) date('Y');
+        // Cek apakah tahun sekarang sudah ada di koleksi
+        if (!$years->contains($currentYear)) {
+            // Tambahkan dan urutkan ulang hanya jika perlu
+            $years->push($currentYear)->sortDesc()->values();
+        }
 
         // Logic Default Tahun
         $isFreshLoad = empty($request->all());

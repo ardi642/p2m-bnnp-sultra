@@ -159,6 +159,12 @@ class DesaKelurahanBersinarController extends Controller
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
         }
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
+        $currentYear = (int) date('Y');
+        // Cek apakah tahun sekarang sudah ada di koleksi
+        if (!$years->contains($currentYear)) {
+            // Tambahkan dan urutkan ulang hanya jika perlu
+            $years->push($currentYear)->sortDesc()->values();
+        }
 
         $query = $this->getFilteredQuery($request);
 

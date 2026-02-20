@@ -109,8 +109,17 @@ class OnlineController extends Controller
         }
 
         $yearQuery = P2mOnline::selectRaw('YEAR(tanggal_mulai_pelaksanaan) as year');
-        if ($user->hasRole(['operator_satker', 'operator_p2m'])) { $yearQuery->where('satuan_kerja_id', $user->getSatkerId()); }
+        if ($user->hasRole(['operator_satker', 'operator_p2m'])) { 
+            $yearQuery->where('satuan_kerja_id', $user->getSatkerId()); 
+        }
+        
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
+        $currentYear = (int) date('Y');
+        // Cek apakah tahun sekarang sudah ada di koleksi
+        if (!$years->contains($currentYear)) {
+            // Tambahkan dan urutkan ulang hanya jika perlu
+            $years->push($currentYear)->sortDesc()->values();
+        }
 
         $query = $this->getFilteredQuery($request);
 

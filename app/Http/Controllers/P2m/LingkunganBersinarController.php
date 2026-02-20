@@ -177,6 +177,12 @@ class LingkunganBersinarController extends Controller
         }
 
         $years = $yearQuery->distinct()->orderBy('year', 'desc')->pluck('year');
+        $currentYear = (int) date('Y');
+        // Cek apakah tahun sekarang sudah ada di koleksi
+        if (!$years->contains($currentYear)) {
+            // Tambahkan dan urutkan ulang hanya jika perlu
+            $years->push($currentYear)->sortDesc()->values();
+        }
 
         // Panggil Query Utama
         $query = $this->getFilteredQuery($request);

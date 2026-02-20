@@ -1,9 +1,11 @@
 <?php
 namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasDokumen;
 
 class RehabRiwayat extends Model
 {
+    use HasDokumen;
     protected $table = 'rehab_riwayat';
     protected $guarded = ['id'];
     protected $casts = [

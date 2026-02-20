@@ -11,7 +11,7 @@
             <a href="{{ route('rehab.pasien.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Kembali</a>
         </div>
 
-        <form action="{{ route('rehab.pasien.riwayat.store', $pasien->id) }}" method="POST">
+        <form action="{{ route('rehab.pasien.riwayat.store', $pasien->id) }}" method="POST" id="form-riwayat">
             @csrf
             <div class="row g-4">
                 {{-- IDENTITAS PASIEN (TERKUNCI FULL WIDTH) --}}
@@ -87,11 +87,58 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- UPLOAD FILE DOKUMEN --}}
+                <div class="col-12">
+                    <div class="bg-light p-4 rounded-3 border border-dashed">
+                        <label class="form-label fw-bold h6 mb-3 text-dark d-block border-bottom pb-2">
+                            <i class="bi bi-cloud-arrow-up me-2"></i>Upload File & Link (Opsional)
+                        </label>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
+                                    <label class="form-label fw-bold small text-primary mb-1"><i class="bi bi-folder2-open me-2"></i>Dokumentasi Berkas</label>
+                                    <div class="mb-3"><input type="file" id="fp-dokumentasi" name="dokumentasi[]" multiple></div>
+                                    <hr class="border-secondary-subtle my-3">
+                                    <div x-data="linkManager( {{ \Illuminate\Support\Js::from(array_values(old('dokumentasi_links', []))) }} )">
+                                        <label class="form-label fw-bold small text-primary mb-2"><i class="bi bi-link-45deg me-1"></i>Tautkan Link</label>
+                                        <template x-for="(link, index) in links" :key="index">
+                                            <div class="input-group mb-2 input-group-sm">
+                                                <input type="text" class="form-control" :name="`dokumentasi_links[${index}][nama]`" placeholder="Nama" x-model="link.nama" required>
+                                                <input type="url" class="form-control" :name="`dokumentasi_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
+                                                <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
+                                            </div>
+                                        </template>
+                                        <button type="button" class="btn btn-xs btn-outline-primary w-100 mt-1" @click="addLink()">Tambah Link</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
+                                    <label class="form-label fw-bold small text-danger mb-1"><i class="bi bi-paperclip me-2"></i>Lampiran Tambahan</label>
+                                    <div class="mb-3"><input type="file" id="fp-lampiran" name="lampiran[]" multiple></div>
+                                    <hr class="border-secondary-subtle my-3">
+                                    <div x-data="linkManager( {{ \Illuminate\Support\Js::from(array_values(old('lampiran_links', []))) }} )">
+                                        <label class="form-label fw-bold small text-danger mb-2"><i class="bi bi-link-45deg me-1"></i>Tautkan Link</label>
+                                        <template x-for="(link, index) in links" :key="index">
+                                            <div class="input-group mb-2 input-group-sm">
+                                                <input type="text" class="form-control" :name="`lampiran_links[${index}][nama]`" placeholder="Nama" x-model="link.nama" required>
+                                                <input type="url" class="form-control" :name="`lampiran_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
+                                                <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
+                                            </div>
+                                        </template>
+                                        <button type="button" class="btn btn-xs btn-outline-danger w-100 mt-1" @click="addLink()">Tambah Link</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="d-flex justify-content-end gap-2 mt-4 pb-5">
                 <button type="reset" class="btn btn-light border px-4 py-2">Reset Form</button>
-                <button type="submit" class="btn btn-success px-5 py-2 fw-bold shadow-sm">Simpan Riwayat Baru</button>
+                <button type="submit" id="btn-submit" class="btn btn-success px-5 py-2 fw-bold shadow-sm">Simpan Riwayat Baru</button>
             </div>
         </form>
     </div>
@@ -99,12 +146,32 @@
 @endsection
 
 @push('styles')
-<style>
-    .ts-control { border: 1px solid #ced4da; border-radius: 0.375rem; padding: 0.5rem 0.75rem; }
-    .ts-wrapper.focus .ts-control { border-color: #6c757d; box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.15); }
-</style>
+    @vite(['resources/css/filepond.css', 'resources/js/filepond.js'])
+    <style>
+        .ts-control { border: 1px solid #ced4da; border-radius: 0.375rem; padding: 0.5rem 0.75rem; }
+        .border-dashed { border: 1px dashed #ced4da !important; }
+    </style>
 @endpush
 
 @push('scripts')
-<script>document.addEventListener("DOMContentLoaded", function() { new TomSelect('#select-narko', { plugins: ['remove_button', 'clear_button'], create: false }); });</script>
+<script type="module">
+    document.addEventListener("DOMContentLoaded", function() {
+        new TomSelect('#select-narko', { plugins: ['remove_button', 'clear_button'], create: false });
+
+        if (window.FilePondManager) {
+            const commonConfig = { uploadRoute: '{{ route('upload.temp') }}', revertRoute: '{{ route('revert.temp') }}', loadRoute: '{{ route('load.temp') }}', csrfToken: '{{ csrf_token() }}', submitBtnId: 'btn-submit' };
+            window.FilePondManager.create('#fp-dokumentasi', { ...commonConfig, maxSize: '10MB', existingFiles: @json(old('dokumentasi', [])) });
+            window.FilePondManager.create('#fp-lampiran', { ...commonConfig, maxSize: '10MB', existingFiles: @json(old('lampiran', [])) });
+            window.FilePondManager.attachFormSubmit('form-riwayat', 'btn-submit');
+        }
+    });
+
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('linkManager', (initialData = []) => ({
+            links: Array.isArray(initialData) ? initialData : [], 
+            addLink() { this.links.push({ nama: '', url: '' }); },
+            removeLink(index) { this.links.splice(index, 1); }
+        }));
+    });
+</script>
 @endpush

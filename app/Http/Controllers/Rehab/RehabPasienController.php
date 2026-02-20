@@ -7,13 +7,16 @@ use App\Models\RehabPasien;
 use App\Models\RehabRiwayat;
 use App\Models\SatuanKerja;
 use App\Models\BerantasNarkotika;
+use App\Models\Dokumen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use App\Constants\Pendidikan;
 use App\Constants\Pekerjaan;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\RehabPasienExport;
+use App\Services\DokumenService;
 use Illuminate\Support\Facades\Log;
 
 class RehabPasienController extends Controller
@@ -107,7 +110,7 @@ class RehabPasienController extends Controller
         return view('rehab.pasien.create', compact('masterNarkotika', 'satuanKerjas'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, DokumenService $dokumenService)
     {
         $user = Auth::user();
         $request->validate([
@@ -118,10 +121,20 @@ class RehabPasienController extends Controller
             'pendidikan' => 'required|string',
             'pekerjaan' => 'required|string',
             'sumber_pasien' => 'required|in:Voluntary,Compulsory',
-            'narkotika_ids' => 'required|array|min:1'
+            'narkotika_ids' => 'required|array|min:1',
+            
+            'dokumentasi'          => 'nullable|array', 
+            'lampiran'             => 'nullable|array',
+            'dokumentasi_links'    => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+            'lampiran_links'       => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ]);
 
         $satkerId = $user->isAdmin() ? $request->satuan_kerja_id : $user->getSatkerId();
+        $uploadedPaths = [];
 
         DB::beginTransaction();
         try {
@@ -156,11 +169,25 @@ class RehabPasienController extends Controller
 
             $riwayat->narkotika()->sync($request->narkotika_ids);
 
+            if ($request->filled('dokumentasi')) {
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $riwayat, 'dokumentasi', $uploadedPaths);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $riwayat, 'lampiran', $uploadedPaths);
+            }
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $riwayat, 'lampiran');
+            }
+
             DB::commit();
             return redirect()->route('rehab.pasien.show', $pasien->id)->with('success', 'Pasien Baru Berhasil Didaftarkan. Harap catat No Rekam Medis pasien ini.');
 
         } catch (\Exception $e) {
             DB::rollBack();
+            foreach ($uploadedPaths as $path) { Storage::disk(config('filesystems.default'))->delete($path); }
             Log::error('Error Store Pasien: ' . $e->getMessage());
             return back()->with('error', 'Terjadi kesalahan server saat menyimpan data.')->withInput();
         }
@@ -168,7 +195,7 @@ class RehabPasienController extends Controller
 
     public function show($id)
     {
-        $pasien = RehabPasien::with(['riwayat.narkotika', 'satuanKerja'])->findOrFail($id);
+        $pasien = RehabPasien::with(['riwayat.narkotika', 'riwayat.dokumen', 'satuanKerja'])->findOrFail($id);
         if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
         
         return view('rehab.pasien.show', compact('pasien'));
@@ -212,7 +239,7 @@ class RehabPasienController extends Controller
         return view('rehab.pasien.create_riwayat', compact('pasien', 'masterNarkotika'));
     }
 
-    public function storeRiwayat(Request $request, $pasien_id)
+    public function storeRiwayat(Request $request, DokumenService $dokumenService, $pasien_id)
     {
         $pasien = RehabPasien::findOrFail($pasien_id);
         if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
@@ -223,8 +250,19 @@ class RehabPasienController extends Controller
             'pendidikan' => 'required|string',
             'pekerjaan' => 'required|string',
             'sumber_pasien' => 'required|in:Voluntary,Compulsory',
-            'narkotika_ids' => 'required|array|min:1'
+            'narkotika_ids' => 'required|array|min:1',
+
+            'dokumentasi'          => 'nullable|array', 
+            'lampiran'             => 'nullable|array',
+            'dokumentasi_links'    => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+            'lampiran_links'       => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ]);
+
+        $uploadedPaths = [];
 
         DB::beginTransaction();
         try {
@@ -237,24 +275,38 @@ class RehabPasienController extends Controller
             ]);
             $riwayat->narkotika()->sync($request->narkotika_ids);
 
+            if ($request->filled('dokumentasi')) {
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $riwayat, 'dokumentasi', $uploadedPaths);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $riwayat, 'lampiran', $uploadedPaths);
+            }
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $riwayat, 'lampiran');
+            }
+
             DB::commit();
             return redirect()->route('rehab.pasien.show', $pasien->id)->with('success', 'Riwayat Rehabilitasi Baru Berhasil Ditambahkan.');
         } catch (\Exception $e) {
             DB::rollBack();
+            foreach ($uploadedPaths as $path) { Storage::disk(config('filesystems.default'))->delete($path); }
             return back()->with('error', 'Gagal menambahkan riwayat kedatangan.')->withInput();
         }
     }
 
     public function editRiwayat($id)
     {
-        $riwayat = RehabRiwayat::with(['pasien', 'narkotika'])->findOrFail($id);
+        $riwayat = RehabRiwayat::with(['pasien', 'narkotika', 'dokumen'])->findOrFail($id);
         if (!Auth::user()->isAdmin() && $riwayat->pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
 
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
         return view('rehab.pasien.edit_riwayat', compact('riwayat', 'masterNarkotika'));
     }
 
-    public function updateRiwayat(Request $request, $id)
+    public function updateRiwayat(Request $request, DokumenService $dokumenService, $id)
     {
         $riwayat = RehabRiwayat::findOrFail($id);
         if (!Auth::user()->isAdmin() && $riwayat->pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
@@ -265,8 +317,21 @@ class RehabPasienController extends Controller
             'pendidikan' => 'required|string',
             'pekerjaan' => 'required|string',
             'sumber_pasien' => 'required|in:Voluntary,Compulsory',
-            'narkotika_ids' => 'required|array|min:1'
+            'narkotika_ids' => 'required|array|min:1',
+
+            'delete_files'         => 'nullable|array', 
+            'dokumentasi'          => 'nullable|array',
+            'lampiran'             => 'nullable|array',
+            'dokumentasi_links'    => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
+            'lampiran_links'       => 'nullable|array',
+            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
+            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
         ]);
+
+        $newFilesMoved = [];
+        $filesToDelete = [];
 
         DB::beginTransaction();
         try {
@@ -279,25 +344,59 @@ class RehabPasienController extends Controller
             ]);
             $riwayat->narkotika()->sync($request->narkotika_ids);
 
+            if ($request->has('delete_files')) {
+                $filesToRemove = Dokumen::whereIn('id', $request->delete_files)->get();
+                foreach ($filesToRemove as $file) {
+                    if (!$file->is_link) $filesToDelete[] = $file->path_file; 
+                    $file->delete();
+                }
+            }
+
+            if ($request->filled('dokumentasi')) {
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $riwayat, 'dokumentasi', $newFilesMoved);
+            }
+            if ($request->filled('lampiran')) {
+                $dokumenService->moveToPermanent($request->input('lampiran'), $riwayat, 'lampiran', $newFilesMoved);
+            }
+            if ($request->filled('dokumentasi_links')) {
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi');
+            }
+            if ($request->filled('lampiran_links')) {
+                $dokumenService->saveLinks($request->input('lampiran_links'), $riwayat, 'lampiran');
+            }
+
             DB::commit();
-            
+
+            foreach ($filesToDelete as $path) {
+                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+            }
+
             if ($request->query('ref') === 'index') {
                 return redirect()->route('rehab.pasien.index')->with('success', 'Data Riwayat Kedatangan berhasil diperbarui.');
             }
             return redirect()->route('rehab.pasien.show', $riwayat->rehab_pasien_id)->with('success', 'Data Riwayat Kedatangan berhasil diperbarui.');
+        
         } catch (\Exception $e) {
             DB::rollBack();
+            foreach ($newFilesMoved as $path) { Storage::disk('public')->exists($path) && Storage::disk('public')->delete($path); }
             return back()->with('error', 'Gagal memperbarui riwayat kedatangan.')->withInput();
         }
     }
 
     public function destroy($id)
     {
-        $riwayat = RehabRiwayat::findOrFail($id);
+        $riwayat = RehabRiwayat::with('dokumen')->findOrFail($id);
         $pasienId = $riwayat->rehab_pasien_id;
         
         $pasien = RehabPasien::findOrFail($pasienId);
         if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
+
+        $filesToDelete = [];
+        foreach ($riwayat->dokumen()->cursor() as $doc) {
+            if (!$doc->is_link && !empty($doc->path_file)) {
+                $filesToDelete[] = $doc->path_file;
+            }
+        }
 
         DB::beginTransaction();
         try {
@@ -306,7 +405,14 @@ class RehabPasienController extends Controller
                 $pasien->delete();
             }
             DB::commit();
-            return back()->with('success', 'Data riwayat berhasil dihapus.');
+
+            foreach ($filesToDelete as $path) {
+                if ($path && Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+
+            return back()->with('success', 'Data riwayat dan dokumen berhasil dihapus.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal menghapus data riwayat.');

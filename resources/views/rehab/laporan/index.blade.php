@@ -154,7 +154,7 @@
                     </div>
                 </div>
             </div>
-            <div x-show="showBreakdown" x-collapse>
+            <div x-show="showBreakdown" x-collapse x-cloak>
                 <div class="card-body p-0 border-top">
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped table-hover mb-0 text-center small align-middle">
@@ -550,6 +550,7 @@
 
 @push('styles')
 <style>
+    [x-cloak] { display: none !important; }
     .ts-control { border: none !important; box-shadow: none !important; padding-top: 0.5rem; padding-bottom: 0.5rem; background-color: transparent !important; min-height: 40px; }
     .custom-table-scroll { max-height: 70vh; overflow-y: auto; position: relative; border: 1px solid #dee2e6; border-radius: 6px; }
     .custom-table-scroll thead th { position: sticky !important; top: 0 !important; z-index: 10; background-color: #f8f9fa !important; box-shadow: inset 0 -1px 0 #dee2e6; }

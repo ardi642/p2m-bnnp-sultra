@@ -41,10 +41,7 @@ use App\Http\Controllers\P2m\IkanController;
 use App\Http\Controllers\P2m\InformasiEdukasiController;
 use App\Http\Controllers\P2m\MonevController;
 use App\Http\Controllers\P2m\PemetaanSdmSdaController;
-use App\Livewire\Dashboard\Index;
-use App\Models\Dokumen;
-use App\Models\DokumentasiKegiatan;
-use App\Models\p2mOnline;
+use App\Http\Controllers\Rehab\RehabPasienController;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -304,32 +301,48 @@ Route::middleware('auth')->group(function() {
     Route::prefix('rehab')->name('rehab.')->group(function() {
         
         // A. READ/VIEW ACCESS (Melihat Data & Export)
-        // Roles: Admin Pusat, Admin Satker, Admin Rehab, Operator Satker, Operator Rehab
         Route::middleware(['role:admin,admin_satker,admin_rehab,operator_satker,operator_rehab'])->group(function() {
             
-            // 1. Export Excel (Ditaruh sebelum resource agar tidak dianggap ID)
-            Route::get('/laporan/export/{kategori}', [RehabLaporanController::class, 'export'])->name('laporan.export');
+            // --- 1. LAPORAN HARIAN ---
+            Route::get('/laporan/export-full', [\App\Http\Controllers\Rehab\RehabLaporanController::class, 'exportFull'])->name('laporan.export_full');
+            Route::get('/laporan/export/{kategori}', [\App\Http\Controllers\Rehab\RehabLaporanController::class, 'export'])->name('laporan.export');
+            Route::get('/laporan', [\App\Http\Controllers\Rehab\RehabLaporanController::class, 'index'])->name('laporan.index');
 
-            // 2. Export Excel Data Lengkap (Raw Table) - Letakkan sebelum yang {kategori}
-            Route::get('/laporan/export-full', [RehabLaporanController::class, 'exportFull'])->name('laporan.export_full');
-            
-            // 3. Index Laporan
-            Route::get('/laporan', [RehabLaporanController::class, 'index'])->name('laporan.index');
+            // --- 2. DATA PASIEN REHAB ---
+            Route::get('/pasien/export', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'export'])->name('pasien.export');
+            Route::get('/pasien', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'index'])->name('pasien.index');
+            Route::get('/pasien/{pasien}', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'show'])->name('pasien.show')->where('pasien', '[0-9]+'); 
         });
 
         // B. WRITE ACCESS (Input Data, Target, Edit, Hapus)
-        // Roles: Admin Pusat, Admin Satker, Operator Satker, Operator Rehab
         Route::middleware(['role:admin,admin_satker,operator_satker,operator_rehab'])->group(function() {
             
-            // 1. Routes Kelola Target Tahunan
-            // URL: /rehab/target (POST) -> Nama: rehab.target.store
-            Route::post('/target', [RehabLaporanController::class, 'storeTarget'])->name('target.store');
-            // URL: /rehab/target/{id} (DELETE) -> Nama: rehab.target.destroy
-            Route::delete('/target/{id}', [RehabLaporanController::class, 'destroyTarget'])->name('target.destroy');
+            // --- 1. KELOLA TARGET TAHUNAN ---
+            Route::post('/target', [\App\Http\Controllers\Rehab\RehabLaporanController::class, 'storeTarget'])->name('target.store');
+            Route::delete('/target/{id}', [\App\Http\Controllers\Rehab\RehabLaporanController::class, 'destroyTarget'])->name('target.destroy');
 
-            // 2. Resource Laporan Harian (Create, Store, Edit, Update, Destroy)
-            // Menggunakan except 'index' & 'show' karena index sudah ada di grup READ di atas
-            Route::resource('laporan', RehabLaporanController::class)->except(['index', 'show']);
+            // --- 2. LAPORAN HARIAN ---
+            Route::resource('laporan', \App\Http\Controllers\Rehab\RehabLaporanController::class)->except(['index', 'show']);
+
+            // --- 3. DATA PASIEN REHAB ---
+            // Pendaftaran Pasien Baru
+            Route::get('/pasien/create', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'create'])->name('pasien.create');
+            Route::post('/pasien', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'store'])->name('pasien.store');
+            
+            // Edit Identitas Pasien
+            Route::get('/pasien/{pasien}/edit', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'edit'])->name('pasien.edit')->where('pasien', '[0-9]+');
+            Route::put('/pasien/{pasien}', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'update'])->name('pasien.update')->where('pasien', '[0-9]+');
+
+            // Tambah Riwayat Kedatangan
+            Route::get('/pasien/{pasien}/riwayat', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'createRiwayat'])->name('pasien.riwayat.create')->where('pasien', '[0-9]+');
+            Route::post('/pasien/{pasien}/riwayat', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'storeRiwayat'])->name('pasien.riwayat.store')->where('pasien', '[0-9]+');
+            
+            // Edit Data Riwayat
+            Route::get('/pasien/riwayat/{id}/edit', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'editRiwayat'])->name('pasien.riwayat.edit')->where('id', '[0-9]+');
+            Route::put('/pasien/riwayat/{id}', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'updateRiwayat'])->name('pasien.riwayat.update')->where('id', '[0-9]+');
+
+            // Hapus Riwayat
+            Route::delete('/pasien/riwayat/{id}', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'destroy'])->name('pasien.destroy');
         });
     });
 

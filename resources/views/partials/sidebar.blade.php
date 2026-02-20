@@ -80,10 +80,14 @@
                     <i class="bi bi-heart-pulse-fill fs-5"></i>
                     <span>Bidang Rehab</span>
                 </div>
-
-                <a href="{{ route('rehab.laporan.index') }}" class="nav-link {{ Request::is('rehab/laporan*') ? 'active' : '' }}">
-                    Laporan Layanan
-                </a>
+                @foreach([
+                    ['route' => 'rehab.laporan.index', 'label' => 'Laporan Layanan', 'url' => 'rehab/laporan*'],
+                    ['route' => 'rehab.pasien.index', 'label' => 'Pasien', 'url' => 'rehab/pasien*']
+                ] as $menu)
+                    <a href="{{ route($menu['route']) }}" class="nav-link {{ Request::is($menu['url']) ? 'active' : '' }}">
+                        {{ $menu['label'] }}
+                    </a>
+                @endforeach
             @endif
 
             {{-- 4. ADMINISTRATOR --}}

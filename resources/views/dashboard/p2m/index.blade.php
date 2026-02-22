@@ -8,17 +8,25 @@
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
             <div>
                 <h1 class="h3 mb-2 fw-bold text-dark">Dashboard Kinerja P2M</h1>
-                <p class="text-muted mb-0 fs-5">
-                    <i class="bi bi-building-fill me-2 text-primary"></i>
+                
+                <div class="mt-2">
                     @if(auth()->user()->role === 'admin')
-                        <span class="fw-bold text-dark">Data Seluruh Satuan Kerja</span>
+                        {{-- Dropdown Satker Khusus Super Admin - Dibuat Jelas dan Tebal --}}
+                        <select x-model="globalSatkerId" class="form-select form-select-lg border-primary text-primary fw-bold shadow-sm" style="width: auto; min-width: 350px;">
+                            <option value="">-- Seluruh Satuan Kerja (Gabungan) --</option>
+                            @foreach($satkers as $s)
+                                <option value="{{ $s->id }}">{{ $s->satuan_kerja }}</option>
+                            @endforeach
+                        </select>
                     @else
-                        <span class="fw-bold text-dark">{{ auth()->user()->pegawai?->satuanKerja?->satuan_kerja ?? 'Satuan Kerja' }}</span>
+                        <p class="text-muted mb-0 fs-5 d-flex align-items-center gap-2">
+                            <i class="bi bi-building-fill text-primary"></i>
+                            <span class="fw-bold text-dark">{{ auth()->user()->pegawai?->satuanKerja?->satuan_kerja ?? 'Satuan Kerja' }}</span>
+                        </p>
                     @endif
-                </p>
+                </div>
             </div>
             
-            {{-- Tombol Navigasi Bidang --}}
             @if($showTabs)
             <div class="btn-group shadow-sm">
                 <a href="{{ route('dashboard.p2m.index') }}" class="btn btn-primary fw-bold"><i class="bi bi-megaphone-fill me-1"></i> P2M</a>
@@ -28,15 +36,15 @@
             @endif
         </div>
 
-        {{-- FILTER PERIODE GLOBAL (Untuk Kartu Atas) --}}
+        {{-- FILTER GLOBAL (Kartu Atas & Ranking) --}}
         <div class="d-flex justify-content-end mb-3">
             <div class="d-flex align-items-center bg-white p-2 rounded shadow-sm border gap-2">
                 <span class="fw-bold text-muted small"><i class="bi bi-calendar-range me-2 text-primary"></i>Periode Akumulasi:</span>
-                <select x-model="startYear" class="form-select form-select-sm border-secondary fw-bold text-primary" style="width: 90px;">
+                <select x-model="globalStartYear" class="form-select form-select-sm border-secondary fw-bold text-primary" style="width: 90px;">
                     @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
                 </select>
                 <span class="fw-bold">-</span>
-                <select x-model="endYear" class="form-select form-select-sm border-secondary fw-bold text-primary" style="width: 90px;">
+                <select x-model="globalEndYear" class="form-select form-select-sm border-secondary fw-bold text-primary" style="width: 90px;">
                     @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
                 </select>
             </div>
@@ -44,7 +52,6 @@
 
         {{-- B. KARTU UTAMA --}}
         <div class="row g-3 mb-4">
-            {{-- 1. TOTAL KEGIATAN --}}
             <div class="col-md-6">
                 <div class="card border-0 shadow-sm h-100 bg-primary text-white overflow-hidden">
                     <i class="bi bi-layers-fill position-absolute opacity-25" style="font-size: 8rem; right: -20px; bottom: -30px;"></i>
@@ -54,7 +61,6 @@
                     </div>
                 </div>
             </div>
-            {{-- 2. ORANG TERLAYANI --}}
             <div class="col-md-6">
                 <div class="card border-0 shadow-sm h-100 overflow-hidden">
                     <div class="d-flex h-100 align-items-stretch">
@@ -76,7 +82,6 @@
                     </div>
                 </div>
             </div>
-            {{-- 3. MEDIA --}}
             <div class="col-md-6">
                 <div class="card border-0 shadow-sm h-100 overflow-hidden">
                     <div class="d-flex h-100 align-items-stretch">
@@ -96,7 +101,6 @@
                     </div>
                 </div>
             </div>
-            {{-- 4. WILAYAH --}}
             <div class="col-md-6">
                 <div class="card border-0 shadow-sm h-100 overflow-hidden">
                     <div class="d-flex h-100 align-items-stretch">
@@ -118,77 +122,116 @@
         </div>
 
         {{-- C. CHART RANKING --}}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white py-3"><h6 class="m-0 fw-bold text-dark"><i class="bi bi-bar-chart-fill text-primary me-2"></i>Ranking Frekuensi Seluruh Kegiatan P2M</h6></div>
+        <div class="card border-0 shadow-sm mb-5">
+            <div class="card-header bg-white py-3"><h6 class="m-0 fw-bold text-dark"><i class="bi bi-bar-chart-fill text-primary me-2"></i>Ranking Frekuensi Seluruh Kegiatan P2M (Sesuai Periode)</h6></div>
             <div class="card-body p-3"><div x-ref="rankingChart" style="min-height: 400px;"></div></div>
         </div>
 
-        {{-- D. CHART ANALISA TREN & KOMPOSISI --}}
-        <div class="row g-4"> 
+        {{-- ================================================================= --}}
+        {{-- D. PUSAT ANALISIS GRAFIK DETAIL (TREN & KOMPOSISI) --}}
+        {{-- ================================================================= --}}
+        
+        <div class="bg-dark p-3 rounded shadow-sm mb-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h5 class="m-0 fw-bold text-white"><i class="bi bi-display me-2 text-warning"></i>Pusat Analisis Kinerja Detail</h5>
+                <small class="text-white-50">Gunakan kontrol di bawah ini untuk mengatur tampilan grafik analitik secara instan.</small>
+            </div>
             
-            {{-- FILTER UTAMA ANALISA --}}
-            <div class="col-12">
-                <div class="bg-white p-3 rounded shadow-sm border d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-                    <div>
-                        <h5 class="m-0 fw-bold text-dark"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Analisis Kinerja Detil</h5>
-                        <small class="text-muted">Pilih jenis kegiatan untuk mengeksplorasi tren dan proporsi anggaran/sasaran.</small>
-                    </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                {{-- Pilih Kegiatan --}}
+                <select x-model="detailType" class="form-select border-warning fw-bold text-dark" style="width: 200px;">
+                    <option value="informasi_edukasi">Informasi & Edukasi</option>
+                    <option value="media_elektronik">Media Elektronik</option>
+                    <option value="media_non_elektronik">Media Non-Elektronik</option>
+                    <option value="media_online">Media Online</option>
+                    <option value="tes_urine">Tes Urine</option>
+                    <option value="desa_bersinar">Desa/Kel. Bersinar</option>
+                    <option value="asistensi">Asistensi Relawan</option>
+                    <option value="pelatihan">Pelatihan Soft Skill</option>
+                    <option value="keluarga">Ketahanan Keluarga</option>
+                    <option value="monev">Monitoring & Evaluasi</option>
+                    <option value="pemetaan">Pemetaan SDM/SDA</option>
+                    <option value="ikan">IKAN</option>
+                </select>
+
+                {{-- Pilih Mode (Bulanan / Tahunan) --}}
+                <select x-model="detailMode" class="form-select border-primary fw-bold text-primary" style="width: 150px;">
+                    <option value="monthly">Per Bulan</option>
+                    <option value="yearly">Rentang Tahun</option>
+                </select>
+
+                {{-- Mode Bulanan: Pilih Tahun --}}
+                <template x-if="detailMode === 'monthly'">
                     <div class="d-flex gap-2">
-                        <select x-model="chartFilter.type" class="form-select border-secondary fw-bold text-dark fs-6" style="width: 250px;">
-                            <option value="informasi_edukasi">Informasi & Edukasi</option>
-                            <option value="media_elektronik">Media Elektronik</option>
-                            <option value="media_non_elektronik">Media Non-Elektronik</option>
-                            <option value="media_online">Media Online</option>
-                            <option value="tes_urine">Tes Urine</option>
-                            <option value="desa_bersinar">Desa/Kelurahan Bersinar</option>
-                            <option value="asistensi">Asistensi Relawan</option>
-                            <option value="pelatihan">Pelatihan Soft Skill</option>
-                            <option value="keluarga">Ketahanan Keluarga</option>
-                            <option value="monev">Monitoring & Evaluasi</option>
-                            <option value="pemetaan">Pemetaan SDM/SDA</option>
-                            <option value="ikan">IKAN</option>
-                        </select>
-                        <select x-model="chartFilter.year" class="form-select border-primary fw-bold text-primary fs-6" style="width: 100px;">
+                        <select x-model="detailMonthYear" class="form-select border-info text-info fw-bold" style="width: 100px;">
                             @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
                         </select>
                     </div>
-                </div>
-            </div>
+                </template>
 
-            {{-- 1. GRAFIK TREN (LINE CHART) --}}
+                {{-- Mode Tahunan: Pilih Rentang --}}
+                <template x-if="detailMode === 'yearly'">
+                    <div class="d-flex gap-2 align-items-center">
+                        <select x-model="detailYearStart" class="form-select border-info text-info fw-bold" style="width: 90px;">
+                            @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                        </select>
+                        <span class="text-white-50 fw-bold">-</span>
+                        <select x-model="detailYearEnd" class="form-select border-info text-info fw-bold" style="width: 90px;">
+                            @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                        </select>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-5">
+            {{-- Grafik 1: TREN KINERJA --}}
             <div class="col-12">
                 <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                        <div class="d-flex align-items-center gap-2">
-                            <h6 class="m-0 fw-bold text-primary">Grafik Tren Waktu</h6>
-                            {{-- Toggle Mode: Bulanan vs Tahunan --}}
-                            <select x-model="chartFilter.trendMode" class="form-select form-select-sm border-0 bg-light text-secondary fw-bold ms-2" style="width: 140px;">
-                                <option value="monthly">Per Bulan</option>
-                                <option value="yearly">Per Tahun (5 Thn)</option>
-                            </select>
-                        </div>
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
                         
-                        {{-- Tab Kendali Metrik (Sama untuk Admin & Non-Admin) --}}
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            {{-- Judul Terintegrasi dengan Metrik --}}
+                            <h6 class="m-0 fw-bold text-primary">
+                                <i class="bi bi-graph-up text-primary me-2"></i>
+                                <span x-text="dynamicTrendMetric"></span> 
+                                <span x-text="dynamicTrendTitle" class="text-secondary fw-normal fs-6 ms-1"></span>
+                            </h6>
+                            
+                            {{-- Toggle Khusus Mode Multi Satker: Heatmap vs Grouped Bar --}}
+                            <template x-if="isMultiSatker">
+                                <select x-model="adminTrendType" class="form-select border-primary text-primary fw-bold ms-2" style="width: auto;">
+                                    <option value="heatmap">Tampilan Heatmap</option>
+                                    <option value="bar">Tampilan Batang</option>
+                                </select>
+                            </template>
+                        </div>
+
                         <div class="btn-group btn-group-sm shadow-sm">
-                            <button @click="lineTab = 'kegiatan'" :class="lineTab === 'kegiatan' ? 'btn-primary text-white' : 'btn-outline-secondary'" class="btn fw-bold">Jml. Kegiatan</button>
-                            <button x-show="config.unit !== '-'" @click="lineTab = 'peserta'" :class="lineTab === 'peserta' ? 'btn-primary text-white' : 'btn-outline-secondary'" class="btn fw-bold">Jml. <span x-text="config.unit"></span></button>
-                            <button x-show="config.has_positif" @click="lineTab = 'positif'" :class="lineTab === 'positif' ? 'btn-danger text-white' : 'btn-outline-secondary'" class="btn fw-bold">Indikasi Positif</button>
+                            <button @click="tabTrend = 'kegiatan'" :class="tabTrend === 'kegiatan' ? 'btn-primary text-white' : 'btn-outline-secondary'" class="btn fw-bold">Jumlah Kegiatan</button>
+                            <button x-show="config.unit !== '-'" @click="tabTrend = 'peserta'" :class="tabTrend === 'peserta' ? 'btn-primary text-white' : 'btn-outline-secondary'" class="btn fw-bold px-2">Jumlah <span x-text="config.unit"></span></button>
+                            <button x-show="config.has_positif" @click="tabTrend = 'positif'" :class="tabTrend === 'positif' ? 'btn-danger text-white' : 'btn-outline-secondary'" class="btn fw-bold">Indikasi Positif</button>
                         </div>
                     </div>
                     <div class="card-body">
-                        <div x-ref="lineChart" style="min-height: 400px;"></div>
+                        <div x-ref="chartTrend" style="min-height: 400px;"></div>
                     </div>
                 </div>
             </div>
-
-            {{-- 2. GRAFIK KOMPOSISI (STACKED BAR CHART) --}}
+            
+            {{-- Grafik 2: KOMPOSISI PROPORSI --}}
             <div class="col-12" x-show="config.has_anggaran || config.has_sasaran">
                 <div class="card border-0 shadow-sm h-100">
-                    <div class="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div class="d-flex align-items-center gap-2">
-                            <h6 class="m-0 fw-bold text-success">Komposisi Profil Kegiatan</h6>
-                            {{-- Toggle Filter Bulan untuk Stacked Bar --}}
-                            <select x-model="chartFilter.barMonth" class="form-select form-select-sm border-0 bg-light text-secondary fw-bold ms-2" style="width: 160px;">
+                            
+                            <h6 class="m-0 fw-bold text-success">
+                                <i class="bi bi-pie-chart-fill text-success me-2"></i>
+                                Proporsi <span x-text="dynamicCompMetric"></span>
+                                <span x-text="dynamicCompTitle" class="text-secondary fw-normal fs-6 ms-1"></span>
+                            </h6>
+                            
+                            <select x-show="detailMode === 'monthly'" x-model="detailMonthMonth" class="form-select border-0 bg-light text-secondary fw-bold ms-3" style="width: auto; min-width: 160px;">
                                 <option value="all">Sepanjang Tahun</option>
                                 <option value="1">Januari</option>
                                 <option value="2">Februari</option>
@@ -205,19 +248,16 @@
                             </select>
                         </div>
 
-                        {{-- Tab Kendali Proporsi (Sama untuk Admin & Non-Admin) --}}
                         <div class="btn-group btn-group-sm shadow-sm">
-                            <button x-show="config.has_anggaran" @click="barTab = 'anggaran'" :class="barTab === 'anggaran' ? 'btn-success text-white' : 'btn-outline-secondary'" class="btn fw-bold">Proporsi Anggaran</button>
-                            <button x-show="config.has_sasaran" @click="barTab = 'sasaran'" :class="barTab === 'sasaran' ? 'btn-warning text-dark' : 'btn-outline-secondary'" class="btn fw-bold">Proporsi Sasaran</button>
+                            <button x-show="config.has_anggaran" @click="tabComp = 'anggaran'" :class="tabComp === 'anggaran' ? 'btn-success text-white' : 'btn-outline-secondary'" class="btn fw-bold">Berdasarkan Anggaran</button>
+                            <button x-show="config.has_sasaran" @click="tabComp = 'sasaran'" :class="tabComp === 'sasaran' ? 'btn-warning text-dark' : 'btn-outline-secondary'" class="btn fw-bold">Berdasarkan Sasaran</button>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div x-ref="barChart" style="min-height: 400px;"></div>
-                    </div>
+                    <div class="card-body"><div x-ref="chartComp" style="min-height: 400px;"></div></div>
                 </div>
             </div>
-
         </div>
+
     </div>
 </main>
 @endsection
@@ -226,73 +266,107 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('dashboardP2M', () => ({
-            // Filter Global (Top Cards)
-            startYear: '{{ date("Y") }}',
-            endYear: '{{ date("Y") }}',
+            // State Filter Utama
+            globalSatkerId: '',
+            globalStartYear: '{{ date("Y") }}',
+            globalEndYear: '{{ date("Y") }}',
             
-            cards: {
-                kegiatan: { total: 0 },
-                orang: { total: 0, list: {} },
-                media: { total_freq: 0, total_durasi: 0, list: {} },
-                wilayah: { total: 0, list: {} }
-            },
+            cards: { kegiatan: { total: 0 }, orang: { total: 0, list: {} }, media: { total_freq: 0, total_durasi: 0, list: {} }, wilayah: { total: 0, list: {} } },
             
-            // Filter Khusus Chart Analisis
-            chartFilter: { 
-                type: 'informasi_edukasi', 
-                year: '{{ date("Y") }}',
-                trendMode: 'monthly', // 'monthly' atau 'yearly'
-                barMonth: 'all'       // 'all' atau '1' sampai '12'
-            },
+            // Detail Filter
+            detailType: 'informasi_edukasi',
+            detailMode: 'monthly',
+            detailMonthYear: '{{ date("Y") }}',
+            detailMonthMonth: 'all',
+            detailYearStart: '{{ date("Y") - 4 }}',
+            detailYearEnd: '{{ date("Y") }}',
             
-            // Konfigurasi & State
+            // State Tabs & Settings
+            tabTrend: 'kegiatan', 
+            tabComp: 'anggaran',
+            adminTrendType: 'heatmap', 
+            
             config: { unit: 'Peserta', has_anggaran: true, has_sasaran: true, has_positif: false },
-            lineTab: 'kegiatan', 
-            barTab: 'anggaran',
+            isMultiSatker: false,
             rawData: null,
+            chartInst: { rank: null, trend: null, comp: null },
             
-            // Objek Chart Instance
-            chartInst: { rank: null, line: null, bar: null },
+            // Palet Warna Kontras untuk 6 Satker (Biru, Hijau, Kuning Gelap, Merah, Ungu, Cyan Tua)
+            satkerColors: ['#0d6efd', '#198754', '#d39e00', '#dc3545', '#6f42c1', '#0aa2c0'],
 
             init() {
                 this.fetchGlobal();
-                this.fetchChart();
+                this.fetchDetail();
 
-                // Observers API Request
-                this.$watch('startYear', () => Object.assign(this, { endYear: Math.max(this.startYear, this.endYear) }) && this.fetchGlobal());
-                this.$watch('endYear', () => Object.assign(this, { startYear: Math.min(this.startYear, this.endYear) }) && this.fetchGlobal());
+                this.$watch('globalSatkerId', () => { this.fetchGlobal(); this.fetchDetail(); });
+                this.$watch('globalStartYear', () => Object.assign(this, { globalEndYear: Math.max(this.globalStartYear, this.globalEndYear) }) && this.fetchGlobal());
+                this.$watch('globalEndYear', () => Object.assign(this, { globalStartYear: Math.min(this.globalStartYear, this.globalEndYear) }) && this.fetchGlobal());
                 
-                this.$watch('chartFilter.type', () => this.fetchChart());
-                this.$watch('chartFilter.year', () => this.fetchChart());
-                this.$watch('chartFilter.trendMode', () => this.fetchChart());
-                this.$watch('chartFilter.barMonth', () => this.fetchChart());
+                this.$watch('detailYearStart', () => Object.assign(this, { detailYearEnd: Math.max(this.detailYearStart, this.detailYearEnd) }) && this.fetchDetail());
+                this.$watch('detailYearEnd', () => Object.assign(this, { detailYearStart: Math.min(this.detailYearStart, this.detailYearEnd) }) && this.fetchDetail());
                 
-                // Observers Client-Side Render (Ganti Tab)
-                this.$watch('lineTab', () => this.renderLineChart());
-                this.$watch('barTab', () => this.renderBarChart());
+                ['detailType', 'detailMode', 'detailMonthYear', 'detailMonthMonth'].forEach(prop => {
+                    this.$watch(prop, () => this.fetchDetail());
+                });
+                
+                this.$watch('tabTrend', () => this.renderTrend());
+                this.$watch('tabComp', () => this.renderComp());
+                this.$watch('adminTrendType', () => this.renderTrend());
+            },
+
+            get dynamicTrendMetric() {
+                if (this.tabTrend === 'kegiatan') return 'Jumlah Kegiatan';
+                if (this.tabTrend === 'peserta') return 'Jumlah ' + this.config.unit;
+                if (this.tabTrend === 'positif') return 'Indikasi Positif';
+            },
+
+            get dynamicCompMetric() {
+                if (this.tabComp === 'anggaran') return 'Berdasarkan Anggaran';
+                if (this.tabComp === 'sasaran') return 'Berdasarkan Sasaran';
+            },
+
+            get dynamicTrendTitle() {
+                if (this.detailMode === 'monthly') {
+                    return '(Periode: Januari - Desember ' + this.detailMonthYear + ')';
+                } else {
+                    return '(Periode: ' + this.detailYearStart + ' s/d ' + this.detailYearEnd + ')';
+                }
+            },
+
+            get dynamicCompTitle() {
+                if (this.detailMode === 'monthly') {
+                    if (this.detailMonthMonth === 'all') {
+                        return '(Periode: Akumulasi Tahun ' + this.detailMonthYear + ')';
+                    } else {
+                        const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+                        return '(Periode: Bulan ' + months[parseInt(this.detailMonthMonth)-1] + ' ' + this.detailMonthYear + ')';
+                    }
+                } else {
+                    return '(Periode: ' + this.detailYearStart + ' s/d ' + this.detailYearEnd + ')';
+                }
             },
 
             fetchGlobal() {
-                let url = `{{ route('dashboard.p2m.api.global') }}?start_year=${this.startYear}&end_year=${this.endYear}`;
-                fetch(url).then(r => r.json()).then(res => {
-                    this.cards = res;
-                    this.renderRanking(res.ranking_chart);
-                });
+                fetch(`{{ route('dashboard.p2m.api.global') }}?start_year=${this.globalStartYear}&end_year=${this.globalEndYear}&satker_id=${this.globalSatkerId}`)
+                    .then(r => r.json()).then(res => {
+                        this.cards = res;
+                        this.renderRanking(res.ranking_chart);
+                    });
             },
 
-            fetchChart() {
-                let url = `{{ route('dashboard.p2m.api.chart') }}?type=${this.chartFilter.type}&year=${this.chartFilter.year}&trend_mode=${this.chartFilter.trendMode}&bar_month=${this.chartFilter.barMonth}`;
+            fetchDetail() {
+                let url = `{{ route('dashboard.p2m.api.chart') }}?type=${this.detailType}&mode=${this.detailMode}&m_year=${this.detailMonthYear}&m_month=${this.detailMonthMonth}&y_start=${this.detailYearStart}&y_end=${this.detailYearEnd}&satker_id=${this.globalSatkerId}`;
                 fetch(url).then(r => r.json()).then(res => {
                     this.rawData = res;
+                    this.isMultiSatker = res.is_multi_satker;
                     this.config  = res.config;
                     
-                    // Otomatis pindah tab jika matrik tidak didukung di kegiatan yang dipilih
-                    if(this.lineTab === 'peserta' && this.config.unit === '-') this.lineTab = 'kegiatan';
-                    if(this.lineTab === 'positif' && !this.config.has_positif) this.lineTab = 'kegiatan';
+                    if(this.tabTrend === 'peserta' && this.config.unit === '-') this.tabTrend = 'kegiatan';
+                    if(this.tabTrend === 'positif' && !this.config.has_positif) this.tabTrend = 'kegiatan';
 
                     this.$nextTick(() => {
-                        this.renderLineChart();
-                        if(this.config.has_anggaran || this.config.has_sasaran) this.renderBarChart();
+                        this.renderTrend();
+                        if(this.config.has_anggaran || this.config.has_sasaran) this.renderComp();
                     });
                 });
             },
@@ -310,53 +384,92 @@
                 this.chartInst.rank.render();
             },
 
-            renderLineChart() {
-                if(!this.$refs.lineChart || !this.rawData) return;
+            renderTrend() {
+                if(!this.$refs.chartTrend || !this.rawData) return;
                 
-                let seriesData = this.lineTab === 'kegiatan' ? this.rawData.tren.kegiatan : 
-                                (this.lineTab === 'peserta' ? this.rawData.tren.peserta : this.rawData.tren.positif);
-                                
-                let yTitle = this.lineTab === 'kegiatan' ? 'Jumlah Kegiatan' : (this.lineTab === 'positif' ? 'Indikasi Positif' : this.config.unit);
+                let dataSeries = this.tabTrend === 'kegiatan' ? this.rawData.trend.kegiatan : (this.tabTrend === 'peserta' ? this.rawData.trend.peserta : this.rawData.trend.positif);
                 
-                // Pewarnaan dinamis: Jika Non-Admin (1 baris) pakai biru. Jika Admin (6 baris), ApexCharts akan otomatis mewarnai.
-                let colors = this.rawData.is_admin ? undefined : (this.lineTab === 'positif' ? ['#dc3545'] : ['#0d6efd']);
-
+                let isHeatmap = this.isMultiSatker && this.adminTrendType === 'heatmap'; 
+                let isGroupedBar = this.isMultiSatker && this.adminTrendType === 'bar';
+                
                 let opts = {
-                    series: seriesData,
-                    chart: { type: 'line', height: 400, toolbar: { show: true } },
-                    stroke: { width: 3, curve: 'smooth' },
-                    colors: colors,
+                    series: dataSeries,
+                    chart: { type: isHeatmap ? 'heatmap' : 'bar', height: 400, toolbar: { show: true } },
                     xaxis: { categories: this.rawData.trend_labels },
-                    yaxis: { title: { text: yTitle, style: { fontWeight: 'bold' } } },
-                    tooltip: { shared: true, intersect: false },
-                    legend: { position: 'top' },
-                    dataLabels: { enabled: !this.rawData.is_admin, formatter: (val) => val > 0 ? val : "" } // Tampilkan angka di titik jika non-admin
                 };
 
-                if(this.chartInst.line) this.chartInst.line.destroy();
-                this.chartInst.line = new ApexCharts(this.$refs.lineChart, opts);
-                this.chartInst.line.render();
+                if (isHeatmap) {
+                    opts.colors = ['#0d6efd'];
+                    opts.legend = { show: false }; // Matikan Legend "Kosong"
+                    opts.dataLabels = { 
+                        enabled: true,
+                        style: {
+                            colors: ['#212529'], // Teks dipaksa abu-abu gelap agar selalu terbaca
+                            fontSize: '12px'
+                        }
+                    };
+                    opts.plotOptions = {
+                        heatmap: {
+                            shadeIntensity: 0.6,
+                            radius: 4,
+                            useFillColorAsStroke: false,
+                            colorScale: { 
+                                ranges: [{ from: 0, to: 0, color: '#f1f3f5', name: '' }] // Warna sangat pudar untuk 0
+                            } 
+                        }
+                    };
+                    opts.yaxis = { labels: { style: { fontWeight: 'bold' } } };
+                } else {
+                    opts.colors = this.isMultiSatker ? this.satkerColors : (this.tabTrend === 'positif' ? ['#dc3545'] : ['#0d6efd']);
+                    opts.plotOptions = { bar: { borderRadius: 4, columnWidth: isGroupedBar ? '85%' : '50%' } };
+                    opts.yaxis = { labels: { formatter: (val) => Math.round(val) } };
+                    
+                    // Tooltip Gabungan (Shared) diaktifkan agar muncul semua nilai sekaligus
+                    opts.tooltip = { shared: true, intersect: false };
+                    opts.dataLabels = { enabled: !this.isMultiSatker, formatter: (val) => val > 0 ? val : "" };
+                    
+                    if (isGroupedBar) opts.legend = { position: 'top', fontWeight: 'bold' };
+                }
+
+                if(this.chartInst.trend) this.chartInst.trend.destroy();
+                this.chartInst.trend = new ApexCharts(this.$refs.chartTrend, opts);
+                this.chartInst.trend.render();
             },
 
-            renderBarChart() {
-                if(!this.$refs.barChart || !this.rawData) return;
+            renderComp() {
+                if(!this.$refs.chartComp || !this.rawData) return;
                 
-                let seriesData = this.barTab === 'anggaran' ? this.rawData.komposisi.anggaran : this.rawData.komposisi.sasaran;
-                let isAnggaran = this.barTab === 'anggaran';
-
+                let dataSeries = this.tabComp === 'anggaran' ? this.rawData.comp.anggaran : this.rawData.comp.sasaran;
+                let colors = this.tabComp === 'anggaran' ? ['#198754', '#ffc107'] : ['#0d6efd', '#dc3545', '#ffc107', '#20c997'];
+                
                 let opts = {
-                    series: seriesData,
+                    series: dataSeries,
                     chart: { type: 'bar', height: 400, stacked: true, toolbar: { show: false } },
-                    plotOptions: { bar: { columnWidth: '50%', borderRadius: 2 } },
-                    xaxis: { categories: this.rawData.bar_labels, labels: { style: { fontSize: '11px', fontWeight: 'bold' } } },
-                    colors: isAnggaran ? ['#198754', '#ffc107'] : ['#0d6efd', '#dc3545', '#ffc107', '#20c997'],
-                    dataLabels: { enabled: true, formatter: (val) => val > 0 ? val : "" },
-                    legend: { position: 'top' }
+                    plotOptions: { bar: { columnWidth: this.isMultiSatker ? '50%' : '15%', borderRadius: 2 } },
+                    xaxis: { categories: this.rawData.comp_labels, labels: { style: { fontSize: '12px', fontWeight: 'bold' } } },
+                    colors: colors,
+                    legend: { position: 'top', fontWeight: 'bold' },
+                    tooltip: { shared: true, intersect: false },
+                    dataLabels: {
+                        enabled: true,
+                        formatter: function(val, opts) {
+                            if (val === 0 || !val) return "";
+                            let total = 0;
+                            opts.w.config.series.forEach(s => { 
+                                let v = s.data[opts.dataPointIndex];
+                                if(v) total += v; 
+                            });
+                            if(total === 0) return val;
+                            let percent = Math.round((val / total) * 100);
+                            return val + " (" + percent + "%)";
+                        },
+                        style: { fontSize: '11px' }
+                    }
                 };
 
-                if(this.chartInst.bar) this.chartInst.bar.destroy();
-                this.chartInst.bar = new ApexCharts(this.$refs.barChart, opts);
-                this.chartInst.bar.render();
+                if(this.chartInst.comp) this.chartInst.comp.destroy();
+                this.chartInst.comp = new ApexCharts(this.$refs.chartComp, opts);
+                this.chartInst.comp.render();
             }
         }));
     });

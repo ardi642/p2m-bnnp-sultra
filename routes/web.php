@@ -12,6 +12,7 @@ use App\Http\Controllers\Berantas\TatController;
 use App\Http\Controllers\Berantas\UngkapKasusController;
 use App\Http\Controllers\Berantas\RegisterBarangBuktiController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DashboardP2MController;
 use App\Http\Controllers\P2m\SosialisasiController;
 use App\Http\Controllers\P2m\UpacaraController;
 use App\Http\Controllers\P2m\KieController;
@@ -61,13 +62,16 @@ Route::middleware('guest')->group(function () {
 // --- AUTHENTICATED ROUTES ---
 Route::middleware('auth')->group(function() {
     
-    // Dashboard & Umum
-    // Route::get('/', function () { return view('welcome'); })->name('dashboard');
+    // Traffic Controller Dashboard (Mengarahkan user sesuai rolenya)
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
 
-    // API Data (Satu endpoint fleksibel untuk semua bidang)
-    Route::get('/api/dashboard/global', [DashboardController::class, 'getGlobalData'])->name('api.dashboard.global');
-    Route::get('/api/dashboard/chart', [DashboardController::class, 'getChartData'])->name('api.dashboard.chart');
+    // DASHBOARD P2M
+    Route::prefix('dashboard/p2m')->name('dashboard.p2m.')->group(function() {
+        Route::get('/', [DashboardP2MController::class, 'index'])->name('index');
+        // API Endpoint khusus P2M
+        Route::get('/api/global', [DashboardP2MController::class, 'getGlobalData'])->name('api.global');
+        Route::get('/api/chart', [DashboardP2MController::class, 'getChartData'])->name('api.chart');
+    });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 

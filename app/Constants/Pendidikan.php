@@ -11,7 +11,6 @@ class Pendidikan
         'SMA/ sederajat',
         'Diploma',
         'Strata 1',
-        'Strata 2',
-        'Strata 3'
+        'Strata 2 ke atas',
     ];
 }

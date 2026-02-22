@@ -18,8 +18,6 @@ class Pekerjaan
         'Buruh/ Kuli Bangunan',
         'Perangkat Desa',
         'PPNPN',
-        'Tidak Bekerja',
-        'Guru',
-        'Lainnya'
+        'Tidak Bekerja'
     ];
 }

@@ -15,13 +15,11 @@ class DashboardController extends Controller
 
         // 1. Jika admin/operator khusus Berantas
         if (in_array($role, ['admin_berantas', 'operator_berantas'])) {
-            // Aktifkan jika Dashboard Berantas sudah dibuat:
             // return redirect()->route('dashboard.berantas.index');
         }
         
         // 2. Jika admin/operator khusus Rehab
         if (in_array($role, ['admin_rehab', 'operator_rehab'])) {
-            // Aktifkan jika Dashboard Rehab sudah dibuat:
             // return redirect()->route('dashboard.rehab.index');
         }
 
@@ -30,8 +28,7 @@ class DashboardController extends Controller
             return redirect()->route('dashboard.p2m.index');
         }
 
-        // 4. Default untuk: admin (Super), admin_satker, dan operator_satker
-        // Karena mereka punya hak melihat semua tab, kita lempar ke P2M sebagai tab pembuka (Home)
+        // 4. Default (Super Admin, Admin Satker, Operator Satker)
         return redirect()->route('dashboard.p2m.index');
     }
 }

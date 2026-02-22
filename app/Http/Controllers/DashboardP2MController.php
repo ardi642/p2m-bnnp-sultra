@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Schema;
 use App\Models\SatuanKerja;
 
 class DashboardP2MController extends Controller
@@ -17,7 +16,10 @@ class DashboardP2MController extends Controller
         $years = range(date('Y'), date('Y') - 4);
         
         $showTabs = in_array($user->role, ['admin', 'admin_satker', 'operator_satker']);
-        $satkers = ($user->role === 'admin') ? SatuanKerja::orderBy('satuan_kerja', 'asc')->get() : [];
+        
+        $satkers = ($user->role === 'admin') 
+            ? SatuanKerja::orderBy('satuan_kerja', 'asc')->get() 
+            : [];
 
         return view('dashboard.p2m.index', compact('years', 'showTabs', 'satkers'));
     }
@@ -32,37 +34,43 @@ class DashboardP2MController extends Controller
         $satkerId  = ($user->role === 'admin') ? $request->input('satker_id') : $user->pegawai?->satuan_kerja_id;
 
         $count = function($table, $dateCol) use ($startYear, $endYear, $satkerId) {
-            $q = DB::table($table)->whereYear($dateCol, '>=', $startYear)->whereYear($dateCol, '<=', $endYear);
+            $q = DB::table($table)
+                ->whereYear($dateCol, '>=', $startYear)
+                ->whereYear($dateCol, '<=', $endYear);
             if ($satkerId) $q->where('satuan_kerja_id', $satkerId);
             return $q->count();
         };
 
         $sum = function($table, $colSum, $dateCol) use ($startYear, $endYear, $satkerId) {
-            $q = DB::table($table)->whereYear($dateCol, '>=', $startYear)->whereYear($dateCol, '<=', $endYear);
+            $q = DB::table($table)
+                ->whereYear($dateCol, '>=', $startYear)
+                ->whereYear($dateCol, '<=', $endYear);
             if ($satkerId) $q->where('satuan_kerja_id', $satkerId);
             return $q->sum($colSum);
         };
 
         $listOrang = [
-            'Informasi Edukasi' => $sum('p2m_informasi_edukasi', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'Tes Urine'         => [
+            'Informasi Edukasi'  => $sum('p2m_informasi_edukasi', 'jumlah_peserta', 'tanggal_pelaksanaan'),
+            'Tes Urine'          => [
                 'val' => $sum('p2m_tes_urine', 'jumlah_peserta', 'tanggal_pelaksanaan'), 
                 'positif' => $sum('p2m_tes_urine', 'jumlah_positif', 'tanggal_pelaksanaan'), 
                 'is_tes_urine' => true
             ],
-            'Asistensi Relawan' => $sum('p2m_asistensi_relawan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'Pelatihan'         => $sum('p2m_pelatihan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'Ketahanan Keluarga'=> $sum('p2m_keluarga', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'Monev'             => $sum('p2m_monev', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'Pemetaan SDM/SDA'  => $sum('p2m_pemetaan_sdm_sda', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'IKAN'              => $sum('p2m_ikan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
+            'Asistensi Relawan'  => $sum('p2m_asistensi_relawan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
+            'Pelatihan'          => $sum('p2m_pelatihan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
+            'Ketahanan Keluarga' => $sum('p2m_keluarga', 'jumlah_peserta', 'tanggal_pelaksanaan'),
+            'Monev'              => $sum('p2m_monev', 'jumlah_peserta', 'tanggal_pelaksanaan'),
+            'Pemetaan SDM/SDA'   => $sum('p2m_pemetaan_sdm_sda', 'jumlah_peserta', 'tanggal_pelaksanaan'),
+            'IKAN'               => $sum('p2m_ikan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
         ];
         
         $totalOrang = 0; 
-        foreach($listOrang as $v) { $totalOrang += (is_array($v) ? $v['val'] : $v); }
+        foreach($listOrang as $v) { 
+            $totalOrang += (is_array($v) ? $v['val'] : $v); 
+        }
 
         $listMedia = [
-            'Elektronik'     => [
+            'Elektronik' => [
                 'freq' => $count('p2m_elektronik', 'tanggal_pelaksanaan'), 
                 'durasi' => $sum('p2m_elektronik', 'durasi_pelaksanaan', 'tanggal_pelaksanaan')
             ],
@@ -70,14 +78,18 @@ class DashboardP2MController extends Controller
                 'freq' => $count('p2m_non_elektronik', 'tanggal_mulai_pelaksanaan'), 
                 'durasi' => $sum('p2m_non_elektronik', 'durasi_pelaksanaan', 'tanggal_mulai_pelaksanaan')
             ],
-            'Online'         => [
+            'Online' => [
                 'freq' => $count('p2m_online', 'tanggal_mulai_pelaksanaan'), 
                 'durasi' => $sum('p2m_online', 'durasi_pelaksanaan', 'tanggal_mulai_pelaksanaan')
             ],
         ];
         
-        $totalMediaFreq = 0; $totalMediaDurasi = 0; 
-        foreach($listMedia as $m) { $totalMediaFreq += $m['freq']; $totalMediaDurasi += $m['durasi']; }
+        $totalMediaFreq = 0; 
+        $totalMediaDurasi = 0; 
+        foreach($listMedia as $m) { 
+            $totalMediaFreq += $m['freq']; 
+            $totalMediaDurasi += $m['durasi']; 
+        }
 
         $listWilayah = [
             'Desa/Kel. Bersinar' => $count('p2m_desa_kelurahan_bersinar', 'tanggal_pencanangan')
@@ -103,10 +115,10 @@ class DashboardP2MController extends Controller
         arsort($allActivities);
 
         return response()->json([
-            'orang' => ['total' => $totalOrang, 'list' => $listOrang],
-            'media' => ['total_freq' => $totalMediaFreq, 'total_durasi' => $totalMediaDurasi, 'list' => $listMedia],
+            'orang'   => ['total' => $totalOrang, 'list' => $listOrang],
+            'media'   => ['total_freq' => $totalMediaFreq, 'total_durasi' => $totalMediaDurasi, 'list' => $listMedia],
             'wilayah' => ['total' => $totalWilayah, 'list' => $listWilayah],
-            'kegiatan' => ['total' => $totalKegiatan],
+            'kegiatan'=> ['total' => $totalKegiatan],
             'ranking_chart' => ['labels' => array_keys($allActivities), 'data' => array_values($allActivities)]
         ]);
     }
@@ -115,10 +127,8 @@ class DashboardP2MController extends Controller
     {
         $type      = $request->input('type', 'informasi_edukasi'); 
         $mode      = $request->input('mode', 'monthly'); 
-        
         $mYear     = $request->input('m_year', date('Y'));
         $mMonth    = $request->input('m_month', 'all');
-        
         $yStart    = $request->input('y_start', date('Y'));
         $yEnd      = $request->input('y_end', date('Y'));
         
@@ -127,10 +137,8 @@ class DashboardP2MController extends Controller
         $isAdmin   = ($user->role === 'admin');
         
         $selectedSatker = $request->input('satker_id');
-        $mySatker = $isAdmin ? $selectedSatker : $user->pegawai?->satuan_kerja_id;
-        
-        // Cek apakah Admin membiarkan dropdown Satker kosong (Berarti Mode Multi Satker Aktif)
-        $isMultiSatker = ($isAdmin && empty($selectedSatker));
+        $mySatker       = $isAdmin ? $selectedSatker : $user->pegawai?->satuan_kerja_id;
+        $isMultiSatker  = ($isAdmin && empty($selectedSatker));
 
         $config    = $this->getTableConfig($type); 
         $table     = $config['table'];
@@ -142,7 +150,8 @@ class DashboardP2MController extends Controller
         $sasaranList = $config['sasaran_list'];
 
         $trendLabels = [];
-        $timePoints = [];
+        $timePoints  = [];
+
         if ($mode === 'monthly') {
             $trendLabels = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
             $timePoints  = range(1, 12);
@@ -154,9 +163,8 @@ class DashboardP2MController extends Controller
         $applyTrendTime = function($q, $val) use ($mode, $mYear, $dateCol) {
             if ($mode === 'monthly') {
                 return $q->whereYear($dateCol, $mYear)->whereMonth($dateCol, $val);
-            } else {
-                return $q->whereYear($dateCol, $val);
             }
+            return $q->whereYear($dateCol, $val);
         };
 
         $applyCompTime = function($q) use ($mode, $mYear, $mMonth, $yStart, $yEnd, $dateCol) {
@@ -166,24 +174,25 @@ class DashboardP2MController extends Controller
                     $q = $q->whereMonth($dateCol, (int)$mMonth);
                 }
                 return $q;
-            } else {
-                return $q->whereYear($dateCol, '>=', $yStart)->whereYear($dateCol, '<=', $yEnd);
             }
+            return $q->whereYear($dateCol, '>=', $yStart)->whereYear($dateCol, '<=', $yEnd);
         };
 
-        $chartKegiatan = []; $chartPeserta = []; $chartPositif = [];
-        $barAnggaranDipa = []; $barAnggaranNon = [];
+        $chartKegiatan = []; 
+        $chartPeserta  = []; 
+        $chartPositif  = [];
+        $barAnggaranDipa = []; 
+        $barAnggaranNon  = [];
         $barSasaran = array_fill_keys($sasaranList, []);
         $compLabels = [];
 
         if ($isMultiSatker) {
-            // --- LOGIKA MULTI SATKER (SUPER ADMIN) ---
             $satkers = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
             $compLabels = $satkers->pluck('satuan_kerja')->toArray();
 
             foreach ($satkers as $satker) {
-                // TREN
                 $dataGiat = []; $dataPeserta = []; $dataPositif = [];
+                
                 foreach ($timePoints as $timeVal) {
                     $q = DB::table($table)->where('satuan_kerja_id', $satker->id);
                     $q = $applyTrendTime($q, $timeVal);
@@ -194,9 +203,10 @@ class DashboardP2MController extends Controller
                 }
                 $chartKegiatan[] = ['name' => $satker->satuan_kerja, 'data' => $dataGiat];
                 $chartPeserta[]  = ['name' => $satker->satuan_kerja, 'data' => $dataPeserta];
-                if ($type === 'tes_urine') $chartPositif[] = ['name' => $satker->satuan_kerja, 'data' => $dataPositif];
+                if ($type === 'tes_urine') {
+                    $chartPositif[] = ['name' => $satker->satuan_kerja, 'data' => $dataPositif];
+                }
 
-                // KOMPOSISI
                 $qComp = DB::table($table)->where('satuan_kerja_id', $satker->id);
                 $qComp = $applyCompTime($qComp);
 
@@ -212,7 +222,6 @@ class DashboardP2MController extends Controller
             }
 
         } else {
-            // --- LOGIKA SINGLE SATKER (NON-ADMIN ATAU ADMIN PILIH 1 SATKER) ---
             $satkerName = 'Satuan Kerja';
             if ($mySatker) {
                 $stk = SatuanKerja::find($mySatker);
@@ -220,8 +229,8 @@ class DashboardP2MController extends Controller
             }
             $compLabels = [$satkerName];
 
-            // TREN
             $dataGiat = []; $dataPeserta = []; $dataPositif = [];
+            
             foreach ($timePoints as $timeVal) {
                 $q = DB::table($table);
                 if ($mySatker) $q->where('satuan_kerja_id', $mySatker);
@@ -233,9 +242,10 @@ class DashboardP2MController extends Controller
             }
             $chartKegiatan[] = ['name' => 'Jumlah Kegiatan', 'data' => $dataGiat];
             $chartPeserta[]  = ['name' => 'Jumlah ' . $config['unit_label'], 'data' => $dataPeserta];
-            if ($type === 'tes_urine') $chartPositif[] = ['name' => 'Indikasi Positif', 'data' => $dataPositif];
+            if ($type === 'tes_urine') {
+                $chartPositif[] = ['name' => 'Indikasi Positif', 'data' => $dataPositif];
+            }
 
-            // KOMPOSISI
             $qComp = DB::table($table);
             if ($mySatker) $qComp->where('satuan_kerja_id', $mySatker);
             $qComp = $applyCompTime($qComp);
@@ -254,17 +264,20 @@ class DashboardP2MController extends Controller
         $sasaranSeries = [];
         if ($hasSasaran) {
             foreach ($barSasaran as $label => $dataArr) {
-                $sasaranSeries[] = ['name' => ucwords(str_replace('lingkungan ', '', $label)), 'data' => $dataArr];
+                $sasaranSeries[] = [
+                    'name' => ucwords(str_replace('lingkungan ', '', $label)), 
+                    'data' => $dataArr
+                ];
             }
         }
 
         return response()->json([
             'is_multi_satker' => $isMultiSatker,
-            'config'       => [
+            'config' => [
                 'unit' => $config['unit_label'], 
                 'has_anggaran' => $hasAnggaran, 
-                'has_sasaran' => $hasSasaran, 
-                'has_positif' => ($type === 'tes_urine')
+                'has_sasaran'  => $hasSasaran, 
+                'has_positif'  => ($type === 'tes_urine')
             ],
             'trend_labels' => $trendLabels,
             'comp_labels'  => $compLabels,
@@ -288,19 +301,68 @@ class DashboardP2MController extends Controller
         $urineSasaran = ['instansi pemerintah', 'lingkungan pendidikan', 'pekerja swasta', 'lingkungan masyarakat'];
 
         $map = [
-            'informasi_edukasi'   => ['table' => 'p2m_informasi_edukasi', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => true, 'sasaran_list' => $defaultSasaran],
-            'tes_urine'           => ['table' => 'p2m_tes_urine', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => true, 'sasaran_list' => $urineSasaran],
-            'media_elektronik'    => ['table' => 'p2m_elektronik', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 'unit_label' => 'Hari', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => false, 'sasaran_list' => []],
-            'media_non_elektronik'=> ['table' => 'p2m_non_elektronik', 'date_col' => 'tanggal_mulai_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 'unit_label' => 'Hari', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => false, 'sasaran_list' => []],
-            'media_online'        => ['table' => 'p2m_online', 'date_col' => 'tanggal_mulai_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 'unit_label' => 'Hari', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => false, 'sasaran_list' => []],
-            'desa_bersinar'       => ['table' => 'p2m_desa_kelurahan_bersinar', 'date_col' => 'tanggal_pencanangan', 'val_col' => null, 'unit_label' => '-', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pembentukan', 'has_sasaran' => false, 'sasaran_list' => []],
-            'asistensi'           => ['table' => 'p2m_asistensi_relawan', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => true, 'sasaran_list' => $defaultSasaran],
-            'pelatihan'           => ['table' => 'p2m_pelatihan', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => true, 'sasaran_list' => $defaultSasaran],
-            'keluarga'            => ['table' => 'p2m_keluarga', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => true, 'sasaran_list' => $defaultSasaran],
-            'monev'               => ['table' => 'p2m_monev', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => true, 'sasaran_list' => $defaultSasaran],
-            'pemetaan'            => ['table' => 'p2m_pemetaan_sdm_sda', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => true, 'sasaran_list' => $defaultSasaran],
-            'ikan'                => ['table' => 'p2m_ikan', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 'has_sasaran' => true, 'sasaran_list' => $defaultSasaran],
+            'informasi_edukasi' => [
+                'table' => 'p2m_informasi_edukasi', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 
+                'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => true, 'sasaran_list' => $defaultSasaran
+            ],
+            'tes_urine' => [
+                'table' => 'p2m_tes_urine', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 
+                'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => true, 'sasaran_list' => $urineSasaran
+            ],
+            'media_elektronik' => [
+                'table' => 'p2m_elektronik', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 
+                'unit_label' => 'Hari', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => false, 'sasaran_list' => []
+            ],
+            'media_non_elektronik' => [
+                'table' => 'p2m_non_elektronik', 'date_col' => 'tanggal_mulai_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 
+                'unit_label' => 'Hari', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => false, 'sasaran_list' => []
+            ],
+            'media_online' => [
+                'table' => 'p2m_online', 'date_col' => 'tanggal_mulai_pelaksanaan', 'val_col' => 'durasi_pelaksanaan', 
+                'unit_label' => 'Hari', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => false, 'sasaran_list' => []
+            ],
+            'desa_bersinar' => [
+                'table' => 'p2m_desa_kelurahan_bersinar', 'date_col' => 'tanggal_pencanangan', 'val_col' => null, 
+                'unit_label' => '-', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pembentukan', 
+                'has_sasaran' => false, 'sasaran_list' => []
+            ],
+            'asistensi' => [
+                'table' => 'p2m_asistensi_relawan', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 
+                'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => true, 'sasaran_list' => $defaultSasaran
+            ],
+            'pelatihan' => [
+                'table' => 'p2m_pelatihan', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 
+                'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => true, 'sasaran_list' => $defaultSasaran
+            ],
+            'keluarga' => [
+                'table' => 'p2m_keluarga', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 
+                'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => true, 'sasaran_list' => $defaultSasaran
+            ],
+            'monev' => [
+                'table' => 'p2m_monev', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 
+                'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => true, 'sasaran_list' => $defaultSasaran
+            ],
+            'pemetaan' => [
+                'table' => 'p2m_pemetaan_sdm_sda', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 
+                'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => true, 'sasaran_list' => $defaultSasaran
+            ],
+            'ikan' => [
+                'table' => 'p2m_ikan', 'date_col' => 'tanggal_pelaksanaan', 'val_col' => 'jumlah_peserta', 
+                'unit_label' => 'Peserta', 'has_anggaran' => true, 'col_anggaran' => 'anggaran_pelaksanaan', 
+                'has_sasaran' => true, 'sasaran_list' => $defaultSasaran
+            ],
         ];
+
         return $map[$type] ?? $map['informasi_edukasi'];
     }
 }

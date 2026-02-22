@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use App\Models\SatuanKerja;
 
 class DashboardP2MController extends Controller
@@ -13,7 +14,44 @@ class DashboardP2MController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $years = range(date('Y'), date('Y') - 4);
+        
+        // =========================================================
+        // RADAR DETEKSI TAHUN OTOMATIS (MENCARI DATA PALING LAMA)
+        // =========================================================
+        $minYear = (int) date('Y'); // Default batas awal adalah tahun ini
+        $currentYear = (int) date('Y');
+
+        // Daftar tabel dan kolom tanggal yang akan di-scan
+        $tables = [
+            'p2m_informasi_edukasi'       => 'tanggal_pelaksanaan',
+            'p2m_tes_urine'               => 'tanggal_pelaksanaan',
+            'p2m_elektronik'              => 'tanggal_pelaksanaan',
+            'p2m_non_elektronik'          => 'tanggal_mulai_pelaksanaan',
+            'p2m_online'                  => 'tanggal_mulai_pelaksanaan',
+            'p2m_desa_kelurahan_bersinar' => 'tanggal_pencanangan',
+            'p2m_asistensi_relawan'       => 'tanggal_pelaksanaan',
+            'p2m_pelatihan'               => 'tanggal_pelaksanaan',
+            'p2m_keluarga'                => 'tanggal_pelaksanaan',
+            'p2m_monev'                   => 'tanggal_pelaksanaan',
+            'p2m_pemetaan_sdm_sda'        => 'tanggal_pelaksanaan',
+            'p2m_ikan'                    => 'tanggal_pelaksanaan',
+        ];
+
+        foreach ($tables as $table => $column) {
+            // Ambil tanggal paling lawas di setiap tabel
+            $oldestDate = DB::table($table)->min($column);
+            if ($oldestDate) {
+                $year = (int) date('Y', strtotime($oldestDate));
+                // Pastikan tahun logis (> 2000) dan simpan jika lebih lama dari $minYear saat ini
+                if ($year > 2000 && $year < $minYear) {
+                    $minYear = $year;
+                }
+            }
+        }
+
+        // Buat rentang dari tahun sekarang mundur ke tahun paling lawas
+        $years = range($currentYear, $minYear);
+        // =========================================================
         
         $showTabs = in_array($user->role, ['admin', 'admin_satker', 'operator_satker']);
         
@@ -49,7 +87,6 @@ class DashboardP2MController extends Controller
             return $q->sum($colSum);
         };
 
-        // Rekap Orang
         $listOrang = [
             'Informasi Edukasi'  => $sum('p2m_informasi_edukasi', 'jumlah_peserta', 'tanggal_pelaksanaan'),
             'Tes Urine'          => [
@@ -70,7 +107,6 @@ class DashboardP2MController extends Controller
             $totalOrang += (is_array($v) ? $v['val'] : $v); 
         }
 
-        // Rekap Media
         $listMedia = [
             'Elektronik' => [
                 'freq' => $count('p2m_elektronik', 'tanggal_pelaksanaan'), 
@@ -93,13 +129,11 @@ class DashboardP2MController extends Controller
             $totalMediaDurasi += $m['durasi']; 
         }
 
-        // Rekap Wilayah
         $listWilayah = [
             'Desa/Kel. Bersinar' => $count('p2m_desa_kelurahan_bersinar', 'tanggal_pencanangan')
         ];
         $totalWilayah = array_sum($listWilayah);
 
-        // Rekap Kegiatan untuk Chart Ranking
         $allActivities = [
             'Info Edukasi'      => $count('p2m_informasi_edukasi', 'tanggal_pelaksanaan'),
             'Tes Urine'         => $count('p2m_tes_urine', 'tanggal_pelaksanaan'),
@@ -191,14 +225,12 @@ class DashboardP2MController extends Controller
         $compLabels = [];
 
         if ($isMultiSatker) {
-            // MODE: BANYAK SATKER
             $satkers = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
             $compLabels = $satkers->pluck('satuan_kerja')->toArray();
 
             foreach ($satkers as $satker) {
                 $dataGiat = []; $dataPeserta = []; $dataPositif = [];
                 
-                // Ambil Data Tren
                 foreach ($timePoints as $timeVal) {
                     $q = DB::table($table)->where('satuan_kerja_id', $satker->id);
                     $q = $applyTrendTime($q, $timeVal);
@@ -213,7 +245,6 @@ class DashboardP2MController extends Controller
                     $chartPositif[] = ['name' => $satker->satuan_kerja, 'data' => $dataPositif];
                 }
 
-                // Ambil Data Komposisi Proporsi
                 $qComp = DB::table($table)->where('satuan_kerja_id', $satker->id);
                 $qComp = $applyCompTime($qComp);
 
@@ -229,7 +260,6 @@ class DashboardP2MController extends Controller
             }
 
         } else {
-            // MODE: SATU SATKER
             $satkerName = 'Satuan Kerja';
             if ($mySatker) {
                 $stk = SatuanKerja::find($mySatker);
@@ -239,7 +269,6 @@ class DashboardP2MController extends Controller
 
             $dataGiat = []; $dataPeserta = []; $dataPositif = [];
             
-            // Ambil Data Tren
             foreach ($timePoints as $timeVal) {
                 $q = DB::table($table);
                 if ($mySatker) $q->where('satuan_kerja_id', $mySatker);
@@ -255,7 +284,6 @@ class DashboardP2MController extends Controller
                 $chartPositif[] = ['name' => 'Indikasi Positif', 'data' => $dataPositif];
             }
 
-            // Ambil Data Komposisi Proporsi
             $qComp = DB::table($table);
             if ($mySatker) $qComp->where('satuan_kerja_id', $mySatker);
             $qComp = $applyCompTime($qComp);

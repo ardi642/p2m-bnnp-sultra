@@ -16,7 +16,7 @@
             
             {{-- DASHBOARD --}}
             <a href="{{ route('dashboard.index') }}" 
-               class="nav-link dashboard-link d-flex align-items-center gap-3 {{ Request::is('/') ? 'active' : '' }}">
+               class="nav-link dashboard-link d-flex align-items-center gap-3 {{ Request::is('dashboard*') ? 'active' : '' }}">
                 <i class="bi bi-grid-fill fs-5"></i> 
                 <span>Dashboard</span>
             </a>

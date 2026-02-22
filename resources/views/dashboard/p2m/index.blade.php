@@ -1,26 +1,41 @@
 @extends('admin')
 
 @section('content')
-<main class="admin-main bg-light" x-data="dashboardP2M()" x-init="init()" style="min-height: 100vh;">
+<main class="admin-main bg-light" 
+      x-data="dashboardP2M()" 
+      x-init="init()" 
+      style="min-height: 100vh;">
+    
     <div class="container-fluid p-4">
 
         {{-- A. HEADER & IDENTITAS --}}
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
             <div>
-                <h1 class="h3 mb-1 fw-bold text-dark">Dashboard Kinerja P2M</h1>
+                <h1 class="h3 mb-2 fw-bold text-dark">Dashboard Kinerja P2M</h1>
+                
                 <div class="mt-2">
                     @if(auth()->user()->role === 'admin')
-                        {{-- Dropdown Satker Clean tanpa border norak --}}
-                        <select x-model="globalSatkerId" class="form-select border-0 bg-transparent fw-bold text-primary shadow-none p-0 fs-5 cursor-pointer w-auto" style="min-width: 350px; outline: none;">
-                            <option value="" class="text-dark">Seluruh Satuan Kerja (Gabungan)</option>
-                            @foreach($satkers as $s)
-                                <option value="{{ $s->id }}" class="text-dark">{{ $s->satuan_kerja }}</option>
-                            @endforeach
-                        </select>
+                        {{-- Dropdown Satker (Pill Style - Mengikuti Gambar 3 & 4) --}}
+                        <div class="d-flex align-items-center bg-light rounded-pill px-3 py-2 shadow-sm w-auto" 
+                             style="max-width: max-content;">
+                            
+                            <i class="bi bi-building-fill text-muted me-2"></i>
+                            
+                            <select x-model="globalSatkerId" 
+                                    class="form-select border-0 bg-transparent text-dark fw-bold shadow-none p-0 pe-4 cursor-pointer" 
+                                    style="font-size: 1.1rem; outline: none; min-width: 300px;">
+                                <option value="">Seluruh Satuan Kerja</option>
+                                @foreach($satkers as $s)
+                                    <option value="{{ $s->id }}">{{ $s->satuan_kerja }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     @else
                         <p class="text-muted mb-0 fs-5 d-flex align-items-center gap-2">
                             <i class="bi bi-building-fill text-primary"></i>
-                            <span class="fw-bold text-dark">{{ auth()->user()->pegawai?->satuanKerja?->satuan_kerja ?? 'Satuan Kerja' }}</span>
+                            <span class="fw-bold text-dark">
+                                {{ auth()->user()->pegawai?->satuanKerja?->satuan_kerja ?? 'Satuan Kerja' }}
+                            </span>
                         </p>
                     @endif
                 </div>
@@ -31,8 +46,6 @@
                 <a href="{{ route('dashboard.p2m.index') }}" class="btn btn-primary fw-bold px-4">
                     <i class="bi bi-megaphone-fill me-1"></i> P2M
                 </a>
-                {{-- <a href="{{ route('dashboard.berantas.index') }}" class="btn btn-white text-secondary fw-bold px-4 border">Berantas</a> --}}
-                {{-- <a href="{{ route('dashboard.rehab.index') }}" class="btn btn-white text-secondary fw-bold px-4 border">Rehab</a> --}}
             </div>
             @endif
         </div>
@@ -43,17 +56,26 @@
                 <span class="fw-bold text-muted small ms-2">
                     <i class="bi bi-calendar-range me-2 text-primary"></i>Akumulasi Global:
                 </span>
-                <select x-model="globalStartYear" class="form-select form-select-sm border-0 bg-light fw-bold text-dark w-auto">
-                    @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                
+                <select x-model="globalStartYear" 
+                        class="form-select form-select-sm border-0 bg-light fw-bold text-dark w-auto shadow-none">
+                    @foreach($years as $y) 
+                        <option value="{{ $y }}">{{ $y }}</option> 
+                    @endforeach
                 </select>
+                
                 <span class="fw-bold text-muted">-</span>
-                <select x-model="globalEndYear" class="form-select form-select-sm border-0 bg-light fw-bold text-dark w-auto me-1">
-                    @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                
+                <select x-model="globalEndYear" 
+                        class="form-select form-select-sm border-0 bg-light fw-bold text-dark w-auto me-1 shadow-none">
+                    @foreach($years as $y) 
+                        <option value="{{ $y }}">{{ $y }}</option> 
+                    @endforeach
                 </select>
             </div>
         </div>
 
-        {{-- B. KARTU UTAMA (Clean Design) --}}
+        {{-- B. KARTU UTAMA --}}
         <div class="row g-3 mb-4">
             
             {{-- Kartu 1: Total Kegiatan --}}
@@ -109,7 +131,7 @@
                 <div class="card border-0 shadow-sm h-100 bg-white border-start border-4 border-warning rounded-3 overflow-hidden">
                     <div class="card-header bg-white border-0 pt-4 pb-2 d-flex align-items-center gap-3">
                         <div class="bg-warning bg-opacity-10 text-warning p-2 rounded-3">
-                            <i class="bi bi-megaphone-fill fs-4"></i>
+                            <i class="bi bi-megaphone-fill fs-4 text-dark"></i>
                         </div>
                         <div>
                             <h6 class="text-muted fw-bold mb-0">Total Publikasi Media</h6>
@@ -143,7 +165,7 @@
                 <div class="card border-0 shadow-sm h-100 bg-white border-start border-4 border-info rounded-3 overflow-hidden">
                     <div class="card-header bg-white border-0 pt-4 pb-2 d-flex align-items-center gap-3">
                         <div class="bg-info bg-opacity-10 text-info p-2 rounded-3">
-                            <i class="bi bi-geo-alt-fill fs-4"></i>
+                            <i class="bi bi-geo-alt-fill fs-4 text-dark"></i>
                         </div>
                         <div>
                             <h6 class="text-muted fw-bold mb-0">Kawasan Binaan</h6>
@@ -165,30 +187,33 @@
             </div>
         </div>
 
-        {{-- C. RANKING --}}
+        {{-- C. RANKING CHART --}}
         <div class="card border-0 shadow-sm mb-5 bg-white rounded-3">
             <div class="card-body p-4">
                 <div x-ref="rankingChart" style="min-height: 400px;"></div>
             </div>
         </div>
 
-        {{-- D. PUSAT ANALISIS (Clean Filter Bar) --}}
+        {{-- D. PUSAT ANALISIS KINERJA --}}
+        {{-- Border biru dihapus total agar clean sesuai instruksi --}}
         <div class="bg-white p-4 rounded-4 shadow-sm mb-4">
             <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-4">
                 
                 <div>
                     <h5 class="m-0 fw-bold text-dark">
-                        <i class="bi bi-display me-2 text-primary"></i>Pusat Analisis Kinerja
+                        <i class="bi bi-display me-2 text-primary"></i>Pusat Analisis Kinerja Detail
                     </h5>
                     <small class="text-muted">Pilih parameter di bawah untuk mengubah analitik secara instan.</small>
                 </div>
                 
                 <div class="d-flex flex-wrap gap-3 align-items-center">
                     
-                    {{-- Dropdown Kegiatan - Clean look --}}
+                    {{-- Dropdown Kegiatan (Pill Style) --}}
                     <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1">
                         <span class="text-muted small fw-bold me-2">Kegiatan:</span>
-                        <select x-model="detailType" class="form-select border-0 bg-transparent fw-bold text-dark shadow-none" style="min-width: 200px; cursor: pointer; outline: none;">
+                        <select x-model="detailType" 
+                                class="form-select border-0 bg-transparent fw-bold text-dark shadow-none cursor-pointer" 
+                                style="min-width: 200px; outline: none;">
                             <option value="informasi_edukasi">Informasi & Edukasi</option>
                             <option value="media_elektronik">Media Elektronik</option>
                             <option value="media_non_elektronik">Media Non-Elektronik</option>
@@ -204,30 +229,40 @@
                         </select>
                     </div>
 
-                    {{-- Mode Waktu - Clean look --}}
+                    {{-- Mode Waktu (Pill Style - Teks Per Bulan diubah ke hitam) --}}
                     <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1">
                         <span class="text-muted small fw-bold me-2">Waktu:</span>
-                        <select x-model="detailMode" class="form-select border-0 bg-transparent fw-bold text-primary shadow-none w-auto cursor-pointer">
+                        <select x-model="detailMode" 
+                                class="form-select border-0 bg-transparent fw-bold text-dark shadow-none w-auto cursor-pointer">
                             <option value="monthly">Per Bulan</option>
                             <option value="yearly">Rentang Tahun</option>
                         </select>
                         
-                        {{-- Mode Bulanan: Pilih Tahun --}}
+                        {{-- Mode Bulanan --}}
                         <template x-if="detailMode === 'monthly'">
-                            <select x-model="detailMonthYear" class="form-select border-0 bg-transparent fw-bold text-dark shadow-none w-auto ms-1 cursor-pointer">
-                                @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                            <select x-model="detailMonthYear" 
+                                    class="form-select border-0 bg-transparent fw-bold text-dark shadow-none w-auto ms-1 cursor-pointer">
+                                @foreach($years as $y) 
+                                    <option value="{{ $y }}">{{ $y }}</option> 
+                                @endforeach
                             </select>
                         </template>
 
-                        {{-- Mode Tahunan: Pilih Rentang --}}
+                        {{-- Mode Tahunan --}}
                         <template x-if="detailMode === 'yearly'">
                             <div class="d-flex align-items-center ms-1">
-                                <select x-model="detailYearStart" class="form-select border-0 bg-transparent fw-bold text-dark shadow-none w-auto cursor-pointer p-1">
-                                    @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                                <select x-model="detailYearStart" 
+                                        class="form-select border-0 bg-transparent fw-bold text-dark shadow-none w-auto cursor-pointer p-1">
+                                    @foreach($years as $y) 
+                                        <option value="{{ $y }}">{{ $y }}</option> 
+                                    @endforeach
                                 </select>
                                 <span class="text-muted fw-bold">-</span>
-                                <select x-model="detailYearEnd" class="form-select border-0 bg-transparent fw-bold text-dark shadow-none w-auto cursor-pointer p-1">
-                                    @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                                <select x-model="detailYearEnd" 
+                                        class="form-select border-0 bg-transparent fw-bold text-dark shadow-none w-auto cursor-pointer p-1">
+                                    @foreach($years as $y) 
+                                        <option value="{{ $y }}">{{ $y }}</option> 
+                                    @endforeach
                                 </select>
                             </div>
                         </template>
@@ -244,11 +279,13 @@
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
                         
                         <div>
-                            {{-- Dropdown Tipe Chart Khusus Admin (Bar is default) --}}
+                            {{-- Dropdown Tipe Chart Admin (Pill Style) --}}
                             <template x-if="isMultiSatker">
                                 <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
                                     <i class="bi bi-eye text-muted me-2"></i>
-                                    <select x-model="adminTrendType" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer" style="min-width: 180px;">
+                                    <select x-model="adminTrendType" 
+                                            class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer" 
+                                            style="min-width: 180px;">
                                         <option value="bar">Grafik Batang (Default)</option>
                                         <option value="heatmap">Grafik Matriks (Heatmap)</option>
                                     </select>
@@ -256,24 +293,24 @@
                             </template>
                         </div>
 
-                        {{-- Tab Kendali Tren (Pill Style) --}}
+                        {{-- Tab Kendali Tren (Pill tanpa border background) --}}
                         <div class="d-flex bg-light p-1 rounded-pill">
                             <button @click="tabTrend = 'kegiatan'" 
-                                    :class="tabTrend === 'kegiatan' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary'" 
+                                    :class="tabTrend === 'kegiatan' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" 
                                     class="btn btn-sm rounded-pill fw-bold px-4 border-0">
                                 Kegiatan
                             </button>
                             
                             <button x-show="config.unit !== '-'" 
                                     @click="tabTrend = 'peserta'" 
-                                    :class="tabTrend === 'peserta' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary'" 
+                                    :class="tabTrend === 'peserta' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" 
                                     class="btn btn-sm rounded-pill fw-bold px-4 border-0">
                                 <span x-text="config.unit"></span>
                             </button>
                             
                             <button x-show="config.has_positif" 
                                     @click="tabTrend = 'positif'" 
-                                    :class="tabTrend === 'positif' ? 'btn-danger text-white shadow-sm' : 'btn-light text-secondary'" 
+                                    :class="tabTrend === 'positif' ? 'btn-danger text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" 
                                     class="btn btn-sm rounded-pill fw-bold px-4 border-0">
                                 Positif
                             </button>
@@ -292,33 +329,43 @@
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
                         
                         <div>
-                            {{-- Dropdown Filter Bulan Proporsi --}}
-                            <div x-show="detailMode === 'monthly'" class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
-                                <i class="bi bi-filter text-muted me-2"></i>
-                                <select x-model="detailMonthMonth" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer" style="min-width: 150px;">
-                                    <option value="all">Sepanjang Tahun</option>
-                                    <option value="1">Bulan Januari</option><option value="2">Bulan Februari</option>
-                                    <option value="3">Bulan Maret</option><option value="4">Bulan April</option>
-                                    <option value="5">Bulan Mei</option><option value="6">Bulan Juni</option>
-                                    <option value="7">Bulan Juli</option><option value="8">Bulan Agustus</option>
-                                    <option value="9">Bulan September</option><option value="10">Bulan Oktober</option>
-                                    <option value="11">Bulan November</option><option value="12">Bulan Desember</option>
-                                </select>
-                            </div>
+                            {{-- Dropdown Filter Bulan Proporsi (Pill Style) --}}
+                            <template x-if="detailMode === 'monthly'">
+                                <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
+                                    <i class="bi bi-filter text-muted me-2"></i>
+                                    <select x-model="detailMonthMonth" 
+                                            class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer" 
+                                            style="min-width: 150px;">
+                                        <option value="all">Sepanjang Tahun</option>
+                                        <option value="1">Bulan Januari</option>
+                                        <option value="2">Bulan Februari</option>
+                                        <option value="3">Bulan Maret</option>
+                                        <option value="4">Bulan April</option>
+                                        <option value="5">Bulan Mei</option>
+                                        <option value="6">Bulan Juni</option>
+                                        <option value="7">Bulan Juli</option>
+                                        <option value="8">Bulan Agustus</option>
+                                        <option value="9">Bulan September</option>
+                                        <option value="10">Bulan Oktober</option>
+                                        <option value="11">Bulan November</option>
+                                        <option value="12">Bulan Desember</option>
+                                    </select>
+                                </div>
+                            </template>
                         </div>
 
-                        {{-- Tab Kendali Proporsi (Pill Style) --}}
+                        {{-- Tab Kendali Proporsi (Pill tanpa border background) --}}
                         <div class="d-flex bg-light p-1 rounded-pill">
                             <button x-show="config.has_anggaran" 
                                     @click="tabComp = 'anggaran'" 
-                                    :class="tabComp === 'anggaran' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary'" 
+                                    :class="tabComp === 'anggaran' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" 
                                     class="btn btn-sm rounded-pill fw-bold px-4 border-0">
                                 Anggaran
                             </button>
                             
                             <button x-show="config.has_sasaran" 
                                     @click="tabComp = 'sasaran'" 
-                                    :class="tabComp === 'sasaran' ? 'btn-warning text-dark shadow-sm' : 'btn-light text-secondary'" 
+                                    :class="tabComp === 'sasaran' ? 'btn-warning text-dark shadow-sm' : 'btn-light text-secondary bg-transparent'" 
                                     class="btn btn-sm rounded-pill fw-bold px-4 border-0">
                                 Sasaran
                             </button>
@@ -340,27 +387,57 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('dashboardP2M', () => ({
-            globalSatkerId: '', globalStartYear: '{{ date("Y") }}', globalEndYear: '{{ date("Y") }}',
-            cards: { kegiatan: { total: 0 }, orang: { total: 0, list: {} }, media: { total_freq: 0, total_durasi: 0, list: {} }, wilayah: { total: 0, list: {} } },
+            // State
+            globalSatkerId: '', 
+            globalStartYear: '{{ date("Y") }}', 
+            globalEndYear: '{{ date("Y") }}',
+            cards: { 
+                kegiatan: { total: 0 }, 
+                orang: { total: 0, list: {} }, 
+                media: { total_freq: 0, total_durasi: 0, list: {} }, 
+                wilayah: { total: 0, list: {} } 
+            },
             
-            detailType: 'informasi_edukasi', detailMode: 'monthly', detailMonthYear: '{{ date("Y") }}', detailMonthMonth: 'all', detailYearStart: '{{ date("Y") - 4 }}', detailYearEnd: '{{ date("Y") }}',
+            detailType: 'informasi_edukasi', 
+            detailMode: 'monthly', 
+            detailMonthYear: '{{ date("Y") }}', 
+            detailMonthMonth: 'all', 
+            detailYearStart: '{{ date("Y") - 4 }}', 
+            detailYearEnd: '{{ date("Y") }}',
             
-            tabTrend: 'kegiatan', tabComp: 'anggaran', adminTrendType: 'bar', 
+            tabTrend: 'kegiatan', 
+            tabComp: 'anggaran', 
+            adminTrendType: 'bar', 
             
             config: { unit: 'Peserta', has_anggaran: true, has_sasaran: true, has_positif: false },
-            isMultiSatker: false, rawData: null, chartInst: { rank: null, trend: null, comp: null },
+            isMultiSatker: false, 
+            rawData: null, 
+            chartInst: { rank: null, trend: null, comp: null },
             
-            // Palet Warna Kontras untuk 6 Satker (Biru, Oranye, Hijau, Ungu, Merah, Cyan)
+            // Warna Chart Kontras
             satkerColors: ['#0d6efd', '#fd7e14', '#198754', '#6f42c1', '#dc3545', '#0dcaf0'],
 
             init() {
-                this.fetchGlobal(); this.fetchDetail();
+                this.fetchGlobal(); 
+                this.fetchDetail();
                 
-                this.$watch('globalSatkerId', () => { this.fetchGlobal(); this.fetchDetail(); });
-                this.$watch('globalStartYear', () => { this.globalEndYear = Math.max(this.globalStartYear, this.globalEndYear); this.fetchGlobal(); });
-                this.$watch('globalEndYear', () => { this.globalStartYear = Math.min(this.globalStartYear, this.globalEndYear); this.fetchGlobal(); });
+                this.$watch('globalSatkerId', () => { 
+                    this.fetchGlobal(); 
+                    this.fetchDetail(); 
+                });
                 
-                ['detailType', 'detailMode', 'detailMonthYear', 'detailMonthMonth', 'detailYearStart', 'detailYearEnd', 'adminTrendType'].forEach(p => {
+                this.$watch('globalStartYear', () => { 
+                    this.globalEndYear = Math.max(this.globalStartYear, this.globalEndYear); 
+                    this.fetchGlobal(); 
+                });
+                
+                this.$watch('globalEndYear', () => { 
+                    this.globalStartYear = Math.min(this.globalStartYear, this.globalEndYear); 
+                    this.fetchGlobal(); 
+                });
+                
+                ['detailType', 'detailMode', 'detailMonthYear', 'detailMonthMonth', 'detailYearStart', 'detailYearEnd', 'adminTrendType']
+                .forEach(p => {
                     this.$watch(p, () => this.fetchDetail());
                 });
                 
@@ -368,19 +445,25 @@
                 this.$watch('tabComp', () => this.renderComp());
             },
 
-            formatAngka(num) {
-                if (!num) return "0";
-                return new Intl.NumberFormat('id-ID').format(num);
+            formatAngka(num) { 
+                if (!num) return "0"; 
+                return new Intl.NumberFormat('id-ID').format(num); 
             },
 
             get detailTypeName() {
                 const types = {
-                    'informasi_edukasi': 'Informasi & Edukasi', 'media_elektronik': 'Media Elektronik', 
-                    'media_non_elektronik': 'Media Non-Elektronik', 'media_online': 'Media Online', 
-                    'tes_urine': 'Tes Urine', 'desa_bersinar': 'Desa/Kel. Bersinar', 
-                    'asistensi': 'Asistensi Relawan', 'pelatihan': 'Pelatihan Soft Skill', 
-                    'keluarga': 'Ketahanan Keluarga', 'monev': 'Monitoring & Evaluasi', 
-                    'pemetaan': 'Pemetaan SDM/SDA', 'ikan': 'IKAN'
+                    'informasi_edukasi': 'Informasi & Edukasi', 
+                    'media_elektronik': 'Media Elektronik', 
+                    'media_non_elektronik': 'Media Non-Elektronik', 
+                    'media_online': 'Media Online', 
+                    'tes_urine': 'Tes Urine', 
+                    'desa_bersinar': 'Desa/Kel. Bersinar', 
+                    'asistensi': 'Asistensi Relawan', 
+                    'pelatihan': 'Pelatihan Soft Skill', 
+                    'keluarga': 'Ketahanan Keluarga', 
+                    'monev': 'Monitoring & Evaluasi', 
+                    'pemetaan': 'Pemetaan SDM/SDA', 
+                    'ikan': 'IKAN'
                 };
                 return types[this.detailType] || 'Kegiatan';
             },
@@ -399,47 +482,71 @@
                 if (this.detailMode === 'monthly') {
                     return '(Januari - Desember ' + this.detailMonthYear + ')';
                 }
-                return '(Tahun ' + this.detailYearStart + ' - ' + this.detailYearEnd + ')'; 
+                return '(' + this.detailYearStart + ' s/d ' + this.detailYearEnd + ')'; 
             },
 
             get dynamicCompTitle() {
                 if (this.detailMode === 'monthly') {
-                    if (this.detailMonthMonth === 'all') return '(Akumulasi ' + this.detailMonthYear + ')';
+                    if (this.detailMonthMonth === 'all') {
+                        return '(Akumulasi Tahun ' + this.detailMonthYear + ')';
+                    }
                     const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-                    return '(' + months[parseInt(this.detailMonthMonth)-1] + ' ' + this.detailMonthYear + ')';
+                    return '(Bulan ' + months[parseInt(this.detailMonthMonth)-1] + ' ' + this.detailMonthYear + ')';
                 }
-                return '(Tahun ' + this.detailYearStart + ' - ' + this.detailYearEnd + ')';
+                return '(' + this.detailYearStart + ' s/d ' + this.detailYearEnd + ')';
             },
 
             fetchGlobal() { 
-                fetch(`{{ route('dashboard.p2m.api.global') }}?start_year=${this.globalStartYear}&end_year=${this.globalEndYear}&satker_id=${this.globalSatkerId}`)
-                    .then(r => r.json()).then(res => { this.cards = res; this.renderRanking(res.ranking_chart); }); 
+                let url = `{{ route('dashboard.p2m.api.global') }}?start_year=${this.globalStartYear}&end_year=${this.globalEndYear}&satker_id=${this.globalSatkerId}`;
+                fetch(url)
+                    .then(r => r.json())
+                    .then(res => { 
+                        this.cards = res; 
+                        this.renderRanking(res.ranking_chart); 
+                    }); 
             },
 
             fetchDetail() {
                 let url = `{{ route('dashboard.p2m.api.chart') }}?type=${this.detailType}&mode=${this.detailMode}&m_year=${this.detailMonthYear}&m_month=${this.detailMonthMonth}&y_start=${this.detailYearStart}&y_end=${this.detailYearEnd}&satker_id=${this.globalSatkerId}`;
-                fetch(url).then(r => r.json()).then(res => {
-                    this.rawData = res; this.isMultiSatker = res.is_multi_satker; this.config = res.config;
-                    if (this.tabTrend === 'peserta' && this.config.unit === '-') this.tabTrend = 'kegiatan';
-                    if (this.tabTrend === 'positif' && !this.config.has_positif) this.tabTrend = 'kegiatan';
-                    this.$nextTick(() => { this.renderTrend(); if(this.config.has_anggaran || this.config.has_sasaran) this.renderComp(); });
-                });
+                fetch(url)
+                    .then(r => r.json())
+                    .then(res => {
+                        this.rawData = res; 
+                        this.isMultiSatker = res.is_multi_satker; 
+                        this.config = res.config;
+                        
+                        if (this.tabTrend === 'peserta' && this.config.unit === '-') this.tabTrend = 'kegiatan';
+                        if (this.tabTrend === 'positif' && !this.config.has_positif) this.tabTrend = 'kegiatan';
+                        
+                        this.$nextTick(() => { 
+                            this.renderTrend(); 
+                            if(this.config.has_anggaran || this.config.has_sasaran) this.renderComp(); 
+                        });
+                    });
             },
 
+            // CHART RANKING (GARIS TABEL DIHILANGKAN)
             renderRanking(data) {
                 let opts = { 
-                    series: [{ name: 'Kegiatan', data: data.data }], 
+                    series: [{ name: 'Total Kegiatan', data: data.data }], 
                     chart: { type: 'bar', height: 400, toolbar: { show: false }, fontFamily: 'inherit' }, 
                     plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4 } }, 
                     xaxis: { categories: data.labels }, 
                     dataLabels: { enabled: true },
-                    title: { text: `Ranking Frekuensi Seluruh Kegiatan P2M (${this.globalStartYear} - ${this.globalEndYear})`, style: { fontSize: '15px', color: '#495057' } }
+                    grid: { show: false }, // GRIDLINES OFF KHUSUS CHART INI
+                    title: { 
+                        text: `Ranking Frekuensi Seluruh Kegiatan P2M (${this.globalStartYear} - ${this.globalEndYear})`, 
+                        align: 'left', 
+                        style: { fontSize: '15px', fontWeight: '500', color: '#495057' } 
+                    }
                 };
+                
                 if (this.chartInst.rank) this.chartInst.rank.destroy(); 
                 this.chartInst.rank = new ApexCharts(this.$refs.rankingChart, opts); 
                 this.chartInst.rank.render();
             },
 
+            // CHART TREN (GARIS TABEL DINYALAKAN DEFAULT)
             renderTrend() {
                 if (!this.$refs.chartTrend || !this.rawData) return;
                 
@@ -450,20 +557,29 @@
                     series: dataSeries, 
                     chart: { type: isHeatmap ? 'heatmap' : 'bar', height: 450, toolbar: { show: true }, fontFamily: 'inherit' }, 
                     xaxis: { categories: this.rawData.trend_labels },
-                    title: { text: `${this.dynamicTrendMetric} - ${this.detailTypeName} ${this.dynamicTrendTitle}`, align: 'center', margin: 30, style: { fontSize: '15px', color: '#212529' } }
+                    title: {
+                        text: `${this.dynamicTrendMetric} - ${this.detailTypeName} ${this.dynamicTrendTitle}`,
+                        align: 'center', 
+                        margin: 20, 
+                        style: { fontSize: '18px', fontWeight: '500', color: '#212529' }
+                    }
                 };
 
                 if (isHeatmap) {
-                    opts.colors = ['#0d6efd']; opts.legend = { show: false };
+                    opts.colors = ['#0d6efd']; 
+                    opts.legend = { show: false };
                     opts.dataLabels = { enabled: true, style: { colors: ['#212529'], fontSize: '13px' } };
                     opts.plotOptions = { heatmap: { shadeIntensity: 0.6, radius: 4, useFillColorAsStroke: false } };
                     opts.yaxis = { labels: { style: { fontWeight: 'bold' } } };
                 } else {
                     opts.colors = this.isMultiSatker ? this.satkerColors : (this.tabTrend === 'positif' ? ['#dc3545'] : ['#0d6efd']);
-                    opts.plotOptions = { bar: { borderRadius: 4, columnWidth: this.isMultiSatker ? '85%' : '40%' } };
+                    opts.plotOptions = { bar: { borderRadius: 4, columnWidth: this.isMultiSatker ? '85%' : '50%' } };
                     opts.tooltip = { shared: true, intersect: false };
                     opts.dataLabels = { enabled: !this.isMultiSatker, formatter: (val) => val > 0 ? val : "" };
-                    if (this.isMultiSatker) opts.legend = { position: 'top', fontWeight: 'bold', offsetY: -10 };
+                    
+                    if (this.isMultiSatker) {
+                        opts.legend = { position: 'top', fontWeight: 'bold', offsetY: -10 };
+                    }
                     opts.yaxis = { labels: { formatter: (v) => Math.round(v) } };
                 }
                 
@@ -472,20 +588,42 @@
                 this.chartInst.trend.render();
             },
 
+            // CHART PROPORSI (GARIS TABEL DINYALAKAN DEFAULT)
             renderComp() {
                 if (!this.$refs.chartComp || !this.rawData) return;
                 
                 let dataSeries = this.tabComp === 'anggaran' ? this.rawData.comp.anggaran : this.rawData.comp.sasaran;
-                let colors = this.tabComp === 'anggaran' ? ['#198754', '#ced4da'] : ['#0d6efd', '#0dcaf0', '#20c997', '#ffc107'];
+                
+                // Warna NON-DIPA diset ke Oranye
+                let colors = this.tabComp === 'anggaran' 
+                    ? ['#198754', '#fd7e14'] 
+                    : ['#0d6efd', '#0dcaf0', '#20c997', '#ffc107'];
                 
                 let opts = { 
                     series: dataSeries, 
                     chart: { type: 'bar', height: 450, stacked: true, toolbar: { show: false }, fontFamily: 'inherit' }, 
-                    plotOptions: { bar: { columnWidth: this.isMultiSatker ? '60%' : '20%', borderRadius: 2 } }, 
+                    plotOptions: { bar: { columnWidth: this.isMultiSatker ? '50%' : '15%', borderRadius: 2 } }, 
                     xaxis: { categories: this.rawData.comp_labels, labels: { style: { fontSize: '12px', fontWeight: 'bold' } } }, 
-                    colors: colors, legend: { position: 'top', fontWeight: 'bold', offsetY: -10 }, tooltip: { shared: true, intersect: false },
-                    title: { text: `Proporsi ${this.dynamicCompMetric} - ${this.detailTypeName} ${this.dynamicCompTitle}`, align: 'center', margin: 30, style: { fontSize: '15px', color: '#212529' } },
-                    dataLabels: { enabled: true, formatter: function(val, opt) { if (!val) return ""; let t = 0; opt.w.config.series.forEach(s => t += s.data[opt.dataPointIndex]); if (t === 0) return ""; return val + " (" + Math.round((val/t)*100) + "%)"; }, style: { fontSize: '12px', colors: ['#212529'] } }
+                    colors: colors, 
+                    legend: { position: 'top', fontWeight: 'bold', offsetY: -10 }, 
+                    tooltip: { shared: true, intersect: false },
+                    title: {
+                        text: `${this.dynamicCompMetric} - ${this.detailTypeName} ${this.dynamicCompTitle}`,
+                        align: 'center', 
+                        margin: 20, 
+                        style: { fontSize: '18px', fontWeight: '500', color: '#212529' }
+                    },
+                    dataLabels: { 
+                        enabled: true, 
+                        formatter: function(val, opt) { 
+                            if (!val) return ""; 
+                            let t = 0; 
+                            opt.w.config.series.forEach(s => t += s.data[opt.dataPointIndex]); 
+                            if (t === 0) return "";
+                            return val + " (" + Math.round((val/t)*100) + "%)"; 
+                        }, 
+                        style: { fontSize: '12px', colors: ['#212529'] } 
+                    }
                 };
                 
                 if (this.chartInst.comp) this.chartInst.comp.destroy(); 

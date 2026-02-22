@@ -49,6 +49,7 @@ class DashboardP2MController extends Controller
             return $q->sum($colSum);
         };
 
+        // Rekap Orang
         $listOrang = [
             'Informasi Edukasi'  => $sum('p2m_informasi_edukasi', 'jumlah_peserta', 'tanggal_pelaksanaan'),
             'Tes Urine'          => [
@@ -69,6 +70,7 @@ class DashboardP2MController extends Controller
             $totalOrang += (is_array($v) ? $v['val'] : $v); 
         }
 
+        // Rekap Media
         $listMedia = [
             'Elektronik' => [
                 'freq' => $count('p2m_elektronik', 'tanggal_pelaksanaan'), 
@@ -91,11 +93,13 @@ class DashboardP2MController extends Controller
             $totalMediaDurasi += $m['durasi']; 
         }
 
+        // Rekap Wilayah
         $listWilayah = [
             'Desa/Kel. Bersinar' => $count('p2m_desa_kelurahan_bersinar', 'tanggal_pencanangan')
         ];
         $totalWilayah = array_sum($listWilayah);
 
+        // Rekap Kegiatan untuk Chart Ranking
         $allActivities = [
             'Info Edukasi'      => $count('p2m_informasi_edukasi', 'tanggal_pelaksanaan'),
             'Tes Urine'         => $count('p2m_tes_urine', 'tanggal_pelaksanaan'),
@@ -187,12 +191,14 @@ class DashboardP2MController extends Controller
         $compLabels = [];
 
         if ($isMultiSatker) {
+            // MODE: BANYAK SATKER
             $satkers = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
             $compLabels = $satkers->pluck('satuan_kerja')->toArray();
 
             foreach ($satkers as $satker) {
                 $dataGiat = []; $dataPeserta = []; $dataPositif = [];
                 
+                // Ambil Data Tren
                 foreach ($timePoints as $timeVal) {
                     $q = DB::table($table)->where('satuan_kerja_id', $satker->id);
                     $q = $applyTrendTime($q, $timeVal);
@@ -207,6 +213,7 @@ class DashboardP2MController extends Controller
                     $chartPositif[] = ['name' => $satker->satuan_kerja, 'data' => $dataPositif];
                 }
 
+                // Ambil Data Komposisi Proporsi
                 $qComp = DB::table($table)->where('satuan_kerja_id', $satker->id);
                 $qComp = $applyCompTime($qComp);
 
@@ -222,6 +229,7 @@ class DashboardP2MController extends Controller
             }
 
         } else {
+            // MODE: SATU SATKER
             $satkerName = 'Satuan Kerja';
             if ($mySatker) {
                 $stk = SatuanKerja::find($mySatker);
@@ -231,6 +239,7 @@ class DashboardP2MController extends Controller
 
             $dataGiat = []; $dataPeserta = []; $dataPositif = [];
             
+            // Ambil Data Tren
             foreach ($timePoints as $timeVal) {
                 $q = DB::table($table);
                 if ($mySatker) $q->where('satuan_kerja_id', $mySatker);
@@ -246,6 +255,7 @@ class DashboardP2MController extends Controller
                 $chartPositif[] = ['name' => 'Indikasi Positif', 'data' => $dataPositif];
             }
 
+            // Ambil Data Komposisi Proporsi
             $qComp = DB::table($table);
             if ($mySatker) $qComp->where('satuan_kerja_id', $mySatker);
             $qComp = $applyCompTime($qComp);

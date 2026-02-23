@@ -14,6 +14,7 @@ use App\Http\Controllers\Berantas\RegisterBarangBuktiController;
 use App\Http\Controllers\DashboardBerantasController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardP2MController;
+use App\Http\Controllers\DashboardRehabController;
 use App\Http\Controllers\P2m\SosialisasiController;
 use App\Http\Controllers\P2m\UpacaraController;
 use App\Http\Controllers\P2m\KieController;
@@ -83,6 +84,15 @@ Route::middleware('auth')->group(function() {
         Route::get('/api/tat', [DashboardBerantasController::class, 'getChartTat'])->name('api.tat');
         Route::get('/api/bb', [DashboardBerantasController::class, 'getChartBb'])->name('api.bb');
         Route::get('/api/ranking', [DashboardBerantasController::class, 'getRankingNarkotika'])->name('api.ranking');
+    });
+
+    // DASHBOARD REHAB
+    Route::prefix('dashboard/rehab')->name('dashboard.rehab.')->group(function() {
+        Route::get('/', [DashboardRehabController::class, 'index'])->name('index');
+        Route::get('/api/global', [DashboardRehabController::class, 'getGlobalData'])->name('api.global');
+        Route::get('/api/layanan', [DashboardRehabController::class, 'getChartLayanan'])->name('api.layanan');
+        Route::get('/api/demografi', [DashboardRehabController::class, 'getChartDemografi'])->name('api.demografi');
+        Route::get('/api/ranking', [DashboardRehabController::class, 'getRankingNarkotika'])->name('api.ranking');
     });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');

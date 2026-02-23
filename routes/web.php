@@ -11,6 +11,7 @@ use App\Http\Controllers\Berantas\PetaUngkapKasusController;
 use App\Http\Controllers\Berantas\TatController;
 use App\Http\Controllers\Berantas\UngkapKasusController;
 use App\Http\Controllers\Berantas\RegisterBarangBuktiController;
+use App\Http\Controllers\DashboardBerantasController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DashboardP2MController;
 use App\Http\Controllers\P2m\SosialisasiController;
@@ -71,6 +72,17 @@ Route::middleware('auth')->group(function() {
         // API Endpoint khusus P2M
         Route::get('/api/global', [DashboardP2MController::class, 'getGlobalData'])->name('api.global');
         Route::get('/api/chart', [DashboardP2MController::class, 'getChartData'])->name('api.chart');
+    });
+
+    // DASHBOARD BERANTAS
+    Route::prefix('dashboard/berantas')->name('dashboard.berantas.')->group(function() {
+        Route::get('/', [DashboardBerantasController::class, 'index'])->name('index');
+        // API Endpoint khusus Berantas
+        Route::get('/api/global', [DashboardBerantasController::class, 'getGlobalData'])->name('api.global');
+        Route::get('/api/lkn', [DashboardBerantasController::class, 'getChartLkn'])->name('api.lkn');
+        Route::get('/api/tat', [DashboardBerantasController::class, 'getChartTat'])->name('api.tat');
+        Route::get('/api/bb', [DashboardBerantasController::class, 'getChartBb'])->name('api.bb');
+        Route::get('/api/ranking', [DashboardBerantasController::class, 'getRankingNarkotika'])->name('api.ranking');
     });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');

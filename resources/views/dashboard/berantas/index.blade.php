@@ -12,14 +12,15 @@
                 <h1 class="h3 mb-2 fw-bold text-dark">Dashboard Kinerja Pemberantasan</h1>
                 <div class="mt-2">
                     @if(auth()->user()->role === 'admin')
-                        <div class="input-group shadow-sm" style="max-width: 400px;">
-                            <span class="input-group-text bg-white border-primary text-primary">
-                                <i class="bi bi-building-fill"></i>
-                            </span>
-                            <select x-model="globalSatkerId" class="form-select border-primary text-primary fw-bold" style="font-size: 1.1rem;">
-                                <option value="">Seluruh Satuan Kerja (Gabungan)</option>
-                                @foreach($satkers as $s)
-                                    <option value="{{ $s->id }}">{{ $s->satuan_kerja }}</option>
+                        <div class="d-flex align-items-center bg-light rounded-pill px-3 py-2 shadow-sm w-auto" 
+                             style="max-width: max-content;">
+                            <i class="bi bi-building-fill text-muted me-2"></i>
+                            <select x-model="globalSatkerId" 
+                                    class="form-select border-0 bg-transparent text-dark fw-bold shadow-none p-0 pe-4 cursor-pointer" 
+                                    style="font-size: 1.1rem; outline: none; min-width: 300px;">
+                                <option value="">Seluruh Satuan Kerja</option>
+                                @foreach($satkers as $s) 
+                                    <option value="{{ $s->id }}">{{ $s->satuan_kerja }}</option> 
                                 @endforeach
                             </select>
                         </div>
@@ -32,27 +33,21 @@
                 </div>
             </div>
             
-            @if($showTabs)
-            <div class="btn-group shadow-sm">
-                <a href="{{ route('dashboard.p2m.index') }}" class="btn btn-light text-secondary fw-bold px-4 border">
-                    <i class="bi bi-megaphone-fill me-1"></i> P2M
-                </a>
-                <a href="{{ route('dashboard.berantas.index') }}" class="btn btn-primary fw-bold px-4 border-primary">
-                    <i class="bi bi-shield-fill-check me-1"></i> Berantas
-                </a>
-            </div>
-            @endif
+            {{-- PANGGIL TAB NAVIGASI --}}
+            @include('dashboard.partials.nav')
         </div>
 
         {{-- FILTER GLOBAL WAKTU --}}
         <div class="d-flex justify-content-end mb-3">
-            <div class="d-flex align-items-center bg-white p-2 rounded-3 shadow-sm border gap-2">
+            <div class="d-flex align-items-center bg-white p-2 rounded-3 shadow-sm border border-light gap-2">
                 <span class="fw-bold text-muted small ms-2"><i class="bi bi-calendar-range me-2 text-primary"></i>Akumulasi:</span>
-                <select x-model="globalStartYear" class="form-select form-select-sm border-secondary fw-bold text-dark w-auto">
+                <select x-model="globalStartYear" 
+                        class="form-select form-select-sm border-0 bg-light fw-bold text-dark w-auto shadow-none pe-4">
                     @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
                 </select>
                 <span class="fw-bold text-muted">-</span>
-                <select x-model="globalEndYear" class="form-select form-select-sm border-secondary fw-bold text-dark w-auto me-1">
+                <select x-model="globalEndYear" 
+                        class="form-select form-select-sm border-0 bg-light fw-bold text-dark w-auto me-1 shadow-none pe-4">
                     @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
                 </select>
             </div>
@@ -71,10 +66,16 @@
                             <h5 class="fw-bold text-dark mb-0">Ungkap Kasus (LKN)</h5>
                         </div>
                         <div class="row g-2 mb-3">
-                            <div class="col-6"><span class="text-muted small fw-bold">Total LKN</span><h3 class="fw-bold text-primary mb-0" x-text="formatAngka(cards.lkn.kasus)"></h3></div>
-                            <div class="col-6"><span class="text-muted small fw-bold">Tersangka</span><h3 class="fw-bold text-primary mb-0" x-text="formatAngka(cards.lkn.tersangka)"></h3></div>
+                            <div class="col-6">
+                                <span class="text-muted small fw-bold">Total LKN</span>
+                                <h3 class="fw-bold text-primary mb-0" x-text="formatAngka(cards.lkn.kasus)"></h3>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-muted small fw-bold">Tersangka</span>
+                                <h3 class="fw-bold text-primary mb-0" x-text="formatAngka(cards.lkn.tersangka)"></h3>
+                            </div>
                         </div>
-                        <div class="bg-light border p-2 rounded small fw-bold text-secondary d-flex justify-content-between">
+                        <div class="bg-light p-2 rounded small fw-bold text-secondary d-flex justify-content-between">
                             <span>Sitaan: <span class="text-dark" x-text="formatGram(cards.lkn.gram)"></span></span>
                             <span class="text-dark" x-text="formatAngka(cards.lkn.item) + ' Item'"></span>
                         </div>
@@ -91,10 +92,16 @@
                             <h5 class="fw-bold text-dark mb-0">Asesmen (TAT)</h5>
                         </div>
                         <div class="row g-2 mb-3">
-                            <div class="col-6"><span class="text-muted small fw-bold">Total Kasus</span><h3 class="fw-bold text-info mb-0" x-text="formatAngka(cards.tat.kasus)"></h3></div>
-                            <div class="col-6"><span class="text-muted small fw-bold">Tersangka</span><h3 class="fw-bold text-info mb-0" x-text="formatAngka(cards.tat.tersangka)"></h3></div>
+                            <div class="col-6">
+                                <span class="text-muted small fw-bold">Total Kasus</span>
+                                <h3 class="fw-bold text-info mb-0" x-text="formatAngka(cards.tat.kasus)"></h3>
+                            </div>
+                            <div class="col-6">
+                                <span class="text-muted small fw-bold">Tersangka</span>
+                                <h3 class="fw-bold text-info mb-0" x-text="formatAngka(cards.tat.tersangka)"></h3>
+                            </div>
                         </div>
-                        <div class="bg-light border p-2 rounded small fw-bold text-secondary d-flex justify-content-between">
+                        <div class="bg-light p-2 rounded small fw-bold text-secondary d-flex justify-content-between">
                             <span>BB Terkait: <span class="text-dark" x-text="formatGram(cards.tat.gram)"></span></span>
                             <span class="text-dark" x-text="formatAngka(cards.tat.item) + ' Item'"></span>
                         </div>
@@ -117,9 +124,17 @@
                                 <span class="badge bg-danger-subtle text-danger border border-danger fs-6" x-text="formatAngka(cards.reg.total_item) + ' Item'"></span>
                             </h3>
                         </div>
-                        <div class="row g-2 bg-light border p-2 rounded small">
-                            <div class="col-6 border-end border-secondary"><span class="text-muted fw-bold d-block">Hasil Tangkap</span><span class="text-dark fw-bold" x-text="formatGramSingkat(cards.reg.tangkap_gram)"></span> <span class="text-muted" x-text="'('+cards.reg.tangkap_item+'x)'"></span></div>
-                            <div class="col-6 ps-2"><span class="text-muted fw-bold d-block">Temuan (Tak Bertuan)</span><span class="text-dark fw-bold" x-text="formatGramSingkat(cards.reg.temuan_gram)"></span> <span class="text-muted" x-text="'('+cards.reg.temuan_item+'x)'"></span></div>
+                        <div class="row g-2 bg-light p-2 rounded small">
+                            <div class="col-6 border-end">
+                                <span class="text-muted fw-bold d-block">Hasil Tangkap</span>
+                                <span class="text-dark fw-bold" x-text="formatGramSingkat(cards.reg.tangkap_gram)"></span> 
+                                <span class="text-muted" x-text="'('+cards.reg.tangkap_item+'x)'"></span>
+                            </div>
+                            <div class="col-6 ps-2">
+                                <span class="text-muted fw-bold d-block">Temuan (Tak Bertuan)</span>
+                                <span class="text-dark fw-bold" x-text="formatGramSingkat(cards.reg.temuan_gram)"></span> 
+                                <span class="text-muted" x-text="'('+cards.reg.temuan_item+'x)'"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -129,38 +144,46 @@
         {{-- ========================================================= --}}
         {{-- BLOK A: UNGKAP KASUS (LKN) --}}
         {{-- ========================================================= --}}
-        <div class="bg-white p-4 rounded-4 shadow-sm mb-4 border border-primary">
+        <div class="bg-white p-4 rounded-4 shadow-sm mb-4 border">
             <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
                 <div>
                     <h5 class="m-0 fw-bold text-dark"><i class="bi bi-briefcase-fill me-2 text-primary"></i>Pusat Analisis Ungkap Kasus (LKN)</h5>
                 </div>
                 <div class="d-flex flex-wrap gap-3 align-items-center">
                     
-                    <div class="input-group shadow-sm w-auto">
-                        <span class="input-group-text bg-light border-secondary"><i class="bi bi-funnel text-muted"></i></span>
-                        <select x-model="lkn.narkotika" class="form-select border-secondary text-dark fw-bold" style="min-width: 180px;">
+                    <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1">
+                        <i class="bi bi-funnel text-muted me-2"></i>
+                        <select x-model="lkn.narkotika" 
+                                class="form-select border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4" 
+                                style="min-width: 150px; outline: none;">
                             <option value="">Semua Narkotika</option>
                             @foreach($narkotikas as $n) <option value="{{ $n->id }}">{{ $n->nama_narkotika }}</option> @endforeach
                         </select>
                     </div>
 
-                    <div class="input-group shadow-sm w-auto">
-                        <select x-model="lkn.mode" class="form-select border-secondary text-dark fw-bold w-auto">
+                    <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1">
+                        <select x-model="lkn.mode" 
+                                class="form-select border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer pe-4">
                             <option value="monthly">Per Bulan</option>
                             <option value="yearly">Rentang Tahun</option>
                         </select>
+                        
                         <template x-if="lkn.mode === 'monthly'">
-                            <select x-model="lkn.m_year" class="form-select border-secondary text-dark fw-bold w-auto">
+                            <select x-model="lkn.m_year" 
+                                    class="form-select border-0 bg-transparent text-dark fw-bold shadow-none w-auto ms-1 cursor-pointer pe-4">
                                 @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
                             </select>
                         </template>
+                        
                         <template x-if="lkn.mode === 'yearly'">
-                            <div class="d-flex border border-secondary rounded-end bg-white">
-                                <select x-model="lkn.y_start" class="form-select border-0 bg-transparent text-dark fw-bold w-auto px-2">
+                            <div class="d-flex align-items-center ms-1 bg-white rounded">
+                                <select x-model="lkn.y_start" 
+                                        class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer p-1 pe-3">
                                     @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
                                 </select>
-                                <span class="text-muted fw-bold align-self-center">-</span>
-                                <select x-model="lkn.y_end" class="form-select border-0 bg-transparent text-dark fw-bold w-auto px-2">
+                                <span class="text-muted fw-bold">-</span>
+                                <select x-model="lkn.y_end" 
+                                        class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer p-1 pe-3">
                                     @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
                                 </select>
                             </div>
@@ -177,38 +200,45 @@
                 <div class="card border-0 shadow-sm h-100 bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <template x-if="isMultiSatker">
-                            <div class="input-group input-group-sm shadow-sm w-auto">
-                                <span class="input-group-text bg-light border-secondary"><i class="bi bi-eye text-muted"></i></span>
-                                <select x-model="lkn.adminType" class="form-select border-secondary text-dark fw-bold" style="min-width: 150px;">
+                            <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
+                                <i class="bi bi-eye text-muted me-2"></i>
+                                <select x-model="lkn.adminType" 
+                                        class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4" 
+                                        style="min-width: 150px;">
                                     <option value="bar">Bar Chart</option>
                                     <option value="heatmap">Heatmap</option>
                                 </select>
                             </div>
                         </template>
-                        <div class="btn-group btn-group-sm shadow-sm rounded-pill">
-                            <button @click="lkn.tabTrend = 'kasus'" :class="lkn.tabTrend === 'kasus' ? 'btn-primary text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">LKN</button>
-                            <button @click="lkn.tabTrend = 'tersangka'" :class="lkn.tabTrend === 'tersangka' ? 'btn-primary text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Tersangka</button>
-                            <button @click="lkn.tabTrend = 'berat'" :class="lkn.tabTrend === 'berat' ? 'btn-danger text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Berat (g)</button>
+                        <div class="d-flex bg-light p-1 rounded-pill">
+                            <button @click="lkn.tabTrend = 'kasus'" :class="lkn.tabTrend === 'kasus' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">LKN</button>
+                            <button @click="lkn.tabTrend = 'tersangka'" :class="lkn.tabTrend === 'tersangka' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Tersangka</button>
+                            <button @click="lkn.tabTrend = 'berat'" :class="lkn.tabTrend === 'berat' ? 'btn-danger text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Berat (g)</button>
                         </div>
                     </div>
                     <div class="card-body px-4 pb-4 pt-0"><div x-ref="chartLknTrend" style="min-height: 400px;"></div></div>
                 </div>
             </div>
+            
             {{-- Proporsi LKN --}}
             <div class="col-xl-6">
                 <div class="card border-0 shadow-sm h-100 bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <template x-if="lkn.mode === 'monthly'">
-                            <div class="input-group input-group-sm shadow-sm w-auto">
-                                <span class="input-group-text bg-light border-secondary"><i class="bi bi-filter text-muted"></i></span>
-                                <select x-model="lkn.m_month" class="form-select border-secondary text-dark fw-bold">
-                                    <option value="all">Setahun</option><option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Agu</option><option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Des</option>
+                            <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
+                                <i class="bi bi-filter text-muted me-2"></i>
+                                <select x-model="lkn.m_month" 
+                                        class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4">
+                                    <option value="all">Setahun</option>
+                                    <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option>
+                                    <option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Agu</option>
+                                    <option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Des</option>
                                 </select>
                             </div>
                         </template>
-                        <div class="btn-group btn-group-sm shadow-sm rounded-pill">
-                            <button @click="lkn.tabComp = 'gender'" :class="lkn.tabComp === 'gender' ? 'btn-success text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Gender</button>
-                            <button @click="lkn.tabComp = 'pekerjaan'" :class="lkn.tabComp === 'pekerjaan' ? 'btn-warning text-dark' : 'btn-outline-secondary'" class="btn fw-bold px-3">Pekerjaan</button>
+                        <div class="d-flex bg-light p-1 rounded-pill">
+                            <button @click="lkn.tabComp = 'gender'" :class="lkn.tabComp === 'gender' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Gender</button>
+                            <button @click="lkn.tabComp = 'pekerjaan'" :class="lkn.tabComp === 'pekerjaan' ? 'btn-warning text-dark shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Pekerjaan</button>
                         </div>
                     </div>
                     <div class="card-body px-4 pb-4 pt-0"><div x-ref="chartLknComp" style="min-height: 400px;"></div></div>
@@ -219,34 +249,38 @@
         {{-- ========================================================= --}}
         {{-- BLOK B: TIM ASESMEN TERPADU (TAT) --}}
         {{-- ========================================================= --}}
-        <div class="bg-white p-4 rounded-4 shadow-sm mb-4 border border-info">
+        <div class="bg-white p-4 rounded-4 shadow-sm mb-4 border">
             <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
                 <div><h5 class="m-0 fw-bold text-dark"><i class="bi bi-file-medical-fill me-2 text-info"></i>Pusat Analisis Tim Asesmen Terpadu (TAT)</h5></div>
                 <div class="d-flex flex-wrap gap-3 align-items-center">
                     
-                    <div class="input-group shadow-sm w-auto">
-                        <span class="input-group-text bg-light border-secondary"><i class="bi bi-funnel text-muted"></i></span>
-                        <select x-model="tat.narkotika" class="form-select border-secondary text-dark fw-bold" style="min-width: 180px;">
+                    <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1">
+                        <i class="bi bi-funnel text-muted me-2"></i>
+                        <select x-model="tat.narkotika" 
+                                class="form-select border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4" 
+                                style="min-width: 150px; outline: none;">
                             <option value="">Semua Narkotika</option>
                             @foreach($narkotikas as $n) <option value="{{ $n->id }}">{{ $n->nama_narkotika }}</option> @endforeach
                         </select>
                     </div>
 
-                    <div class="input-group shadow-sm w-auto">
-                        <select x-model="tat.mode" class="form-select border-secondary text-dark fw-bold w-auto">
+                    <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1">
+                        <select x-model="tat.mode" 
+                                class="form-select border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer pe-4">
                             <option value="monthly">Per Bulan</option>
                             <option value="yearly">Rentang Tahun</option>
                         </select>
                         <template x-if="tat.mode === 'monthly'">
-                            <select x-model="tat.m_year" class="form-select border-secondary text-dark fw-bold w-auto">
+                            <select x-model="tat.m_year" 
+                                    class="form-select border-0 bg-transparent text-dark fw-bold shadow-none w-auto ms-1 cursor-pointer pe-4">
                                 @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
                             </select>
                         </template>
                         <template x-if="tat.mode === 'yearly'">
-                            <div class="d-flex border border-secondary rounded-end bg-white">
-                                <select x-model="tat.y_start" class="form-select border-0 bg-transparent text-dark fw-bold w-auto px-2">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
-                                <span class="text-muted fw-bold align-self-center">-</span>
-                                <select x-model="tat.y_end" class="form-select border-0 bg-transparent text-dark fw-bold w-auto px-2">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
+                            <div class="d-flex align-items-center ms-1 bg-white rounded">
+                                <select x-model="tat.y_start" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer p-1 pe-3">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
+                                <span class="text-muted fw-bold">-</span>
+                                <select x-model="tat.y_end" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer p-1 pe-3">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
                             </div>
                         </template>
                     </div>
@@ -261,39 +295,46 @@
                 <div class="card border-0 shadow-sm h-100 bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <template x-if="isMultiSatker">
-                            <div class="input-group input-group-sm shadow-sm w-auto">
-                                <span class="input-group-text bg-light border-secondary"><i class="bi bi-eye text-muted"></i></span>
-                                <select x-model="tat.adminType" class="form-select border-secondary text-dark fw-bold" style="min-width: 150px;">
+                            <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
+                                <i class="bi bi-eye text-muted me-2"></i>
+                                <select x-model="tat.adminType" 
+                                        class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4" 
+                                        style="min-width: 150px;">
                                     <option value="bar">Bar Chart</option>
                                     <option value="heatmap">Heatmap</option>
                                 </select>
                             </div>
                         </template>
-                        <div class="btn-group btn-group-sm shadow-sm rounded-pill">
-                            <button @click="tat.tabTrend = 'kasus'" :class="tat.tabTrend === 'kasus' ? 'btn-info text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Kasus TAT</button>
-                            <button @click="tat.tabTrend = 'tersangka'" :class="tat.tabTrend === 'tersangka' ? 'btn-info text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Tersangka TAT</button>
+                        <div class="d-flex bg-light p-1 rounded-pill">
+                            <button @click="tat.tabTrend = 'kasus'" :class="tat.tabTrend === 'kasus' ? 'btn-info text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Kasus TAT</button>
+                            <button @click="tat.tabTrend = 'tersangka'" :class="tat.tabTrend === 'tersangka' ? 'btn-info text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Tersangka TAT</button>
                         </div>
                     </div>
                     <div class="card-body px-4 pb-4 pt-0"><div x-ref="chartTatTrend" style="min-height: 400px;"></div></div>
                 </div>
             </div>
+            
             {{-- Proporsi TAT --}}
             <div class="col-xl-6">
                 <div class="card border-0 shadow-sm h-100 bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <template x-if="tat.mode === 'monthly'">
-                            <div class="input-group input-group-sm shadow-sm w-auto">
-                                <span class="input-group-text bg-light border-secondary"><i class="bi bi-filter text-muted"></i></span>
-                                <select x-model="tat.m_month" class="form-select border-secondary text-dark fw-bold">
-                                    <option value="all">Setahun</option><option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Agu</option><option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Des</option>
+                            <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
+                                <i class="bi bi-filter text-muted me-2"></i>
+                                <select x-model="tat.m_month" 
+                                        class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4">
+                                    <option value="all">Setahun</option>
+                                    <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option>
+                                    <option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Agu</option>
+                                    <option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Des</option>
                                 </select>
                             </div>
                         </template>
-                        <div class="btn-group btn-group-sm shadow-sm rounded-pill">
-                            <button @click="tat.tabComp = 'rekom'" :class="tat.tabComp === 'rekom' ? 'btn-primary text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Rekomendasi</button>
-                            <button @click="tat.tabComp = 'gender'" :class="tat.tabComp === 'gender' ? 'btn-success text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Gender</button>
-                            <button @click="tat.tabComp = 'pendidikan'" :class="tat.tabComp === 'pendidikan' ? 'btn-dark text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Pendidikan</button>
-                            <button @click="tat.tabComp = 'pekerjaan'" :class="tat.tabComp === 'pekerjaan' ? 'btn-warning text-dark' : 'btn-outline-secondary'" class="btn fw-bold px-3">Pekerjaan</button>
+                        <div class="d-flex bg-light p-1 rounded-pill flex-wrap">
+                            <button @click="tat.tabComp = 'rekom'" :class="tat.tabComp === 'rekom' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Rekomendasi</button>
+                            <button @click="tat.tabComp = 'gender'" :class="tat.tabComp === 'gender' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Gender</button>
+                            <button @click="tat.tabComp = 'pendidikan'" :class="tat.tabComp === 'pendidikan' ? 'btn-dark text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Pendidikan</button>
+                            <button @click="tat.tabComp = 'pekerjaan'" :class="tat.tabComp === 'pekerjaan' ? 'btn-warning text-dark shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Pekerjaan</button>
                         </div>
                     </div>
                     <div class="card-body px-4 pb-4 pt-0"><div x-ref="chartTatComp" style="min-height: 400px;"></div></div>
@@ -304,32 +345,35 @@
         {{-- ========================================================= --}}
         {{-- BLOK C: REGISTER BARANG BUKTI --}}
         {{-- ========================================================= --}}
-        <div class="bg-white p-4 rounded-4 shadow-sm mb-4 border border-danger">
+        <div class="bg-white p-4 rounded-4 shadow-sm mb-4 border">
             <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
                 <div><h5 class="m-0 fw-bold text-dark"><i class="bi bi-box-seam-fill me-2 text-danger"></i>Pusat Analisis Register Barang Bukti</h5></div>
                 <div class="d-flex flex-wrap gap-3 align-items-center">
                     
-                    <div class="input-group shadow-sm w-auto">
-                        <span class="input-group-text bg-light border-secondary"><i class="bi bi-funnel text-muted"></i></span>
-                        <select x-model="bb.narkotika" class="form-select border-secondary text-dark fw-bold" style="min-width: 180px;">
+                    <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1">
+                        <i class="bi bi-funnel text-muted me-2"></i>
+                        <select x-model="bb.narkotika" 
+                                class="form-select border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4" 
+                                style="min-width: 150px; outline: none;">
                             <option value="">Semua Narkotika</option>
                             @foreach($narkotikas as $n) <option value="{{ $n->id }}">{{ $n->nama_narkotika }}</option> @endforeach
                         </select>
                     </div>
 
-                    <div class="input-group shadow-sm w-auto">
-                        <select x-model="bb.mode" class="form-select border-secondary text-dark fw-bold w-auto">
+                    <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1">
+                        <select x-model="bb.mode" 
+                                class="form-select border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer pe-4">
                             <option value="monthly">Per Bulan</option>
                             <option value="yearly">Rentang Tahun</option>
                         </select>
                         <template x-if="bb.mode === 'monthly'">
-                            <select x-model="bb.m_year" class="form-select border-secondary text-dark fw-bold w-auto">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
+                            <select x-model="bb.m_year" class="form-select border-0 bg-transparent text-dark fw-bold shadow-none w-auto ms-1 cursor-pointer pe-4">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
                         </template>
                         <template x-if="bb.mode === 'yearly'">
-                            <div class="d-flex border border-secondary rounded-end bg-white">
-                                <select x-model="bb.y_start" class="form-select border-0 bg-transparent text-dark fw-bold w-auto px-2">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
-                                <span class="text-muted fw-bold align-self-center">-</span>
-                                <select x-model="bb.y_end" class="form-select border-0 bg-transparent text-dark fw-bold w-auto px-2">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
+                            <div class="d-flex align-items-center ms-1 bg-white rounded">
+                                <select x-model="bb.y_start" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer p-1 pe-3">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
+                                <span class="text-muted fw-bold">-</span>
+                                <select x-model="bb.y_end" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer p-1 pe-3">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
                             </div>
                         </template>
                     </div>
@@ -344,36 +388,43 @@
                 <div class="card border-0 shadow-sm h-100 bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <template x-if="isMultiSatker">
-                            <div class="input-group input-group-sm shadow-sm w-auto">
-                                <span class="input-group-text bg-light border-secondary"><i class="bi bi-eye text-muted"></i></span>
-                                <select x-model="bb.adminType" class="form-select border-secondary text-dark fw-bold" style="min-width: 150px;">
+                            <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
+                                <i class="bi bi-eye text-muted me-2"></i>
+                                <select x-model="bb.adminType" 
+                                        class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4" 
+                                        style="min-width: 150px;">
                                     <option value="bar">Bar Chart</option>
                                     <option value="heatmap">Heatmap</option>
                                 </select>
                             </div>
                         </template>
-                        <div class="btn-group btn-group-sm shadow-sm rounded-pill">
-                            <button @click="bb.tabTrend = 'berat'" :class="bb.tabTrend === 'berat' ? 'btn-danger text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Total Berat (g)</button>
-                            <button @click="bb.tabTrend = 'item'" :class="bb.tabTrend === 'item' ? 'btn-primary text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Total Item</button>
+                        <div class="d-flex bg-light p-1 rounded-pill">
+                            <button @click="bb.tabTrend = 'berat'" :class="bb.tabTrend === 'berat' ? 'btn-danger text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Total Berat (g)</button>
+                            <button @click="bb.tabTrend = 'item'" :class="bb.tabTrend === 'item' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Total Item</button>
                         </div>
                     </div>
                     <div class="card-body px-4 pb-4 pt-0"><div x-ref="chartBbTrend" style="min-height: 400px;"></div></div>
                 </div>
             </div>
+            
             {{-- Proporsi BB --}}
             <div class="col-xl-6">
                 <div class="card border-0 shadow-sm h-100 bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <template x-if="bb.mode === 'monthly'">
-                            <div class="input-group input-group-sm shadow-sm w-auto">
-                                <span class="input-group-text bg-light border-secondary"><i class="bi bi-filter text-muted"></i></span>
-                                <select x-model="bb.m_month" class="form-select border-secondary text-dark fw-bold">
-                                    <option value="all">Setahun</option><option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Agu</option><option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Des</option>
+                            <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
+                                <i class="bi bi-filter text-muted me-2"></i>
+                                <select x-model="bb.m_month" 
+                                        class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4">
+                                    <option value="all">Setahun</option>
+                                    <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option>
+                                    <option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Agu</option>
+                                    <option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Des</option>
                                 </select>
                             </div>
                         </template>
-                        <div class="btn-group btn-group-sm shadow-sm rounded-pill">
-                            <button class="btn btn-success text-white fw-bold px-4 border-0">Sumber Perolehan</button>
+                        <div class="d-flex bg-light p-1 rounded-pill">
+                            <button class="btn btn-sm btn-success text-white rounded-pill fw-bold px-4 shadow-sm border-0">Sumber Perolehan</button>
                         </div>
                     </div>
                     <div class="card-body px-4 pb-4 pt-0"><div x-ref="chartBbComp" style="min-height: 400px;"></div></div>
@@ -382,42 +433,50 @@
         </div>
 
         {{-- ========================================================= --}}
-        {{-- BLOK D: RANKING JENIS NARKOTIKA --}}
+        {{-- BLOK D: RANKING JENIS NARKOTIKA (BACKGROUND PUTIH) --}}
         {{-- ========================================================= --}}
-        <div class="bg-dark p-4 rounded-4 shadow-sm mb-3 border border-warning">
+        <div class="bg-white p-4 rounded-4 shadow-sm mb-3 border">
             <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
-                <div><h5 class="m-0 fw-bold text-warning"><i class="bi bi-bar-chart-steps me-2 text-warning"></i>Pemetaan Tren Narkotika Sultra</h5></div>
+                <div>
+                    <h5 class="m-0 fw-bold text-dark"><i class="bi bi-bar-chart-steps me-2 text-warning"></i>Pemetaan Tren Narkotika Sultra</h5>
+                </div>
                 <div class="d-flex flex-wrap gap-3 align-items-center">
                     
-                    <div class="input-group shadow-sm w-auto">
-                        <span class="input-group-text bg-white border-white"><i class="bi bi-sort-down text-muted"></i></span>
-                        <select x-model="rank.limit" class="form-select border-white text-dark fw-bold" style="min-width: 140px;">
+                    <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1">
+                        <i class="bi bi-sort-down text-muted me-2"></i>
+                        <select x-model="rank.limit" 
+                                class="form-select border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer p-0 pe-4" 
+                                style="min-width: 120px;">
                             <option value="all">Semua Jenis</option>
                             <option value="10">Top 10 Saja</option>
                             <option value="5">Top 5 Saja</option>
                         </select>
                     </div>
 
-                    <div class="input-group shadow-sm w-auto">
-                        <select x-model="rank.mode" class="form-select border-white text-dark fw-bold w-auto">
-                            <option value="monthly">Per Bulan</option>
+                    <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1">
+                        <select x-model="rank.mode" 
+                                class="form-select border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer p-0 pe-3">
+                            <option value="monthly">Per Tahun</option>
                             <option value="yearly">Rentang Tahun</option>
                         </select>
                         <template x-if="rank.mode === 'monthly'">
-                            <div class="d-flex border border-white rounded-end bg-white">
-                                <select x-model="rank.m_month" class="form-select border-0 bg-transparent text-dark fw-bold w-auto px-2">
-                                    <option value="all">Setahun</option><option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Agu</option><option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Des</option>
+                            <div class="d-flex align-items-center ms-1">
+                                <select x-model="rank.m_month" class="form-select border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer p-0 pe-3">
+                                    <option value="all">Setahun</option>
+                                    <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option>
+                                    <option value="5">Mei</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Agu</option>
+                                    <option value="9">Sep</option><option value="10">Okt</option><option value="11">Nov</option><option value="12">Des</option>
                                 </select>
-                                <select x-model="rank.m_year" class="form-select border-0 bg-transparent text-dark fw-bold w-auto px-2 border-start">
+                                <select x-model="rank.m_year" class="form-select border-0 bg-transparent text-dark fw-bold shadow-none w-auto ms-1 cursor-pointer p-0 pe-3">
                                     @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
                                 </select>
                             </div>
                         </template>
                         <template x-if="rank.mode === 'yearly'">
-                            <div class="d-flex border border-white rounded-end bg-white">
-                                <select x-model="rank.y_start" class="form-select border-0 bg-transparent text-dark fw-bold w-auto px-2">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
-                                <span class="text-muted fw-bold align-self-center">-</span>
-                                <select x-model="rank.y_end" class="form-select border-0 bg-transparent text-dark fw-bold w-auto px-2">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
+                            <div class="d-flex align-items-center ms-1">
+                                <select x-model="rank.y_start" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer p-0 pe-3">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
+                                <span class="text-muted fw-bold mx-1">-</span>
+                                <select x-model="rank.y_end" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none w-auto cursor-pointer p-0 pe-3">@foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach</select>
                             </div>
                         </template>
                     </div>
@@ -428,14 +487,14 @@
 
         <div class="card border-0 shadow-sm bg-white rounded-4 mb-5">
             <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-3">
-                <div class="btn-group btn-group-sm shadow-sm rounded-pill">
-                    <button @click="rank.source = 'lkn'" :class="rank.source === 'lkn' ? 'btn-primary text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Dari LKN</button>
-                    <button @click="rank.source = 'tat'" :class="rank.source === 'tat' ? 'btn-info text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Dari TAT</button>
-                    <button @click="rank.source = 'bb'" :class="rank.source === 'bb' ? 'btn-danger text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Dari Register BB</button>
+                <div class="d-flex bg-light p-1 rounded-pill">
+                    <button @click="rank.source = 'lkn'" :class="rank.source === 'lkn' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Dari LKN</button>
+                    <button @click="rank.source = 'tat'" :class="rank.source === 'tat' ? 'btn-info text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Dari TAT</button>
+                    <button @click="rank.source = 'bb'" :class="rank.source === 'bb' ? 'btn-danger text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Dari Register BB</button>
                 </div>
-                <div class="btn-group btn-group-sm shadow-sm rounded-pill">
-                    <button @click="rank.metric = 'berat'" :class="rank.metric === 'berat' ? 'btn-dark text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Berdasarkan Berat</button>
-                    <button @click="rank.metric = 'freq'" :class="rank.metric === 'freq' ? 'btn-dark text-white' : 'btn-outline-secondary'" class="btn fw-bold px-3">Berdasarkan Frekuensi</button>
+                <div class="d-flex bg-light p-1 rounded-pill">
+                    <button @click="rank.metric = 'berat'" :class="rank.metric === 'berat' ? 'btn-dark text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Berdasarkan Berat</button>
+                    <button @click="rank.metric = 'freq'" :class="rank.metric === 'freq' ? 'btn-dark text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Berdasarkan Frekuensi</button>
                 </div>
             </div>
             <div class="card-body px-4 pb-4 pt-2">
@@ -457,17 +516,19 @@
             globalSatkerId: '', 
             globalStartYear: '{{ min($years) }}', 
             globalEndYear: '{{ max($years) }}',
+            
             cards: { 
                 lkn: { kasus: 0, tersangka: 0, gram: 0, item: 0 },
                 tat: { kasus: 0, tersangka: 0, gram: 0, item: 0 },
                 reg: { total_gram: 0, total_item: 0, tangkap_gram: 0, tangkap_item: 0, temuan_gram: 0, temuan_item: 0 }
             },
+            
             isMultiSatker: false,
             chartInst: { lknT: null, lknC: null, tatT: null, tatC: null, bbT: null, bbC: null, rank: null },
             
             getBarColors() { return ['#0d6efd', '#fd7e14', '#198754', '#6f42c1', '#dc3545', '#0dcaf0', '#20c997', '#ffc107', '#6c757d']; },
 
-            // Modul States (Default Mode = Monthly)
+            // Modul States
             lkn: { mode: 'monthly', m_year: '{{ max($years) }}', m_month: 'all', y_start: '{{ min($years) }}', y_end: '{{ max($years) }}', narkotika: '', tabTrend: 'kasus', tabComp: 'gender', adminType: 'bar', data: null },
             tat: { mode: 'monthly', m_year: '{{ max($years) }}', m_month: 'all', y_start: '{{ min($years) }}', y_end: '{{ max($years) }}', narkotika: '', tabTrend: 'kasus', tabComp: 'rekom', adminType: 'bar', data: null },
             bb: { mode: 'monthly', m_year: '{{ max($years) }}', m_month: 'all', y_start: '{{ min($years) }}', y_end: '{{ max($years) }}', narkotika: '', tabTrend: 'berat', tabComp: 'sumber', adminType: 'bar', data: null },
@@ -481,21 +542,32 @@
                 this.$watch('globalEndYear', () => { this.globalStartYear = Math.min(this.globalStartYear, this.globalEndYear); this.fetchGlobal(); });
                 
                 ['mode','m_year','m_month','y_start','y_end','narkotika','adminType'].forEach(p => this.$watch('lkn.'+p, () => this.fetchLkn()));
-                this.$watch('lkn.tabTrend', () => this.renderLknTrend()); this.$watch('lkn.tabComp', () => this.renderLknComp());
+                this.$watch('lkn.tabTrend', () => this.renderLknTrend()); 
+                this.$watch('lkn.tabComp', () => this.renderLknComp());
                 
                 ['mode','m_year','m_month','y_start','y_end','narkotika','adminType'].forEach(p => this.$watch('tat.'+p, () => this.fetchTat()));
-                this.$watch('tat.tabTrend', () => this.renderTatTrend()); this.$watch('tat.tabComp', () => this.renderTatComp());
+                this.$watch('tat.tabTrend', () => this.renderTatTrend()); 
+                this.$watch('tat.tabComp', () => this.renderTatComp());
 
                 ['mode','m_year','m_month','y_start','y_end','narkotika','adminType'].forEach(p => this.$watch('bb.'+p, () => this.fetchBb()));
-                this.$watch('bb.tabTrend', () => this.renderBbTrend()); this.$watch('bb.tabComp', () => this.renderBbComp());
+                this.$watch('bb.tabTrend', () => this.renderBbTrend()); 
+                this.$watch('bb.tabComp', () => this.renderBbComp());
 
                 ['mode','m_year','m_month','y_start','y_end','limit','source','metric'].forEach(p => this.$watch('rank.'+p, () => this.fetchRank()));
             },
 
-            fetchAll() { this.fetchGlobal(); this.fetchLkn(); this.fetchTat(); this.fetchBb(); this.fetchRank(); },
+            fetchAll() { 
+                this.fetchGlobal(); 
+                this.fetchLkn(); 
+                this.fetchTat(); 
+                this.fetchBb(); 
+                this.fetchRank(); 
+            },
 
             // Formatters
-            formatAngka(num) { return new Intl.NumberFormat('id-ID').format(num || 0); },
+            formatAngka(num) { 
+                return new Intl.NumberFormat('id-ID').format(num || 0); 
+            },
             formatGram(gram) {
                 let g = gram || 0;
                 if (g >= 1000000) return this.formatAngka(g) + ' g (' + this.formatAngka(g/1000000) + ' Ton)';
@@ -544,21 +616,25 @@
                     colors: isHeat ? ['#0d6efd'] : (this.isMultiSatker ? this.getBarColors() : (this.lkn.tabTrend === 'berat' ? ['#dc3545'] : ['#0d6efd'])),
                     dataLabels: {
                         enabled: isHeat ? true : !this.isMultiSatker,
-                        formatter: function(val) { return val > 0 ? new Intl.NumberFormat('id-ID').format(val) : ""; },
+                        formatter: function(val) { 
+                            let v = val || 0; 
+                            return v > 0 ? new Intl.NumberFormat('id-ID').format(v) : "0"; 
+                        },
                         style: { colors: ['#212529'], fontSize: '13px' }
                     },
                     tooltip: { 
                         shared: true, intersect: false,
-                        y: { formatter: function(val) { return self.lkn.tabTrend === 'berat' ? self.formatGram(val) : new Intl.NumberFormat('id-ID').format(val); } }
+                        y: { formatter: function(val) { return self.lkn.tabTrend === 'berat' ? self.formatGram(val) : new Intl.NumberFormat('id-ID').format(val || 0); } }
                     },
                     legend: { show: !isHeat, position: 'top', fontWeight: 'bold', offsetY: -10 },
-                    yaxis: { labels: { formatter: function(val) { return typeof val === 'number' ? Math.round(val) : val; } } }
+                    yaxis: { labels: { formatter: function(val) { return typeof val === 'number' ? Math.round(val || 0) : val; } } }
                 };
 
                 if(this.chartInst.lknT) this.chartInst.lknT.destroy();
                 this.chartInst.lknT = new ApexCharts(this.$refs.chartLknTrend, opts);
                 this.chartInst.lknT.render();
             },
+            
             renderLknComp() {
                 if(!this.$refs.chartLknComp || !this.lkn.data) return;
                 const ds = this.lkn.tabComp === 'gender' ? this.lkn.data.comp.gender : this.lkn.data.comp.pekerjaan;
@@ -612,18 +688,22 @@
                     colors: isHeat ? ['#0dcaf0'] : (this.isMultiSatker ? this.getBarColors() : ['#0dcaf0']),
                     dataLabels: {
                         enabled: isHeat ? true : !this.isMultiSatker,
-                        formatter: function(val) { return val > 0 ? new Intl.NumberFormat('id-ID').format(val) : ""; },
+                        formatter: function(val) { 
+                            let v = val || 0; 
+                            return v > 0 ? new Intl.NumberFormat('id-ID').format(v) : "0"; 
+                        },
                         style: { colors: ['#212529'], fontSize: '13px' }
                     },
                     tooltip: { shared: true, intersect: false },
                     legend: { show: !isHeat, position: 'top', fontWeight: 'bold', offsetY: -10 },
-                    yaxis: { labels: { formatter: function(val) { return typeof val === 'number' ? Math.round(val) : val; } } }
+                    yaxis: { labels: { formatter: function(val) { return typeof val === 'number' ? Math.round(val || 0) : val; } } }
                 };
 
                 if(this.chartInst.tatT) this.chartInst.tatT.destroy();
                 this.chartInst.tatT = new ApexCharts(this.$refs.chartTatTrend, opts);
                 this.chartInst.tatT.render();
             },
+            
             renderTatComp() {
                 if(!this.$refs.chartTatComp || !this.tat.data) return;
                 const ds = this.tat.data.comp[this.tat.tabComp];
@@ -678,21 +758,25 @@
                     colors: isHeat ? ['#dc3545'] : (this.isMultiSatker ? this.getBarColors() : ['#dc3545']),
                     dataLabels: {
                         enabled: isHeat ? true : !this.isMultiSatker,
-                        formatter: function(val) { return val > 0 ? new Intl.NumberFormat('id-ID').format(val) : ""; },
+                        formatter: function(val) { 
+                            let v = val || 0; 
+                            return v > 0 ? new Intl.NumberFormat('id-ID').format(v) : "0"; 
+                        },
                         style: { colors: ['#212529'], fontSize: '13px' }
                     },
                     tooltip: { 
                         shared: true, intersect: false,
-                        y: { formatter: function(val) { return self.bb.tabTrend === 'berat' ? self.formatGram(val) : new Intl.NumberFormat('id-ID').format(val); } }
+                        y: { formatter: function(val) { return self.bb.tabTrend === 'berat' ? self.formatGram(val) : new Intl.NumberFormat('id-ID').format(val || 0); } }
                     },
                     legend: { show: !isHeat, position: 'top', fontWeight: 'bold', offsetY: -10 },
-                    yaxis: { labels: { formatter: function(val) { return typeof val === 'number' ? Math.round(val) : val; } } }
+                    yaxis: { labels: { formatter: function(val) { return typeof val === 'number' ? Math.round(val || 0) : val; } } }
                 };
 
                 if(this.chartInst.bbT) this.chartInst.bbT.destroy();
                 this.chartInst.bbT = new ApexCharts(this.$refs.chartBbTrend, opts);
                 this.chartInst.bbT.render();
             },
+            
             renderBbComp() {
                 if(!this.$refs.chartBbComp || !this.bb.data) return;
                 let opts = {
@@ -737,13 +821,16 @@
                     xaxis: { categories: d.labels }, 
                     dataLabels: { 
                         enabled: true, 
-                        formatter: function(val) { return self.rank.metric === 'berat' ? new Intl.NumberFormat('id-ID').format(val) : val; },
+                        formatter: function(val) { 
+                            let v = val || 0; 
+                            return self.rank.metric === 'berat' ? new Intl.NumberFormat('id-ID').format(v) : v; 
+                        },
                         style: { colors: ['#333'], fontSize: '12px' } 
                     },
                     grid: { show: false, xaxis: { lines: { show: false } }, yaxis: { lines: { show: false } } }, 
                     title: { text: this.getTitle(this.rank, tTitle), align: 'left', margin: 20, style: { fontSize: '16px', fontWeight: '500' } },
                     tooltip: { 
-                        y: { formatter: function(val) { return self.rank.metric === 'berat' ? self.formatGram(val) : new Intl.NumberFormat('id-ID').format(val); } } 
+                        y: { formatter: function(val) { return self.rank.metric === 'berat' ? self.formatGram(val) : new Intl.NumberFormat('id-ID').format(val || 0); } } 
                     }
                 };
                 

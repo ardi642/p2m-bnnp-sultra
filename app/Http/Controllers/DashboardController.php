@@ -15,12 +15,12 @@ class DashboardController extends Controller
 
         // 1. Jika admin/operator khusus Berantas
         if (in_array($role, ['admin_berantas', 'operator_berantas'])) {
-            // return redirect()->route('dashboard.berantas.index');
+            return redirect()->route('dashboard.berantas.index');
         }
         
         // 2. Jika admin/operator khusus Rehab
         if (in_array($role, ['admin_rehab', 'operator_rehab'])) {
-            // return redirect()->route('dashboard.rehab.index');
+            return redirect()->route('dashboard.rehab.index');
         }
 
         // 3. Jika admin/operator khusus P2M

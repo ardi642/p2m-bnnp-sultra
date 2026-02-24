@@ -47,6 +47,15 @@
     for($i = $currYear + 1; $i >= $currYear - 4; $i--) {
         $modalYears[] = $i;
     }
+
+    // 5. Helper Format Angka & Persen (Nol menjadi Strip)
+    $formatAngka = function($angka) {
+        return $angka == 0 ? '-' : number_format($angka);
+    };
+    
+    $formatPersen = function($persen) {
+        return $persen == 0 ? '-' : number_format($persen, 1) . '%';
+    };
 @endphp
 
 {{-- ROOT ALPINE DATA --}}
@@ -166,16 +175,31 @@
                                     <th colspan="4" class="bg-warning bg-opacity-10 text-warning-emphasis">SKHPN</th>
                                 </tr>
                                 <tr class="text-secondary" style="font-size: 0.75rem;">
-                                    <th>Real</th><th>Akum</th><th>Sisa</th><th>%</th><th>Real</th><th>Akum</th><th>Sisa</th><th>%</th><th>Real</th><th>Akum</th><th>Sisa</th><th>%</th>
+                                    <th>Realisasi</th><th>Total Realisasi</th><th>Sisa</th><th>%</th><th>Realisasi</th><th>Total Realisasi</th><th>Sisa</th><th>%</th><th>Realisasi</th><th>Total Realisasi</th><th>Sisa</th><th>%</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($monthsData as $row)
                                 <tr>
                                     <td class="text-start fw-bold sticky-start bg-white">{{ $row['bulan_nama'] }}</td>
-                                    <td>{{ number_format($row['rj']['real']) }}</td><td>{{ number_format($row['rj']['akum']) }}</td><td class="text-muted">{{ number_format($row['rj']['sisa']) }}</td><td>{{ number_format($row['rj']['persen'], 1) }}%</td>
-                                    <td>{{ number_format($row['pasca']['real']) }}</td><td>{{ number_format($row['pasca']['akum']) }}</td><td class="text-muted">{{ number_format($row['pasca']['sisa']) }}</td><td>{{ number_format($row['pasca']['persen'], 1) }}%</td>
-                                    <td>{{ number_format($row['skhpn']['real']) }}</td><td>{{ number_format($row['skhpn']['akum']) }}</td><td class="text-muted">{{ number_format($row['skhpn']['sisa']) }}</td><td>{{ number_format($row['skhpn']['persen'], 1) }}%</td>
+                                    
+                                    {{-- Rawat Jalan --}}
+                                    <td>{{ $formatAngka($row['rj']['real']) }}</td>
+                                    <td>{{ $formatAngka($row['rj']['akum']) }}</td>
+                                    <td class="text-muted">{{ $formatAngka($row['rj']['sisa']) }}</td>
+                                    <td>{{ $formatPersen($row['rj']['persen']) }}</td>
+                                    
+                                    {{-- Pasca Rehab --}}
+                                    <td>{{ $formatAngka($row['pasca']['real']) }}</td>
+                                    <td>{{ $formatAngka($row['pasca']['akum']) }}</td>
+                                    <td class="text-muted">{{ $formatAngka($row['pasca']['sisa']) }}</td>
+                                    <td>{{ $formatPersen($row['pasca']['persen']) }}</td>
+                                    
+                                    {{-- SKHPN --}}
+                                    <td>{{ $formatAngka($row['skhpn']['real']) }}</td>
+                                    <td>{{ $formatAngka($row['skhpn']['akum']) }}</td>
+                                    <td class="text-muted">{{ $formatAngka($row['skhpn']['sisa']) }}</td>
+                                    <td>{{ $formatPersen($row['skhpn']['persen']) }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -467,7 +491,6 @@
     {{-- MODAL TARGET TAHUNAN --}}
     {{-- ==================================================================== --}}
     <div class="modal fade" id="targetModal" tabindex="-1" aria-hidden="true">
-        {{-- ... (Isi Modal Tetap Sama) ... --}}
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header bg-primary text-white">

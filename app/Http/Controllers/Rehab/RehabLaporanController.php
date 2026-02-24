@@ -188,16 +188,24 @@ class RehabLaporanController extends Controller
     // Helper Statistik Global
     private function calculateStats($target, $realisasi) {
         $target = $target ?? 0; $realisasi = $realisasi ?? 0;
+        $sisa = $target - $realisasi;
+        
         return [
-            'target' => $target, 'realisasi' => $realisasi, 'sisa' => $target - $realisasi,
+            'target' => $target, 
+            'realisasi' => $realisasi, 
+            'sisa' => max(0, $sisa), // Memastikan sisa minimal adalah 0 (tidak minus)
             'persen' => ($target > 0) ? ($realisasi / $target) * 100 : 0
         ];
     }
 
     // Helper Statistik Bulanan
     private function calculateMonthlyStats($real, $accum, $targetTotal) {
+        $sisa = $targetTotal - $accum;
+        
         return [
-            'real' => $real, 'akum' => $accum, 'sisa' => $targetTotal - $accum, 
+            'real' => $real, 
+            'akum' => $accum, 
+            'sisa' => max(0, $sisa), // Memastikan sisa minimal adalah 0 (tidak minus)
             'persen' => ($targetTotal > 0) ? ($accum / $targetTotal) * 100 : 0
         ];
     }

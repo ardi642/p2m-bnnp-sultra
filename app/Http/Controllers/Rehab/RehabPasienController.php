@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Constants\Pendidikan;
 use App\Constants\Pekerjaan;
+use App\Constants\SumberPasien;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\RehabPasienExport;
 use App\Services\DokumenService;
@@ -21,13 +22,25 @@ use Illuminate\Support\Facades\Log;
 
 class RehabPasienController extends Controller
 {
+    private function generateIdPasien($nama, $tglLahir, $jk) 
+    {
+        $namaBersih = strtoupper(trim($nama));
+        
+        // Ubah baris di bawah ini (tambahkan tanda strip)
+        $tgl = date('d-m-Y', strtotime($tglLahir)); 
+        
+        $kodeJk = $jk === 'Laki-laki' ? 'L' : 'P';
+        
+        return "{$namaBersih}-{$tgl}-{$kodeJk}";
+    }
+
     private function getFilteredQuery(Request $request)
     {
         $user = Auth::user();
         
         $query = RehabRiwayat::with(['pasien.satuanKerja', 'narkotika'])
-                    ->join('rehab_pasien', 'rehab_riwayat.rehab_pasien_id', '=', 'rehab_pasien.id')
-                    ->select('rehab_riwayat.*');
+            ->join('rehab_pasien', 'rehab_riwayat.rehab_pasien_id', '=', 'rehab_pasien.id')
+            ->select('rehab_riwayat.*');
 
         if (!$user->hasRole('admin')) {
             $query->where('rehab_pasien.satuan_kerja_id', $user->getSatkerId());
@@ -36,7 +49,10 @@ class RehabPasienController extends Controller
         }
 
         if ($request->filled('bulan')) {
-            $query->whereIn(DB::raw('MONTH(rehab_riwayat.tanggal_rehab)'), (array)$request->bulan);
+            $query->whereIn(
+                DB::raw('MONTH(rehab_riwayat.tanggal_rehab)'), 
+                (array)$request->bulan
+            );
         }
         
         $years = $request->filled('tahun') ? (array)$request->tahun : [date('Y')];
@@ -55,13 +71,15 @@ class RehabPasienController extends Controller
             $query->whereIn('rehab_riwayat.sumber_pasien', (array)$request->sumber_pasien);
         }
         if ($request->filled('narkotika_ids')) {
-            $query->whereHas('narkotika', fn($q) => $q->whereIn('berantas_narkotika.id', (array)$request->narkotika_ids));
+            $query->whereHas('narkotika', function($q) use ($request) {
+                $q->whereIn('berantas_narkotika.id', (array)$request->narkotika_ids);
+            });
         }
 
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(function($q) use ($s) {
-                $q->where('rehab_pasien.no_rekam_medis', 'LIKE', "%{$s}%")
+                $q->where('rehab_pasien.id_pasien', 'LIKE', "%{$s}%")
                   ->orWhere('rehab_pasien.nama_pasien', 'LIKE', "%{$s}%");
             });
         }
@@ -69,8 +87,8 @@ class RehabPasienController extends Controller
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
         
-        $riwayatSorts = ['tanggal_rehab', 'usia', 'pekerjaan', 'pendidikan', 'sumber_pasien', 'created_at'];
-        $pasienSorts = ['no_rekam_medis', 'nama_pasien', 'jenis_kelamin'];
+        $riwayatSorts = ['tanggal_rehab', 'pekerjaan', 'pendidikan', 'sumber_pasien', 'created_at'];
+        $pasienSorts = ['id_pasien', 'nama_pasien', 'jenis_kelamin', 'tanggal_lahir'];
 
         if ($sortBy === 'satuan_kerja_id') {
             $query->join('satuan_kerja', 'rehab_pasien.satuan_kerja_id', '=', 'satuan_kerja.id')
@@ -89,79 +107,83 @@ class RehabPasienController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        
         $satuanKerjas = $user->isAdmin() ? SatuanKerja::orderBy('satuan_kerja')->get() : [];
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
         
-        $years = RehabRiwayat::selectRaw('YEAR(tanggal_rehab) as year')->distinct()->orderBy('year', 'desc')->pluck('year');
-        if (!$years->contains((int)date('Y'))) $years->push((int)date('Y'))->sortDesc()->values();
+        $years = RehabRiwayat::selectRaw('YEAR(tanggal_rehab) as year')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+            
+        if (!$years->contains((int)date('Y'))) {
+            $years->push((int)date('Y'))->sortDesc()->values();
+        }
 
         $query = $this->getFilteredQuery($request);
-        $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : 10;
+        $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) 
+                   ? $request->input('per_page') : 10;
+                   
         $data = $query->paginate($perPage)->withQueryString();
 
-        return view('rehab.pasien.index', compact('data', 'satuanKerjas', 'masterNarkotika', 'years'));
+        return view('rehab.pasien.index', compact(
+            'data', 'satuanKerjas', 'masterNarkotika', 'years'
+        ));
     }
 
     public function create()
     {
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
         $satuanKerjas = Auth::user()->isAdmin() ? SatuanKerja::orderBy('satuan_kerja')->get() : [];
+        
         return view('rehab.pasien.create', compact('masterNarkotika', 'satuanKerjas'));
     }
 
     public function store(Request $request, DokumenService $dokumenService)
     {
         $user = Auth::user();
+        
         $request->validate([
             'nama_pasien' => 'required|string|max:255',
+            'tanggal_lahir' => 'required|date',
             'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
             'tanggal_rehab' => 'required|date',
-            'usia' => 'required|integer|min:1',
             'pendidikan' => 'required|string',
             'pekerjaan' => 'required|string',
-            'sumber_pasien' => 'required|in:Voluntary,Compulsory',
+            'sumber_pasien' => 'required|string',
             'narkotika_ids' => 'required|array|min:1',
             
-            'dokumentasi'          => 'nullable|array', 
-            'lampiran'             => 'nullable|array',
-            'dokumentasi_links'    => 'nullable|array',
-            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
-            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
-            'lampiran_links'       => 'nullable|array',
-            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
-            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
+            'dokumentasi' => 'nullable|array', 
+            'lampiran' => 'nullable|array',
+            'dokumentasi_links' => 'nullable|array',
+            'dokumentasi_links.*.nama' => 'nullable|string|max:255',
+            'dokumentasi_links.*.url'  => 'nullable|url',
+            'lampiran_links' => 'nullable|array',
+            'lampiran_links.*.nama' => 'nullable|string|max:255',
+            'lampiran_links.*.url'  => 'nullable|url',
         ]);
 
         $satkerId = $user->isAdmin() ? $request->satuan_kerja_id : $user->getSatkerId();
+                        
+        $idPasienBaru = $this->generateIdPasien(
+            $request->nama_pasien, 
+            $request->tanggal_lahir, 
+            $request->jenis_kelamin
+        );
+
         $uploadedPaths = [];
 
         DB::beginTransaction();
         try {
-            $year = date('Y', strtotime($request->tanggal_rehab));
-            $satkerStr = str_pad($satkerId, 2, '0', STR_PAD_LEFT);
-            
-            $lastPasien = RehabPasien::where('satuan_kerja_id', $satkerId)
-                            ->whereYear('created_at', date('Y'))
-                            ->orderBy('id', 'desc')->first();
-            
-            $increment = 1;
-            if ($lastPasien) {
-                $parts = explode('-', $lastPasien->no_rekam_medis);
-                $increment = intval(end($parts)) + 1;
-            }
-            $no_rm = "RM-{$year}-{$satkerStr}-" . str_pad($increment, 4, '0', STR_PAD_LEFT);
-
             $pasien = RehabPasien::create([
                 'satuan_kerja_id' => $satkerId,
-                'no_rekam_medis' => $no_rm,
+                'id_pasien' => $idPasienBaru,
                 'nama_pasien' => $request->nama_pasien,
+                'tanggal_lahir' => $request->tanggal_lahir,
                 'jenis_kelamin' => $request->jenis_kelamin,
             ]);
 
             $riwayat = $pasien->riwayat()->create([
                 'tanggal_rehab' => $request->tanggal_rehab,
-                'usia' => $request->usia,
                 'pendidikan' => $request->pendidikan,
                 'pekerjaan' => $request->pekerjaan,
                 'sumber_pasien' => $request->sumber_pasien,
@@ -169,34 +191,48 @@ class RehabPasienController extends Controller
 
             $riwayat->narkotika()->sync($request->narkotika_ids);
 
-            if ($request->filled('dokumentasi')) {
-                $dokumenService->moveToPermanent($request->input('dokumentasi'), $riwayat, 'dokumentasi', $uploadedPaths);
+            if ($request->filled('dokumentasi')) { 
+                $dokumenService->moveToPermanent(
+                    $request->input('dokumentasi'), $riwayat, 'dokumentasi', $uploadedPaths
+                ); 
             }
-            if ($request->filled('lampiran')) {
-                $dokumenService->moveToPermanent($request->input('lampiran'), $riwayat, 'lampiran', $uploadedPaths);
+            if ($request->filled('lampiran')) { 
+                $dokumenService->moveToPermanent(
+                    $request->input('lampiran'), $riwayat, 'lampiran', $uploadedPaths
+                ); 
             }
-            if ($request->filled('dokumentasi_links')) {
-                $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi');
+            if ($request->filled('dokumentasi_links')) { 
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi'); 
             }
-            if ($request->filled('lampiran_links')) {
-                $dokumenService->saveLinks($request->input('lampiran_links'), $riwayat, 'lampiran');
+            if ($request->filled('lampiran_links')) { 
+                $dokumenService->saveLinks($request->input('lampiran_links'), $riwayat, 'lampiran'); 
             }
 
             DB::commit();
-            return redirect()->route('rehab.pasien.show', $pasien->id)->with('success', 'Pasien Baru Berhasil Didaftarkan. Harap catat No Rekam Medis pasien ini.');
+            return redirect()
+                ->route('rehab.pasien.show', $pasien->id)
+                ->with('success', 'Pasien Baru Berhasil Didaftarkan.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            foreach ($uploadedPaths as $path) { Storage::disk(config('filesystems.default'))->delete($path); }
+            foreach ($uploadedPaths as $path) { 
+                Storage::disk(config('filesystems.default'))->delete($path); 
+            }
             Log::error('Error Store Pasien: ' . $e->getMessage());
-            return back()->with('error', 'Terjadi kesalahan server saat menyimpan data.')->withInput();
+            return back()
+                ->with('error', 'Terjadi kesalahan server saat menyimpan data.')
+                ->withInput();
         }
     }
 
     public function show($id)
     {
-        $pasien = RehabPasien::with(['riwayat.narkotika', 'riwayat.dokumen', 'satuanKerja'])->findOrFail($id);
-        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
+        $pasien = RehabPasien::with(['riwayat.narkotika', 'riwayat.dokumen', 'satuanKerja'])
+                             ->findOrFail($id);
+                             
+        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) {
+            abort(403);
+        }
         
         return view('rehab.pasien.show', compact('pasien'));
     }
@@ -204,7 +240,9 @@ class RehabPasienController extends Controller
     public function edit($id)
     {
         $pasien = RehabPasien::findOrFail($id);
-        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
+        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) {
+            abort(403);
+        }
         
         return view('rehab.pasien.edit', compact('pasien'));
     }
@@ -212,28 +250,46 @@ class RehabPasienController extends Controller
     public function update(Request $request, $id)
     {
         $pasien = RehabPasien::findOrFail($id);
-        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
+        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) {
+            abort(403);
+        }
 
         $request->validate([
             'nama_pasien' => 'required|string|max:255',
+            'tanggal_lahir' => 'required|date',
             'jenis_kelamin' => 'required|in:Laki-laki,Perempuan',
         ]);
 
+        $idPasienBaru = $this->generateIdPasien(
+            $request->nama_pasien, 
+            $request->tanggal_lahir, 
+            $request->jenis_kelamin
+        );
+
         $pasien->update([
+            'id_pasien' => $idPasienBaru,
             'nama_pasien' => $request->nama_pasien,
+            'tanggal_lahir' => $request->tanggal_lahir,
             'jenis_kelamin' => $request->jenis_kelamin,
         ]);
 
         if ($request->query('ref') === 'index') {
-            return redirect()->route('rehab.pasien.index')->with('success', 'Identitas Pasien berhasil diperbarui.');
+            return redirect()
+                ->route('rehab.pasien.index')
+                ->with('success', 'Identitas Pasien berhasil diperbarui.');
         }
-        return redirect()->route('rehab.pasien.show', $pasien->id)->with('success', 'Identitas Pasien berhasil diperbarui.');
+        
+        return redirect()
+            ->route('rehab.pasien.show', $pasien->id)
+            ->with('success', 'Identitas Pasien berhasil diperbarui.');
     }
 
     public function createRiwayat($pasien_id)
     {
         $pasien = RehabPasien::findOrFail($pasien_id);
-        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
+        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) {
+            abort(403);
+        }
 
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
         return view('rehab.pasien.create_riwayat', compact('pasien', 'masterNarkotika'));
@@ -242,65 +298,74 @@ class RehabPasienController extends Controller
     public function storeRiwayat(Request $request, DokumenService $dokumenService, $pasien_id)
     {
         $pasien = RehabPasien::findOrFail($pasien_id);
-        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
+        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) {
+            abort(403);
+        }
 
         $request->validate([
             'tanggal_rehab' => 'required|date',
-            'usia' => 'required|integer|min:1',
             'pendidikan' => 'required|string',
             'pekerjaan' => 'required|string',
-            'sumber_pasien' => 'required|in:Voluntary,Compulsory',
+            'sumber_pasien' => 'required|string',
             'narkotika_ids' => 'required|array|min:1',
-
-            'dokumentasi'          => 'nullable|array', 
-            'lampiran'             => 'nullable|array',
-            'dokumentasi_links'    => 'nullable|array',
-            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
-            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
-            'lampiran_links'       => 'nullable|array',
-            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
-            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
+            'dokumentasi' => 'nullable|array', 
+            'lampiran' => 'nullable|array',
+            'dokumentasi_links' => 'nullable|array',
+            'lampiran_links' => 'nullable|array',
         ]);
-
+                        
         $uploadedPaths = [];
 
         DB::beginTransaction();
         try {
             $riwayat = $pasien->riwayat()->create([
                 'tanggal_rehab' => $request->tanggal_rehab,
-                'usia' => $request->usia,
                 'pendidikan' => $request->pendidikan,
                 'pekerjaan' => $request->pekerjaan,
                 'sumber_pasien' => $request->sumber_pasien,
             ]);
+            
             $riwayat->narkotika()->sync($request->narkotika_ids);
 
-            if ($request->filled('dokumentasi')) {
-                $dokumenService->moveToPermanent($request->input('dokumentasi'), $riwayat, 'dokumentasi', $uploadedPaths);
+            if ($request->filled('dokumentasi')) { 
+                $dokumenService->moveToPermanent(
+                    $request->input('dokumentasi'), $riwayat, 'dokumentasi', $uploadedPaths
+                ); 
             }
-            if ($request->filled('lampiran')) {
-                $dokumenService->moveToPermanent($request->input('lampiran'), $riwayat, 'lampiran', $uploadedPaths);
+            if ($request->filled('lampiran')) { 
+                $dokumenService->moveToPermanent(
+                    $request->input('lampiran'), $riwayat, 'lampiran', $uploadedPaths
+                ); 
             }
-            if ($request->filled('dokumentasi_links')) {
-                $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi');
+            if ($request->filled('dokumentasi_links')) { 
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi'); 
             }
-            if ($request->filled('lampiran_links')) {
-                $dokumenService->saveLinks($request->input('lampiran_links'), $riwayat, 'lampiran');
+            if ($request->filled('lampiran_links')) { 
+                $dokumenService->saveLinks($request->input('lampiran_links'), $riwayat, 'lampiran'); 
             }
 
             DB::commit();
-            return redirect()->route('rehab.pasien.show', $pasien->id)->with('success', 'Riwayat Rehabilitasi Baru Berhasil Ditambahkan.');
+            return redirect()
+                ->route('rehab.pasien.show', $pasien->id)
+                ->with('success', 'Riwayat Rehabilitasi Baru Berhasil Ditambahkan.');
+                
         } catch (\Exception $e) {
             DB::rollBack();
-            foreach ($uploadedPaths as $path) { Storage::disk(config('filesystems.default'))->delete($path); }
-            return back()->with('error', 'Gagal menambahkan riwayat kedatangan.')->withInput();
+            foreach ($uploadedPaths as $path) { 
+                Storage::disk(config('filesystems.default'))->delete($path); 
+            }
+            return back()
+                ->with('error', 'Gagal menambahkan riwayat kedatangan.')
+                ->withInput();
         }
     }
 
     public function editRiwayat($id)
     {
         $riwayat = RehabRiwayat::with(['pasien', 'narkotika', 'dokumen'])->findOrFail($id);
-        if (!Auth::user()->isAdmin() && $riwayat->pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
+        if (!Auth::user()->isAdmin() && $riwayat->pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) {
+            abort(403);
+        }
 
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
         return view('rehab.pasien.edit_riwayat', compact('riwayat', 'masterNarkotika'));
@@ -309,27 +374,23 @@ class RehabPasienController extends Controller
     public function updateRiwayat(Request $request, DokumenService $dokumenService, $id)
     {
         $riwayat = RehabRiwayat::findOrFail($id);
-        if (!Auth::user()->isAdmin() && $riwayat->pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
+        if (!Auth::user()->isAdmin() && $riwayat->pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) {
+            abort(403);
+        }
 
         $request->validate([
             'tanggal_rehab' => 'required|date',
-            'usia' => 'required|integer|min:1',
             'pendidikan' => 'required|string',
             'pekerjaan' => 'required|string',
-            'sumber_pasien' => 'required|in:Voluntary,Compulsory',
+            'sumber_pasien' => 'required|string',
             'narkotika_ids' => 'required|array|min:1',
-
-            'delete_files'         => 'nullable|array', 
-            'dokumentasi'          => 'nullable|array',
-            'lampiran'             => 'nullable|array',
-            'dokumentasi_links'    => 'nullable|array',
-            'dokumentasi_links.*.nama' => 'required_with:dokumentasi_links.*.url|nullable|string|max:255',
-            'dokumentasi_links.*.url'  => 'required_with:dokumentasi_links.*.nama|nullable|url',
-            'lampiran_links'       => 'nullable|array',
-            'lampiran_links.*.nama' => 'required_with:lampiran_links.*.url|nullable|string|max:255',
-            'lampiran_links.*.url'  => 'required_with:lampiran_links.*.nama|nullable|url',
+            'delete_files' => 'nullable|array', 
+            'dokumentasi' => 'nullable|array',
+            'lampiran' => 'nullable|array',
+            'dokumentasi_links' => 'nullable|array',
+            'lampiran_links' => 'nullable|array',
         ]);
-
+                        
         $newFilesMoved = [];
         $filesToDelete = [];
 
@@ -337,7 +398,6 @@ class RehabPasienController extends Controller
         try {
             $riwayat->update([
                 'tanggal_rehab' => $request->tanggal_rehab,
-                'usia' => $request->usia,
                 'pendidikan' => $request->pendidikan,
                 'pekerjaan' => $request->pekerjaan,
                 'sumber_pasien' => $request->sumber_pasien,
@@ -352,33 +412,46 @@ class RehabPasienController extends Controller
                 }
             }
 
-            if ($request->filled('dokumentasi')) {
-                $dokumenService->moveToPermanent($request->input('dokumentasi'), $riwayat, 'dokumentasi', $newFilesMoved);
+            if ($request->filled('dokumentasi')) { 
+                $dokumenService->moveToPermanent(
+                    $request->input('dokumentasi'), $riwayat, 'dokumentasi', $newFilesMoved
+                ); 
             }
-            if ($request->filled('lampiran')) {
-                $dokumenService->moveToPermanent($request->input('lampiran'), $riwayat, 'lampiran', $newFilesMoved);
+            if ($request->filled('lampiran')) { 
+                $dokumenService->moveToPermanent(
+                    $request->input('lampiran'), $riwayat, 'lampiran', $newFilesMoved
+                ); 
             }
-            if ($request->filled('dokumentasi_links')) {
-                $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi');
+            if ($request->filled('dokumentasi_links')) { 
+                $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi'); 
             }
-            if ($request->filled('lampiran_links')) {
-                $dokumenService->saveLinks($request->input('lampiran_links'), $riwayat, 'lampiran');
+            if ($request->filled('lampiran_links')) { 
+                $dokumenService->saveLinks($request->input('lampiran_links'), $riwayat, 'lampiran'); 
             }
 
             DB::commit();
 
             foreach ($filesToDelete as $path) {
-                if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                }
             }
 
             if ($request->query('ref') === 'index') {
-                return redirect()->route('rehab.pasien.index')->with('success', 'Data Riwayat Kedatangan berhasil diperbarui.');
+                return redirect()
+                    ->route('rehab.pasien.index')
+                    ->with('success', 'Data Riwayat Kedatangan berhasil diperbarui.');
             }
-            return redirect()->route('rehab.pasien.show', $riwayat->rehab_pasien_id)->with('success', 'Data Riwayat Kedatangan berhasil diperbarui.');
+            
+            return redirect()
+                ->route('rehab.pasien.show', $riwayat->rehab_pasien_id)
+                ->with('success', 'Data Riwayat Kedatangan berhasil diperbarui.');
         
         } catch (\Exception $e) {
             DB::rollBack();
-            foreach ($newFilesMoved as $path) { Storage::disk('public')->exists($path) && Storage::disk('public')->delete($path); }
+            foreach ($newFilesMoved as $path) { 
+                if(Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path); 
+            }
             return back()->with('error', 'Gagal memperbarui riwayat kedatangan.')->withInput();
         }
     }
@@ -389,7 +462,9 @@ class RehabPasienController extends Controller
         $pasienId = $riwayat->rehab_pasien_id;
         
         $pasien = RehabPasien::findOrFail($pasienId);
-        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) abort(403);
+        if (!Auth::user()->isAdmin() && $pasien->satuan_kerja_id !== Auth::user()->getSatkerId()) {
+            abort(403);
+        }
 
         $filesToDelete = [];
         foreach ($riwayat->dokumen()->cursor() as $doc) {

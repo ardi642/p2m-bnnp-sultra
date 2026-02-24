@@ -1,11 +1,14 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\HasDokumen;
 
 class RehabRiwayat extends Model
 {
     use HasDokumen;
+
     protected $table = 'rehab_riwayat';
     protected $guarded = ['id'];
     protected $casts = [
@@ -17,7 +20,19 @@ class RehabRiwayat extends Model
     }
 
     public function narkotika() {
-        // Relasi pivot langsung ke master Narkotika
-        return $this->belongsToMany(BerantasNarkotika::class, 'rehab_riwayat_narkotika', 'rehab_riwayat_id', 'narkotika_id');
+        return $this->belongsToMany(
+            BerantasNarkotika::class, 
+            'rehab_riwayat_narkotika', 
+            'rehab_riwayat_id', 
+            'narkotika_id'
+        );
+    }
+
+    public function getUsiaSaatRehabAttribute() {
+        if ($this->pasien && $this->pasien->tanggal_lahir && $this->tanggal_rehab) {
+            // (int) akan otomatis membuang angka desimal di belakang koma
+            return (int) $this->pasien->tanggal_lahir->diffInYears($this->tanggal_rehab);
+        }
+        return 0;
     }
 }

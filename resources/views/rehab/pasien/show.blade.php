@@ -10,7 +10,7 @@
                     <i class="bi bi-check-circle-fill text-success fs-3 me-3"></i>
                     <div>
                         <div class="fw-bold fs-5 text-success">{{ session('success') }}</div>
-                        <div class="text-muted small mt-1">Sistem berhasil memproses data rekam medis pasien.</div>
+                        <div class="text-muted small mt-1">Sistem berhasil memproses data pasien.</div>
                     </div>
                 </div>
             </div>
@@ -62,7 +62,7 @@
                 <div class="card border-0 shadow-sm" x-data="{ expanded: [] }">
                     <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                         <h5 class="card-title fw-bold text-dark m-0">
-                            <i class="bi bi-clock-history me-2"></i>Histori Perjalanan Rehabilitasi
+                            <i class="bi bi-clock-history me-2"></i>Riwayat Rehabilitasi pasien
                         </h5>
                         <div>
                             @if (auth()->user()->hasRole(['operator_satker', 'operator_rehab', 'admin']))

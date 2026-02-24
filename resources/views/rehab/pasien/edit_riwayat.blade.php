@@ -123,8 +123,10 @@
                             <i class="bi bi-cloud-arrow-up me-2"></i>Kelola File & Link
                         </label>
                         <div class="row g-3">
+                            
+                            {{-- KOLOM KIRI: DOKUMENTASI --}}
                             <div class="col-12 col-md-6">
-                                {{-- OLD FOTOS --}}
+                                {{-- FOTO TERSIMPAN --}}
                                 @php $oldFotos = $riwayat->dokumen->where('kategori', 'dokumentasi'); @endphp
                                 @if($oldFotos->count() > 0)
                                     <div class="card bg-white border border-dashed mb-3 shadow-sm">
@@ -132,16 +134,32 @@
                                             <h6 class="fw-bold text-primary mb-3"><i class="bi bi-images me-2"></i>Dokumentasi Tersimpan</h6>
                                             <div class="row g-2">
                                                 @foreach($oldFotos as $doc)
-                                                    @php $isMarkedDeleted = old('delete_files') && in_array($doc->id, old('delete_files')); @endphp
+                                                    @php 
+                                                        $isMarkedDeleted = old('delete_files') && in_array($doc->id, old('delete_files')); 
+                                                        $isImage = !$doc->is_link && in_array(strtolower(pathinfo($doc->path_file, PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp','gif']);
+                                                    @endphp
                                                     <div class="col-6 file-item" id="file-card-{{ $doc->id }}">
-                                                        <div class="card h-100 border-secondary-subtle file-card-inner {{ $isMarkedDeleted ? 'border-danger-thick' : '' }}">
-                                                            <div class="delete-overlay position-absolute w-100 h-100 {{ $isMarkedDeleted ? 'd-flex' : 'd-none' }} flex-column justify-content-center align-items-center text-center bg-white opacity-75" style="z-index:5;">
-                                                                <i class="bi bi-trash3-fill text-danger fs-3"></i>
+                                                        <div class="card h-100 border-secondary-subtle file-card-inner overflow-hidden {{ $isMarkedDeleted ? 'border-danger border-2' : '' }}">
+                                                            
+                                                            {{-- Preview Area (Gambar / Ikon) --}}
+                                                            <div class="position-relative border-bottom bg-light d-flex justify-content-center align-items-center" style="height: 120px;">
+                                                                {{-- Overlay Hapus - Hanya menutupi area gambar --}}
+                                                                <div class="delete-overlay position-absolute w-100 h-100 {{ $isMarkedDeleted ? 'd-flex' : 'd-none' }} flex-column justify-content-center align-items-center text-center" style="background-color: rgba(255,255,255,0.85); z-index:5;">
+                                                                    <i class="bi bi-trash3-fill text-danger" style="font-size: 2.5rem;"></i>
+                                                                </div>
+
+                                                                @if($isImage)
+                                                                    <img src="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" class="w-100 h-100" style="object-fit: cover;" alt="Preview">
+                                                                @else
+                                                                    <i class="bi {{ $doc->is_link ? 'bi-link-45deg text-primary' : 'bi-file-earmark-text text-secondary' }}" style="font-size: 3rem;"></i>
+                                                                @endif
                                                             </div>
-                                                            <div class="card-body p-2 text-center">
-                                                                <div class="small text-truncate fw-bold">{{ $doc->nama_file_asli }}</div>
-                                                                <button type="button" id="btn-delete-{{ $doc->id }}" class="btn btn-sm w-100 mt-2 {{ $isMarkedDeleted ? 'btn-secondary' : 'btn-outline-danger' }}" onclick="markForDeletion({{ $doc->id }})">
-                                                                    @if($isMarkedDeleted) Batal @else Hapus @endif
+
+                                                            {{-- Card Body (Aman dari overlay transparan) --}}
+                                                            <div class="card-body p-2 text-center file-card-body {{ $isMarkedDeleted ? 'bg-danger bg-opacity-10' : 'bg-white' }}" style="z-index: 10;">
+                                                                <div class="small text-truncate fw-bold mb-2" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</div>
+                                                                <button type="button" id="btn-delete-{{ $doc->id }}" class="btn btn-sm w-100 {{ $isMarkedDeleted ? 'btn-secondary' : 'btn-outline-danger' }}" onclick="markForDeletion({{ $doc->id }})">
+                                                                    @if($isMarkedDeleted) Batal Hapus @else Hapus @endif
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -152,7 +170,8 @@
                                     </div>
                                 @endif
 
-                                <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
+                                {{-- TAMBAH FOTO BARU (TIDAK MEMANJANG) --}}
+                                <div class="bg-white p-3 rounded border shadow-sm">
                                     <label class="form-label fw-bold small text-primary mb-1">Tambah Dokumentasi Baru</label>
                                     <div class="mb-3"><input type="file" id="fp-dokumentasi" name="dokumentasi[]" multiple></div>
                                     <hr class="border-secondary-subtle my-3">
@@ -170,8 +189,9 @@
                                 </div>
                             </div>
 
+                            {{-- KOLOM KANAN: LAMPIRAN --}}
                             <div class="col-12 col-md-6">
-                                {{-- OLD LAMPIRAN --}}
+                                {{-- LAMPIRAN TERSIMPAN --}}
                                 @php $oldLampirans = $riwayat->dokumen->where('kategori', 'lampiran'); @endphp
                                 @if($oldLampirans->count() > 0)
                                     <div class="card bg-white border border-dashed mb-3 shadow-sm">
@@ -179,16 +199,32 @@
                                             <h6 class="fw-bold text-danger mb-3"><i class="bi bi-paperclip me-2"></i>Lampiran Tersimpan</h6>
                                             <div class="row g-2">
                                                 @foreach($oldLampirans as $doc)
-                                                    @php $isMarkedDeleted = old('delete_files') && in_array($doc->id, old('delete_files')); @endphp
+                                                    @php 
+                                                        $isMarkedDeleted = old('delete_files') && in_array($doc->id, old('delete_files')); 
+                                                        $isImage = !$doc->is_link && in_array(strtolower(pathinfo($doc->path_file, PATHINFO_EXTENSION)), ['jpg','jpeg','png','webp','gif']);
+                                                    @endphp
                                                     <div class="col-6 file-item" id="file-card-{{ $doc->id }}">
-                                                        <div class="card h-100 border-secondary-subtle file-card-inner {{ $isMarkedDeleted ? 'border-danger-thick' : '' }}">
-                                                            <div class="delete-overlay position-absolute w-100 h-100 {{ $isMarkedDeleted ? 'd-flex' : 'd-none' }} flex-column justify-content-center align-items-center text-center bg-white opacity-75" style="z-index:5;">
-                                                                <i class="bi bi-trash3-fill text-danger fs-3"></i>
+                                                        <div class="card h-100 border-secondary-subtle file-card-inner overflow-hidden {{ $isMarkedDeleted ? 'border-danger border-2' : '' }}">
+                                                            
+                                                            {{-- Preview Area (Gambar / Ikon) --}}
+                                                            <div class="position-relative border-bottom bg-light d-flex justify-content-center align-items-center" style="height: 120px;">
+                                                                {{-- Overlay Hapus - Hanya menutupi area gambar --}}
+                                                                <div class="delete-overlay position-absolute w-100 h-100 {{ $isMarkedDeleted ? 'd-flex' : 'd-none' }} flex-column justify-content-center align-items-center text-center" style="background-color: rgba(255,255,255,0.85); z-index:5;">
+                                                                    <i class="bi bi-trash3-fill text-danger" style="font-size: 2.5rem;"></i>
+                                                                </div>
+
+                                                                @if($isImage)
+                                                                    <img src="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" class="w-100 h-100" style="object-fit: cover;" alt="Preview">
+                                                                @else
+                                                                    <i class="bi {{ $doc->is_link ? 'bi-link-45deg text-primary' : (Str::contains($doc->tipe_file, 'pdf') ? 'bi-file-pdf text-danger' : 'bi-file-earmark-text text-secondary') }}" style="font-size: 3rem;"></i>
+                                                                @endif
                                                             </div>
-                                                            <div class="card-body p-2 text-center">
-                                                                <div class="small text-truncate fw-bold">{{ $doc->nama_file_asli }}</div>
-                                                                <button type="button" id="btn-delete-{{ $doc->id }}" class="btn btn-sm w-100 mt-2 {{ $isMarkedDeleted ? 'btn-secondary' : 'btn-outline-danger' }}" onclick="markForDeletion({{ $doc->id }})">
-                                                                    @if($isMarkedDeleted) Batal @else Hapus @endif
+
+                                                            {{-- Card Body (Aman dari overlay transparan) --}}
+                                                            <div class="card-body p-2 text-center file-card-body {{ $isMarkedDeleted ? 'bg-danger bg-opacity-10' : 'bg-white' }}" style="z-index: 10;">
+                                                                <div class="small text-truncate fw-bold mb-2" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</div>
+                                                                <button type="button" id="btn-delete-{{ $doc->id }}" class="btn btn-sm w-100 {{ $isMarkedDeleted ? 'btn-secondary' : 'btn-outline-danger' }}" onclick="markForDeletion({{ $doc->id }})">
+                                                                    @if($isMarkedDeleted) Batal Hapus @else Hapus @endif
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -199,7 +235,8 @@
                                     </div>
                                 @endif
 
-                                <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
+                                {{-- TAMBAH LAMPIRAN BARU (TIDAK MEMANJANG) --}}
+                                <div class="bg-white p-3 rounded border shadow-sm">
                                     <label class="form-label fw-bold small text-danger mb-1">Tambah Lampiran Baru</label>
                                     <div class="mb-3"><input type="file" id="fp-lampiran" name="lampiran[]" multiple></div>
                                     <hr class="border-secondary-subtle my-3">
@@ -216,8 +253,11 @@
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
+                    
+                    {{-- Input hidden untuk file yang dihapus --}}
                     <div id="delete-inputs-container">
                         @if(old('delete_files'))
                             @foreach(old('delete_files') as $deletedId)
@@ -228,8 +268,9 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-end gap-2 mt-4 pb-5">
-                <button type="reset" class="btn btn-light border px-4 py-2">Kembalikan Semula</button>
+            {{-- TOMBOL SUBMIT DIBUNGKUS KOTAK PUTIH UTUH AGAR TIDAK BLEEDING --}}
+            <div class="bg-white p-3 rounded-3 border d-flex justify-content-end gap-2 mt-4 shadow-sm">
+                <button type="button" onclick="window.location.reload();" class="btn btn-light border px-4 py-2 shadow-sm">Reset</button>
                 <button type="submit" id="btn-submit" class="btn btn-primary px-5 py-2 fw-bold shadow-sm">Simpan Perubahan</button>
             </div>
         </form>
@@ -252,7 +293,7 @@
     document.addEventListener("DOMContentLoaded", function() { 
         new TomSelect('#select-narko', { plugins: ['remove_button', 'clear_button'], create: false }); 
 
-if (window.FilePondManager) {
+        if (window.FilePondManager) {
             const commonConfig = { 
                 uploadRoute: '{{ route('upload.temp') }}', 
                 revertRoute: '{{ route('revert.temp') }}', 
@@ -260,20 +301,16 @@ if (window.FilePondManager) {
                 csrfToken: '{{ csrf_token() }}', 
                 submitBtnId: 'btn-submit' 
             };
-            
-            // Cukup gunakan @json(old()) dipadukan dengan || [] dan .filter(Boolean) dari JavaScript
             window.FilePondManager.create('#fp-dokumentasi', { 
                 ...commonConfig, 
                 maxSize: '10MB', 
-                existingFiles: (@json(old('dokumentasi')) || []).filter(Boolean)
+                existingFiles: (@json(old('dokumentasi')) || []).filter(Boolean) 
             });
-            
             window.FilePondManager.create('#fp-lampiran', { 
                 ...commonConfig, 
                 maxSize: '10MB', 
-                existingFiles: (@json(old('lampiran')) || []).filter(Boolean)
+                existingFiles: (@json(old('lampiran')) || []).filter(Boolean) 
             });
-            
             window.FilePondManager.attachFormSubmit('form-edit-riwayat', 'btn-submit');
         }
     });
@@ -289,23 +326,37 @@ if (window.FilePondManager) {
     window.markForDeletion = function(id) {
         const cardInner = document.querySelector('#file-card-' + id + ' .file-card-inner');
         const overlay = cardInner.querySelector('.delete-overlay');
+        const cardBody = cardInner.querySelector('.file-card-body');
         const btnDelete = document.getElementById('btn-delete-' + id);
         const containerInputs = document.getElementById('delete-inputs-container');
         
         if (!overlay.classList.contains('d-none')) {
-            overlay.classList.add('d-none'); overlay.classList.remove('d-flex');
-            cardInner.classList.remove('border-danger-thick');
-            btnDelete.classList.remove('btn-secondary'); btnDelete.classList.add('btn-outline-danger');
+            // Proses Batalkan Hapus (Kembali Normal)
+            overlay.classList.add('d-none'); 
+            overlay.classList.remove('d-flex');
+            cardInner.classList.remove('border-danger', 'border-2');
+            cardBody.classList.remove('bg-danger', 'bg-opacity-10');
+            cardBody.classList.add('bg-white');
+            btnDelete.classList.remove('btn-secondary'); 
+            btnDelete.classList.add('btn-outline-danger');
             btnDelete.innerHTML = 'Hapus';
             const input = document.getElementById('input-delete-' + id);
             if(input) input.remove();
         } else {
-            overlay.classList.remove('d-none'); overlay.classList.add('d-flex');
-            cardInner.classList.add('border-danger-thick');
-            btnDelete.classList.remove('btn-outline-danger'); btnDelete.classList.add('btn-secondary');
-            btnDelete.innerHTML = 'Batal';
+            // Proses Tandai Hapus (Jadi Merah)
+            overlay.classList.remove('d-none'); 
+            overlay.classList.add('d-flex');
+            cardInner.classList.add('border-danger', 'border-2');
+            cardBody.classList.remove('bg-white');
+            cardBody.classList.add('bg-danger', 'bg-opacity-10');
+            btnDelete.classList.remove('btn-outline-danger'); 
+            btnDelete.classList.add('btn-secondary');
+            btnDelete.innerHTML = 'Batal Hapus';
             const input = document.createElement('input');
-            input.type = 'hidden'; input.name = 'delete_files[]'; input.value = id; input.id = 'input-delete-' + id;
+            input.type = 'hidden'; 
+            input.name = 'delete_files[]'; 
+            input.value = id; 
+            input.id = 'input-delete-' + id;
             containerInputs.appendChild(input);
         }
     };

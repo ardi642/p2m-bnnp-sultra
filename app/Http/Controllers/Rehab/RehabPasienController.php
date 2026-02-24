@@ -25,10 +25,7 @@ class RehabPasienController extends Controller
     private function generateIdPasien($nama, $tglLahir, $jk) 
     {
         $namaBersih = strtoupper(trim($nama));
-        
-        // Ubah baris di bawah ini (tambahkan tanda strip)
-        $tgl = date('d-m-Y', strtotime($tglLahir)); 
-        
+        $tgl = date('d-m-Y', strtotime($tglLahir));
         $kodeJk = $jk === 'Laki-laki' ? 'L' : 'P';
         
         return "{$namaBersih}-{$tgl}-{$kodeJk}";
@@ -93,6 +90,9 @@ class RehabPasienController extends Controller
         if ($sortBy === 'satuan_kerja_id') {
             $query->join('satuan_kerja', 'rehab_pasien.satuan_kerja_id', '=', 'satuan_kerja.id')
                   ->orderBy('satuan_kerja.satuan_kerja', $sortOrder);
+        } elseif ($sortBy === 'usia') {
+            // Logika sorting khusus untuk usia menggunakan DATEDIFF di SQL
+            $query->orderByRaw("DATEDIFF(rehab_riwayat.tanggal_rehab, rehab_pasien.tanggal_lahir) {$sortOrder}");
         } elseif (in_array($sortBy, $pasienSorts)) {
             $query->orderBy('rehab_pasien.' . $sortBy, $sortOrder);
         } elseif (in_array($sortBy, $riwayatSorts)) {
@@ -110,6 +110,13 @@ class RehabPasienController extends Controller
         $satuanKerjas = $user->isAdmin() ? SatuanKerja::orderBy('satuan_kerja')->get() : [];
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
         
+        // Mengambil semua nama pekerjaan dari database (termasuk yang diinput manual)
+        $pekerjaans = RehabRiwayat::select('pekerjaan')
+            ->whereNotNull('pekerjaan')
+            ->distinct()
+            ->orderBy('pekerjaan')
+            ->pluck('pekerjaan');
+        
         $years = RehabRiwayat::selectRaw('YEAR(tanggal_rehab) as year')
             ->distinct()
             ->orderBy('year', 'desc')
@@ -126,7 +133,7 @@ class RehabPasienController extends Controller
         $data = $query->paginate($perPage)->withQueryString();
 
         return view('rehab.pasien.index', compact(
-            'data', 'satuanKerjas', 'masterNarkotika', 'years'
+            'data', 'satuanKerjas', 'masterNarkotika', 'years', 'pekerjaans'
         ));
     }
 
@@ -149,9 +156,9 @@ class RehabPasienController extends Controller
             'tanggal_rehab' => 'required|date',
             'pendidikan' => 'required|string',
             'pekerjaan' => 'required|string',
+            'pekerjaan_lainnya' => 'required_if:pekerjaan,Lainnya|nullable|string|max:255',
             'sumber_pasien' => 'required|string',
             'narkotika_ids' => 'required|array|min:1',
-            
             'dokumentasi' => 'nullable|array', 
             'lampiran' => 'nullable|array',
             'dokumentasi_links' => 'nullable|array',
@@ -164,6 +171,10 @@ class RehabPasienController extends Controller
 
         $satkerId = $user->isAdmin() ? $request->satuan_kerja_id : $user->getSatkerId();
                         
+        $pekerjaanFix = $request->pekerjaan === 'Lainnya' 
+                        ? $request->pekerjaan_lainnya 
+                        : $request->pekerjaan;
+
         $idPasienBaru = $this->generateIdPasien(
             $request->nama_pasien, 
             $request->tanggal_lahir, 
@@ -185,21 +196,17 @@ class RehabPasienController extends Controller
             $riwayat = $pasien->riwayat()->create([
                 'tanggal_rehab' => $request->tanggal_rehab,
                 'pendidikan' => $request->pendidikan,
-                'pekerjaan' => $request->pekerjaan,
+                'pekerjaan' => $pekerjaanFix,
                 'sumber_pasien' => $request->sumber_pasien,
             ]);
 
             $riwayat->narkotika()->sync($request->narkotika_ids);
 
             if ($request->filled('dokumentasi')) { 
-                $dokumenService->moveToPermanent(
-                    $request->input('dokumentasi'), $riwayat, 'dokumentasi', $uploadedPaths
-                ); 
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $riwayat, 'dokumentasi', $uploadedPaths); 
             }
             if ($request->filled('lampiran')) { 
-                $dokumenService->moveToPermanent(
-                    $request->input('lampiran'), $riwayat, 'lampiran', $uploadedPaths
-                ); 
+                $dokumenService->moveToPermanent($request->input('lampiran'), $riwayat, 'lampiran', $uploadedPaths); 
             }
             if ($request->filled('dokumentasi_links')) { 
                 $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi'); 
@@ -306,6 +313,7 @@ class RehabPasienController extends Controller
             'tanggal_rehab' => 'required|date',
             'pendidikan' => 'required|string',
             'pekerjaan' => 'required|string',
+            'pekerjaan_lainnya' => 'required_if:pekerjaan,Lainnya|nullable|string|max:255',
             'sumber_pasien' => 'required|string',
             'narkotika_ids' => 'required|array|min:1',
             'dokumentasi' => 'nullable|array', 
@@ -313,6 +321,10 @@ class RehabPasienController extends Controller
             'dokumentasi_links' => 'nullable|array',
             'lampiran_links' => 'nullable|array',
         ]);
+
+        $pekerjaanFix = $request->pekerjaan === 'Lainnya' 
+                        ? $request->pekerjaan_lainnya 
+                        : $request->pekerjaan;
                         
         $uploadedPaths = [];
 
@@ -321,21 +333,17 @@ class RehabPasienController extends Controller
             $riwayat = $pasien->riwayat()->create([
                 'tanggal_rehab' => $request->tanggal_rehab,
                 'pendidikan' => $request->pendidikan,
-                'pekerjaan' => $request->pekerjaan,
+                'pekerjaan' => $pekerjaanFix,
                 'sumber_pasien' => $request->sumber_pasien,
             ]);
             
             $riwayat->narkotika()->sync($request->narkotika_ids);
 
             if ($request->filled('dokumentasi')) { 
-                $dokumenService->moveToPermanent(
-                    $request->input('dokumentasi'), $riwayat, 'dokumentasi', $uploadedPaths
-                ); 
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $riwayat, 'dokumentasi', $uploadedPaths); 
             }
             if ($request->filled('lampiran')) { 
-                $dokumenService->moveToPermanent(
-                    $request->input('lampiran'), $riwayat, 'lampiran', $uploadedPaths
-                ); 
+                $dokumenService->moveToPermanent($request->input('lampiran'), $riwayat, 'lampiran', $uploadedPaths); 
             }
             if ($request->filled('dokumentasi_links')) { 
                 $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi'); 
@@ -382,6 +390,7 @@ class RehabPasienController extends Controller
             'tanggal_rehab' => 'required|date',
             'pendidikan' => 'required|string',
             'pekerjaan' => 'required|string',
+            'pekerjaan_lainnya' => 'required_if:pekerjaan,Lainnya|nullable|string|max:255',
             'sumber_pasien' => 'required|string',
             'narkotika_ids' => 'required|array|min:1',
             'delete_files' => 'nullable|array', 
@@ -390,6 +399,10 @@ class RehabPasienController extends Controller
             'dokumentasi_links' => 'nullable|array',
             'lampiran_links' => 'nullable|array',
         ]);
+
+        $pekerjaanFix = $request->pekerjaan === 'Lainnya' 
+                        ? $request->pekerjaan_lainnya 
+                        : $request->pekerjaan;
                         
         $newFilesMoved = [];
         $filesToDelete = [];
@@ -399,7 +412,7 @@ class RehabPasienController extends Controller
             $riwayat->update([
                 'tanggal_rehab' => $request->tanggal_rehab,
                 'pendidikan' => $request->pendidikan,
-                'pekerjaan' => $request->pekerjaan,
+                'pekerjaan' => $pekerjaanFix,
                 'sumber_pasien' => $request->sumber_pasien,
             ]);
             $riwayat->narkotika()->sync($request->narkotika_ids);
@@ -413,14 +426,10 @@ class RehabPasienController extends Controller
             }
 
             if ($request->filled('dokumentasi')) { 
-                $dokumenService->moveToPermanent(
-                    $request->input('dokumentasi'), $riwayat, 'dokumentasi', $newFilesMoved
-                ); 
+                $dokumenService->moveToPermanent($request->input('dokumentasi'), $riwayat, 'dokumentasi', $newFilesMoved); 
             }
             if ($request->filled('lampiran')) { 
-                $dokumenService->moveToPermanent(
-                    $request->input('lampiran'), $riwayat, 'lampiran', $newFilesMoved
-                ); 
+                $dokumenService->moveToPermanent($request->input('lampiran'), $riwayat, 'lampiran', $newFilesMoved); 
             }
             if ($request->filled('dokumentasi_links')) { 
                 $dokumenService->saveLinks($request->input('dokumentasi_links'), $riwayat, 'dokumentasi'); 

@@ -57,7 +57,7 @@
             </div>
 
             <div class="d-flex justify-content-end gap-2 mt-4 pb-5">
-                <button type="reset" class="btn btn-light border px-4 py-2">Kembalikan Semula</button>
+                <button type="reset" onclick="window.location.reload();" class="btn btn-light border px-4 py-2">Reset</button>
                 <button type="submit" class="btn btn-primary px-5 py-2 fw-bold shadow-sm">Simpan Perubahan</button>
             </div>
         </form>

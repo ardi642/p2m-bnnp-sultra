@@ -27,17 +27,15 @@
 
 <main class="admin-main" x-data="{ showFilter: true }">
     <div class="container-fluid p-4 p-lg-5">
+        
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="h3 mb-1 fw-bold text-dark">Data Pasien Rehabilitasi</h1>
                 <p class="text-muted mb-0">Kelola Riwayat Rekam Medis Pasien Narkotika</p>
             </div>
-            
-            @if (auth()->user()->hasRole(['operator_satker', 'operator_rehab']))
             <a href="{{ route('rehab.pasien.create') }}" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm">
                 <i class="bi bi-person-plus-fill"></i> Tambah Pasien Baru
             </a>
-            @endif
         </div>
 
         @if(session('success'))
@@ -123,8 +121,9 @@
                             
                             <div class="col-md-3">
                                 <label class="form-label fw-bold small text-secondary">Pekerjaan</label>
-                                <select id="sel-kerja" name="pekerjaan[]" multiple placeholder="Pilih Pekerjaan...">
-                                    @foreach(\App\Constants\Pekerjaan::ALL as $p) 
+                                {{-- Menampilkan list semua pekerjaan (termasuk yang manual) dari Database --}}
+                                <select id="sel-kerja" name="pekerjaan[]" multiple placeholder="Pilih/Ketik Pekerjaan...">
+                                    @foreach($pekerjaans as $p) 
                                         <option value="{{ $p }}" {{ in_array($p, request('pekerjaan', [])) ? 'selected' : '' }}>{{ $p }}</option> 
                                     @endforeach
                                 </select>
@@ -173,7 +172,8 @@
                                 <th class="py-3 bg-light">{!! $sortLink('nama_pasien', 'Nama Pasien') !!}</th>
                                 <th class="py-3 bg-light">{!! $sortLink('jenis_kelamin', 'Jenis Kelamin') !!}</th>
                                 <th class="py-3 bg-light">{!! $sortLink('tanggal_rehab', 'Tgl Masuk Rehab') !!}</th>
-                                <th class="py-3 bg-light text-center">Usia Masuk</th>
+                                {{-- Perubahan sort parameter menjadi 'usia' agar ditangkap DATEDIFF di Controller --}}
+                                <th class="py-3 bg-light text-center">{!! $sortLink('usia', 'Usia Masuk') !!}</th>
                                 <th class="py-3 bg-light">{!! $sortLink('pekerjaan', 'Pekerjaan') !!}</th>
                                 <th class="py-3 bg-light">{!! $sortLink('pendidikan', 'Pendidikan') !!}</th>
                                 <th class="py-3 bg-light">{!! $sortLink('sumber_pasien', 'Sumber') !!}</th>

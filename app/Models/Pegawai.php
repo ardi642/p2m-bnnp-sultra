@@ -118,4 +118,16 @@ class Pegawai extends Model
             'id'
         )->withTimestamps();
     }
+
+    public function p2mRts(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            P2mRts::class,
+            'pegawai_p2m_rts',
+            'pegawai_nip',
+            'p2m_rts_id',
+            'nip',
+            'id'
+        )->withTimestamps();
+    }
 }

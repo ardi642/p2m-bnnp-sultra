@@ -30,22 +30,19 @@
 
                 @foreach([
                     ['route' => 'p2m.informasi-edukasi.index', 'label' => 'Informasi dan Edukasi', 'url' => 'p2m/informasi-edukasi*'],
-                    // ['route' => 'p2m.upacara.index', 'label' => 'Upacara', 'url' => 'p2m/upacara*'],
-                    // ['route' => 'p2m.kie.index', 'label' => 'KIE', 'url' => 'p2m/kie*'],
-                    // ['route' => 'p2m.lingkungan-bersinar.index', 'label' => 'Lingkungan Bersinar', 'url' => 'p2m/lingkungan-bersinar*'],
-                    // ['route' => 'p2m.cfd.index', 'label' => 'Car Free Day', 'url' => 'p2m/cfd*'],
                     ['route' => 'p2m.elektronik.index', 'label' => 'Media Elektronik', 'url' => 'p2m/elektronik*'],
                     ['route' => 'p2m.non-elektronik.index', 'label' => 'Media Non-Elektronik', 'url' => 'p2m/non-elektronik*'],
                     ['route' => 'p2m.online.index', 'label' => 'Media Online', 'url' => 'p2m/online*'],
                     ['route' => 'p2m.tes-urine.index', 'label' => 'Tes Urine', 'url' => 'p2m/tes-urine*'],
                     ['route' => 'p2m.desa-kelurahan-bersinar.index', 'label' => 'Desa / Kelurahan Bersinar', 'url' => 'p2m/desa-kelurahan-bersinar*'],
                     ['route' => 'p2m.asistensi-relawan.index', 'label' => 'Asistensi Relawan', 'url' => 'p2m/asistensi-relawan*'],
-                    // ['route' => 'p2m.safari-religi.index', 'label' => 'Safari Religi', 'url' => 'p2m/safari-religi*'],
                     ['route' => 'p2m.pelatihan.index', 'label' => 'Pelatihan Soft Skill', 'url' => 'p2m/pelatihan*'],
+                    ['route' => 'p2m.rts.index', 'label' => 'Remaja Teman Sebaya', 'url' => 'p2m/rts*'],
                     ['route' => 'p2m.keluarga.index', 'label' => 'Ketahanan Keluarga', 'url' => 'p2m/keluarga*'],
-                    ['route' => 'p2m.monev.index', 'label' => 'Monitoring dan Evaluasi', 'url' => 'p2m/monev*'],
+                    ['route' => 'p2m.ikan.index', 'label' => 'Integrasi Kurikulum Anti Narkotika', 'url' => 'p2m/ikan*'],
+                    ['route' => 'p2m.monev.index', 'label' => 'Peran Serta Masyarakat', 'url' => 'p2m/monev*'],
                     ['route' => 'p2m.pemetaan-sdm-sda.index', 'label' => 'Pemetaan SDM dan SDA', 'url' => 'p2m/pemetaan-sdm-sda*'],
-                    ['route' => 'p2m.ikan.index', 'label' => 'Integrasi Kurikulum Anti Narkotika (IKAN)', 'url' => 'p2m/ikan*'],
+                    ['route' => 'p2m.pemberdayaan.index', 'label' => 'Pemberdayaan Alternatif', 'url' => 'p2m/pemberdayaan*'],
                 ] as $menu)
                     <a href="{{ route($menu['route']) }}" class="nav-link {{ Request::is($menu['url']) ? 'active' : '' }}">
                         {{ $menu['label'] }}

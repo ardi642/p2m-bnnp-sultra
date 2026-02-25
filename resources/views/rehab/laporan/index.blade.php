@@ -6,24 +6,17 @@
 {{-- LOGIKA PHP VIEW HELPER --}}
 {{-- ==================================================================== --}}
 @php
-    // 1. Setup Default Tahun
-    // KEMBALIKAN DEFAULT: Jika request kosong, gunakan tahun saat ini [date('Y')]
-    // Agar UI Dropdown langsung terpilih "2026" (bukan kosong)
     $selectedTahun = request('tahun', [date('Y')]);
-
-    // Pastikan format array agar kompatibel dengan in_array
     if (!is_array($selectedTahun)) {
         $selectedTahun = (array) $selectedTahun;
     }
 
-    // 2. Logika Badge Filter
+    // 2. Logika Badge Filter (Ditambah Triwulan)
     $activeFilters = 0;
     if (request()->filled('satuan_kerja_id')) $activeFilters++;
-    if (request()->filled('bulan')) $activeFilters++;
+    if (request()->filled('triwulan')) $activeFilters++;
+    elseif (request()->filled('bulan')) $activeFilters++; // Bulan dihitung jika triwulan kosong
     
-    // Hitung Badge Tahun:
-    // Cek berdasarkan $selectedTahun. Karena defaultnya terisi tahun ini, 
-    // maka badge akan terhitung 1 saat load awal (Sesuai request: "kalau ada tahun terselect hitung badge")
     if (!empty($selectedTahun)) $activeFilters++; 
 
     // 3. Helper Sorting Link
@@ -41,14 +34,12 @@
         return '<a href="'.$url.'" class="text-decoration-none text-secondary fw-bold d-flex align-items-center justify-content-center gap-1">'.$label.' <i class="bi '.$icon.'"></i></a>';
     };
 
-    // 4. Logic Tahun Modal & Filter
     $currYear = date('Y');
     $modalYears = [];
     for($i = $currYear + 1; $i >= $currYear - 4; $i--) {
         $modalYears[] = $i;
     }
 
-    // 5. Helper Format Angka & Persen (Nol menjadi Strip)
     $formatAngka = function($angka) {
         return $angka == 0 ? '-' : number_format($angka);
     };
@@ -58,7 +49,6 @@
     };
 @endphp
 
-{{-- ROOT ALPINE DATA --}}
 <main class="admin-main" x-data="rehabPage">
     <div class="container-fluid p-4 p-lg-5">
 
@@ -71,7 +61,6 @@
 
             <div class="d-flex gap-2">
                 @if(auth()->user()->hasRole(['admin', 'admin_satker', 'operator_satker', 'operator_rehab']))
-                {{-- TOMBOL BUKA MODAL (Via Alpine Function) --}}
                 <button type="button" 
                         class="btn btn-outline-secondary d-flex align-items-center gap-2 shadow-sm" 
                         @click="openTargetModal">
@@ -144,6 +133,15 @@
                         <div class="d-flex justify-content-between small text-muted mt-2"><span>Target: <strong>{{ number_format($stats['skhpn']['target']) }}</strong></span><span>Sisa: <strong>{{ number_format($stats['skhpn']['sisa']) }}</strong></span></div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        {{-- INFO EXCEL BANNER --}}
+        <div class="alert alert-info border-0 shadow-sm mb-4 py-3 d-flex align-items-center">
+            <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+            <div>
+                <h6 class="fw-bold mb-1">Informasi Export Data</h6>
+                <span class="small text-dark">Data Export per layanan (Excel) ditampilkan dalam format <strong>Triwulan</strong> sesuai dengan filter <strong class="text-primary">Tahun</strong> dan <strong class="text-primary">Triwulan</strong> yang aktif. Jika Triwulan kosong, semua Triwulan akan diexport. (Filter Bulan <strong>tidak</strong> digunakan pada export Excel).</span>
             </div>
         </div>
 
@@ -224,32 +222,51 @@
 
             <div class="card-body p-0 p-lg-4">
                 {{-- Form Filter --}}
-                <div x-show="showFilter" x-transition class="mb-4">
+                {{-- PERBAIKAN Z-INDEX DI SINI: Tambah 'position-relative' dan 'style="z-index: 1050;"' agar dropdown TomSelect tidak tertutup header tabel --}}
+                <div x-show="showFilter" x-transition class="mb-4 position-relative" style="z-index: 1050;">
                     <form action="{{ route('rehab.laporan.index') }}" method="GET" class="bg-light p-4 rounded border" id="form-filter">
                         <input type="hidden" name="breakdown_year" value="{{ $breakdownYear }}">
                         <div class="row g-3">
                             @if(auth()->user()->isAdmin())
-                                <div class="col-lg-4">
+                                <div class="col-lg-3">
                                     <label class="form-label fw-bold small text-secondary">Satuan Kerja</label>
                                     <div class="bg-white rounded shadow-sm"><select id="select-satker" name="satuan_kerja_id[]" multiple placeholder="Pilih Satuan Kerja...">@foreach($satuanKerjas as $sk) <option value="{{ $sk->id }}" {{ in_array($sk->id, request('satuan_kerja_id', [])) ? 'selected' : '' }}>{{ $sk->satuan_kerja }}</option> @endforeach</select></div>
                                 </div>
                             @endif
-                            <div class="{{ auth()->user()->isAdmin() ? 'col-lg-4' : 'col-md-6' }}">
+                            <div class="{{ auth()->user()->isAdmin() ? 'col-lg-3' : 'col-md-4' }}">
                                 <label class="form-label fw-bold small text-secondary">Tahun</label>
                                 <div class="bg-white rounded shadow-sm">
-                                    {{-- Menggunakan $selectedTahun yang SUDAH memiliki default tahun ini jika request kosong --}}
                                     <select id="select-tahun" name="tahun[]" multiple placeholder="Pilih Tahun...">
                                         @foreach($allYears as $y) 
-                                            {{-- Hanya selected jika value ada di array selectedTahun --}}
                                             <option value="{{ $y }}" {{ in_array($y, $selectedTahun) ? 'selected' : '' }}>{{ $y }}</option> 
                                         @endforeach
                                     </select>
                                 </div>
                             </div>
-                            <div class="{{ auth()->user()->isAdmin() ? 'col-lg-4' : 'col-md-6' }}">
-                                <label class="form-label fw-bold small text-secondary">Bulan</label>
-                                <div class="bg-white rounded shadow-sm"><select id="select-bulan" name="bulan[]" multiple placeholder="Pilih Bulan...">@foreach(range(1,12) as $m) <option value="{{ $m }}" {{ in_array($m, request('bulan', [])) ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($m)->locale('id')->translatedFormat('F') }}</option> @endforeach</select></div>
+                            
+                            {{-- Filter Triwulan Baru --}}
+                            <div class="{{ auth()->user()->isAdmin() ? 'col-lg-3' : 'col-md-4' }}">
+                                <label class="form-label fw-bold small text-secondary">Triwulan (Utama)</label>
+                                <div class="bg-white rounded shadow-sm">
+                                    <select id="select-triwulan" name="triwulan[]" multiple placeholder="Pilih Triwulan...">
+                                        <option value="1" {{ in_array(1, request('triwulan', [])) ? 'selected' : '' }}>Triwulan I (Jan-Mar)</option>
+                                        <option value="2" {{ in_array(2, request('triwulan', [])) ? 'selected' : '' }}>Triwulan II (Apr-Jun)</option>
+                                        <option value="3" {{ in_array(3, request('triwulan', [])) ? 'selected' : '' }}>Triwulan III (Jul-Sep)</option>
+                                        <option value="4" {{ in_array(4, request('triwulan', [])) ? 'selected' : '' }}>Triwulan IV (Okt-Des)</option>
+                                    </select>
+                                </div>
                             </div>
+
+                            {{-- Filter Bulan (Akan dimatikan jika Triwulan dipakai) --}}
+                            <div class="{{ auth()->user()->isAdmin() ? 'col-lg-3' : 'col-md-4' }}">
+                                <label class="form-label fw-bold small text-secondary">Bulan</label>
+                                <div class="bg-white rounded shadow-sm">
+                                    <select id="select-bulan" name="bulan[]" multiple placeholder="Pilih Bulan...">
+                                        @foreach(range(1,12) as $m) <option value="{{ $m }}" {{ in_array($m, request('bulan', [])) ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($m)->locale('id')->translatedFormat('F') }}</option> @endforeach
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="col-12 d-flex justify-content-end align-items-center pt-2 gap-2">
                                 <a href="{{ route('rehab.laporan.index') }}" class="btn btn-link btn-sm text-decoration-none text-muted">Reset</a>
                                 <button type="submit" class="btn btn-primary px-4 shadow-sm"><i class="bi bi-funnel-fill me-1"></i> Terapkan</button>
@@ -267,32 +284,31 @@
                         </button>
                         <ul class="dropdown-menu shadow border-0" style="z-index: 2000;">
                             <li>
-                                <a href="{{ route('rehab.laporan.export', array_merge(['kategori' => 'rawat_jalan'], request()->only(['tahun', 'satuan_kerja_id']))) }}" class="dropdown-item py-2">
+                                <a href="{{ route('rehab.laporan.export', array_merge(['kategori' => 'rawat_jalan'], request()->only(['tahun', 'satuan_kerja_id', 'triwulan']))) }}" class="dropdown-item py-2">
                                     Laporan Rawat Jalan
                                 </a>
                             </li>
                             <li>
-                                <a href="{{ route('rehab.laporan.export', array_merge(['kategori' => 'pasca_rehab'], request()->only(['tahun', 'satuan_kerja_id']))) }}" class="dropdown-item py-2">
+                                <a href="{{ route('rehab.laporan.export', array_merge(['kategori' => 'pasca_rehab'], request()->only(['tahun', 'satuan_kerja_id', 'triwulan']))) }}" class="dropdown-item py-2">
                                     Laporan Pasca Rehab
                                 </a>
                             </li>
                             <li>
-                                <a href="{{ route('rehab.laporan.export', array_merge(['kategori' => 'skhpn'], request()->only(['tahun', 'satuan_kerja_id']))) }}" class="dropdown-item py-2">
+                                <a href="{{ route('rehab.laporan.export', array_merge(['kategori' => 'skhpn'], request()->only(['tahun', 'satuan_kerja_id', 'triwulan']))) }}" class="dropdown-item py-2">
                                     Laporan SKHPN
                                 </a>
                             </li>
-                            {{-- MENU BARU: EXPORT DATA LENGKAP --}}
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a href="{{ route('rehab.laporan.export_full', request()->query()) }}" class="dropdown-item py-2">
-                                    <i class="bi bi-table me-2"></i>Export Data Tabel
+                                    <i class="bi bi-table me-2"></i>Export Data Tabel (Full)
                                 </a>
                             </li>
                         </ul>
                     </div>
 
                     {{-- 2. TOTAL DATA (KANAN) --}}
-                    <div class="small text-muted">Total Data: <strong>{{ $data->total() }}</strong></div>
+                    <div class="small text-muted">Total Data Tabel: <strong>{{ $data->total() }}</strong></div>
                 </div>
 
                 {{-- Tabel Data --}}
@@ -591,7 +607,6 @@
         window.location.href = url.toString();
     }
 
-    // Fungsi SweetAlert (Global)
     window.confirmDeleteLaporan = function(id) {
         Swal.fire({
             title: 'Hapus Laporan?', text: "Data tidak bisa dikembalikan!", icon: 'warning',
@@ -610,14 +625,11 @@
         Alpine.data('rehabPage', () => ({
             showBreakdown: false,
             expanded: [],
-            // Tidak perlu state isOpen untuk modal, karena pakai bootstrap native
             targetForm: { isEdit: false, id: null, tahun: '{{ date("Y") }}', satker_id: '', rj: '', pasca: '', skhpn: '' },
             
-            // Modal Instance
             modalInstance: null,
 
             init() {
-                // Inisialisasi Modal Bootstrap saat Alpine ready
                 const el = document.getElementById('targetModal');
                 if(el) this.modalInstance = new bootstrap.Modal(el);
             },
@@ -628,7 +640,6 @@
             },
             isExpanded(id) { return this.expanded.includes(id); },
 
-            // --- Modal Target Logic (BOOTSTRAP NATIVE) ---
             openTargetModal() { 
                 this.resetTargetForm(); 
                 if(this.modalInstance) this.modalInstance.show();
@@ -643,37 +654,23 @@
 
         Alpine.data('fileDownloader', () => ({
             selected: [],
-
-            isSelected(id) {
-                return this.selected.includes(id.toString()) || this.selected.includes(id);
-            },
-
+            isSelected(id) { return this.selected.includes(id.toString()) || this.selected.includes(id); },
             toggle(id) {
                 const strId = id.toString();
-                if (this.selected.includes(strId)) {
-                    this.selected = this.selected.filter(i => i !== strId);
-                } else {
-                    this.selected.push(strId);
-                }
+                if (this.selected.includes(strId)) { this.selected = this.selected.filter(i => i !== strId); } 
+                else { this.selected.push(strId); }
             },
-
             toggleAll(ids) {
                 const stringIds = ids.map(String);
                 const allSelected = stringIds.every(id => this.selected.includes(id));
-
-                if (allSelected) {
-                    this.selected = this.selected.filter(id => !stringIds.includes(id));
-                } else {
-                    this.selected = [...new Set([...this.selected, ...stringIds])];
-                }
+                if (allSelected) { this.selected = this.selected.filter(id => !stringIds.includes(id)); } 
+                else { this.selected = [...new Set([...this.selected, ...stringIds])]; }
             },
-
             isAllSelected(ids) {
                 if (ids.length === 0) return false;
                 const stringIds = ids.map(String);
                 return stringIds.every(id => this.selected.includes(id));
             },
-
             submitDownload() {
                 if (this.selected.length === 0) {
                     Swal.fire({icon: 'warning', title: 'Pilih File', text: 'Silakan centang minimal satu file.', confirmButtonColor: '#0d6efd'});
@@ -682,15 +679,32 @@
                 this.$refs.formZip.submit();
             }
         }));
-
     });
 
     document.addEventListener("DOMContentLoaded", function() {
         if(typeof TomSelect !== 'undefined'){
             const config = { plugins: ['remove_button'], create: false };
-            ['select-satker', 'select-bulan', 'select-tahun'].forEach(id => { 
-                if(document.getElementById(id)) new TomSelect('#'+id, config); 
-            });
+            
+            let tsSatker = document.getElementById('select-satker') ? new TomSelect('#select-satker', config) : null;
+            let tsTahun = document.getElementById('select-tahun') ? new TomSelect('#select-tahun', config) : null;
+            
+            let tsTriwulan = document.getElementById('select-triwulan') ? new TomSelect('#select-triwulan', config) : null;
+            let tsBulan = document.getElementById('select-bulan') ? new TomSelect('#select-bulan', config) : null;
+
+            // Logika Disable Bulan Jika Triwulan aktif
+            if (tsTriwulan && tsBulan) {
+                const toggleBulan = () => {
+                    if (tsTriwulan.getValue().length > 0) {
+                        tsBulan.clear();
+                        tsBulan.disable();
+                    } else {
+                        tsBulan.enable();
+                    }
+                };
+
+                tsTriwulan.on('change', toggleBulan);
+                toggleBulan(); // Init on load
+            }
         }
     });
 

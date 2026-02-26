@@ -77,33 +77,32 @@
                         <div class="col-12" x-data="locationPicker">
                             <label class="form-label fw-semibold small text-secondary">Titik Koordinat</label>
                             <div class="row g-2 mb-2">
-                                <div class="col-5">
+                                <div class="col-12 col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text bg-light text-secondary small">Lat</span>
                                         <input type="text" name="latitude" x-model="lat" class="form-control @error('latitude') is-invalid @enderror" placeholder="-4.xxxx" @input="updateMarker">
                                     </div>
                                     @error('latitude') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                 </div>
-                                <div class="col-5">
+                                <div class="col-12 col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text bg-light text-secondary small">Lng</span>
                                         <input type="text" name="longitude" x-model="lng" class="form-control @error('longitude') is-invalid @enderror" placeholder="122.xxxx" @input="updateMarker">
                                     </div>
                                     @error('longitude') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                 </div>
-                                <div class="col-2">
+                                <div class="col-12 col-md-2">
                                     <button type="button" class="btn btn-outline-primary w-100" @click="getGPS" :disabled="isLoading" title="Ambil Lokasi Saat Ini">
                                         <span x-show="isLoading" style="display: none;">
                                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                                         </span>
                                         <span x-show="!isLoading">
-                                            <i class="bi bi-geo-alt-fill"></i> 
-                                            <span class="d-none d-md-inline">GPS</span>
+                                            <i class="bi bi-geo-alt-fill"></i> <span class="d-none d-md-inline ms-1">GPS</span>
                                         </span>
                                     </button>
                                 </div>
                             </div>
-                            <div wire:ignore id="map" style="height: 350px; border-radius: 6px; border: 1px solid #dee2e6; z-index: 1;"></div>
+                            <div wire:ignore id="map" style="height: 60vh; border-radius: 6px; border: 1px solid #dee2e6; z-index: 1;"></div>
                         </div>
 
                         {{-- LOKASI --}}
@@ -111,7 +110,7 @@
                             <label class="form-label fw-semibold small text-secondary">Lokasi Perolehan</label>
                             <textarea name="lokasi_perolehan" 
                                       class="form-control py-2" 
-                                      rows="2"
+                                      rows="3"
                                       placeholder="Masukkan alamat lengkap TKP...">{{ old('lokasi_perolehan', $register->lokasi_perolehan) }}</textarea>
                             @error('lokasi_perolehan') 
                                 <div class="text-danger small mt-1">{{ $message }}</div> 
@@ -492,34 +491,41 @@
                 }).addTo(this.map);
 
                 if(this.lat && this.lng) {
-                    this.setPt(this.lat, this.lng, false);
+                    this.updateMarkerPosition(this.lat, this.lng, false);
                 }
 
+                // Saat klik peta, update nilai di form
                 this.map.on('click', e => {
-                    this.setPt(e.latlng.lat, e.latlng.lng);
+                    this.lat = parseFloat(e.latlng.lat).toFixed(7);
+                    this.lng = parseFloat(e.latlng.lng).toFixed(7);
+                    this.updateMarkerPosition(this.lat, this.lng, true);
                 });
                 
                 setTimeout(() => { this.map.invalidateSize(); }, 200);
             },
 
-            setPt(lat, lng, setView = true) {
-                this.lat = parseFloat(lat).toFixed(7); 
-                this.lng = parseFloat(lng).toFixed(7);
-                
+            // Fungsi memindahkan pin tanpa merusak form input (Input Fighting)
+            updateMarkerPosition(lat, lng, setView = true) {
+                let pLat = parseFloat(lat);
+                let pLng = parseFloat(lng);
+
+                if (isNaN(pLat) || isNaN(pLng)) return;
+
                 if(this.marker) {
-                    this.marker.setLatLng([this.lat, this.lng]); 
+                    this.marker.setLatLng([pLat, pLng]); 
                 } else {
-                    this.marker = L.marker([this.lat, this.lng]).addTo(this.map);
+                    this.marker = L.marker([pLat, pLng]).addTo(this.map);
                 }
                 
                 if(setView) {
-                    this.map.setView([this.lat, this.lng], 16); 
+                    this.map.setView([pLat, pLng], this.map.getZoom()); 
                 }
             },
 
+            // Dipanggil saat mengetik manual
             updateMarker() {
-                if (this.lat && this.lng && !isNaN(this.lat) && !isNaN(this.lng)) {
-                    this.setPt(this.lat, this.lng);
+                if (this.lat && this.lng) {
+                    this.updateMarkerPosition(this.lat, this.lng, true);
                 }
             },
 
@@ -528,7 +534,10 @@
                 if(navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                         (p) => { 
-                            this.setPt(p.coords.latitude, p.coords.longitude); 
+                            this.lat = parseFloat(p.coords.latitude).toFixed(7);
+                            this.lng = parseFloat(p.coords.longitude).toFixed(7);
+                            this.updateMarkerPosition(this.lat, this.lng, false); 
+                            this.map.setView([this.lat, this.lng], 16);
                             this.isLoading = false; 
                         },
                         (err) => { 

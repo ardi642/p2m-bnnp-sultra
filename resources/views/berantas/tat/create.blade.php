@@ -93,6 +93,7 @@
                                                placeholder="Masukkan nama lengkap...">
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'nama')"></div>
                                     </div>
+                                    
                                     <div class="col-md-4">
                                         <label class="form-label small fw-semibold text-secondary">NIK</label>
                                         <input type="text" :name="`tersangka[${index}][nik]`" x-model="t.nik" 
@@ -100,6 +101,7 @@
                                                placeholder="16 Digit NIK...">
                                        <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'nik')"></div>
                                     </div>
+                                    
                                     <div class="col-md-4">
                                         <label class="form-label small fw-semibold text-secondary">Jenis Kelamin</label>
                                         <select :name="`tersangka[${index}][jk]`" x-model="t.jk" class="form-select py-2">
@@ -107,10 +109,12 @@
                                             <option value="Perempuan">Perempuan</option>
                                         </select>
                                     </div>
+                                    
                                     <div class="col-md-3">
                                         <label class="form-label small fw-semibold text-secondary">Usia <span class="text-danger">*</span></label>
                                         <input type="number" :name="`tersangka[${index}][usia]`" x-model="t.usia" 
-                                               class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'usia')}" placeholder="Contoh: 30">
+                                               class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'usia')}" 
+                                               placeholder="Contoh: 30">
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'usia')"></div>
                                     </div>
                                     
@@ -127,23 +131,34 @@
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'pendidikan')"></div>
                                     </div>
 
-                                    {{-- PEKERJAAN DARI CONSTANT --}}
+                                    {{-- PEKERJAAN DENGAN OPSI LAINNYA --}}
                                     <div class="col-md-3">
                                         <label class="form-label small fw-semibold text-secondary">Pekerjaan <span class="text-danger">*</span></label>
-                                        <select :name="`tersangka[${index}][pekerjaan]`" x-model="t.pekerjaan" 
-                                                class="form-select py-2" :class="{'is-invalid': hasError('tersangka', index, 'pekerjaan')}">
+                                        <select x-model="t.pekerjaan_select" 
+                                                @change="if(t.pekerjaan_select !== 'Lainnya') t.pekerjaan = t.pekerjaan_select; else t.pekerjaan = ''"
+                                                class="form-select py-2 mb-2" :class="{'is-invalid': hasError('tersangka', index, 'pekerjaan')}">
                                             <option value="" selected disabled>Pilih Pekerjaan...</option>
-                                            @foreach(\App\Constants\Pekerjaan::ALL as $pj)
-                                                <option value="{{ $pj }}">{{ $pj }}</option>
-                                            @endforeach
+                                            <template x-for="p in pekerjaanList" :key="p">
+                                                <option :value="p" x-text="p"></option>
+                                            </template>
+                                            <option value="Lainnya">Lainnya (Isi Manual)</option>
                                         </select>
-                                        <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'pekerjaan')"></div>
+                                        
+                                        <div x-show="t.pekerjaan_select === 'Lainnya'" x-transition>
+                                            <input type="text" class="form-control py-2" placeholder="Sebutkan pekerjaan..." 
+                                                   x-model="t.pekerjaan" :class="{'is-invalid': hasError('tersangka', index, 'pekerjaan')}">
+                                        </div>
+                                        
+                                        <input type="hidden" :name="`tersangka[${index}][pekerjaan]`" :value="t.pekerjaan">
+                                        
+                                        <div class="invalid-feedback d-block" x-show="hasError('tersangka', index, 'pekerjaan')" x-text="getErrorMessage('tersangka', index, 'pekerjaan')"></div>
                                     </div>
 
                                     <div class="col-md-3">
                                         <label class="form-label small fw-semibold text-secondary">No Telepon</label>
                                         <input type="text" :name="`tersangka[${index}][no_telepon]`" x-model="t.no_telepon" 
-                                               class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'no_telepon')}" placeholder="08xxx...">
+                                               class="form-control py-2" :class="{'is-invalid': hasError('tersangka', index, 'no_telepon')}" 
+                                               placeholder="08xxx...">
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'no_telepon')"></div>
                                     </div>
                                 </div>
@@ -186,7 +201,6 @@
                                             </select>
                                         </td>
                                         <td class="align-top">
-                                            {{-- LOGIC TOMSELECT NARKOTIKA --}}
                                             <div x-show="bb.kategori === 'Narkotika'" class="w-100">
                                                 <div wire:ignore :class="{'border border-danger rounded': hasError('barang_bukti', i, 'narkotika_id')}">
                                                     <select :id="'select_bb_' + bb.temp_id" :name="`barang_bukti[${i}][narkotika_id]`" x-init="initTS($el, bb)"></select>
@@ -194,7 +208,6 @@
                                                 <div class="text-danger small mt-1" x-show="hasError('barang_bukti', i, 'narkotika_id')" x-text="getErrorMessage('barang_bukti', i, 'narkotika_id')"></div>
                                             </div>
                                             
-                                            {{-- LOGIC INPUT MANUAL NON-NARKOTIKA --}}
                                             <div x-show="bb.kategori === 'Non-Narkotika'" class="w-100">
                                                 <input type="text" :name="`barang_bukti[${i}][nama_barang_bukti]`" x-model="bb.nama_barang_bukti" 
                                                        class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'nama_barang_bukti')}"
@@ -209,7 +222,6 @@
                                             <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'jumlah')"></div>
                                         </td>
                                         <td class="align-top">
-                                            {{-- SATUAN NARKOTIKA (ENUM) --}}
                                             <template x-if="bb.kategori === 'Narkotika'">
                                                 <div>
                                                     <select :name="`barang_bukti[${i}][satuan_narkotika]`" x-model="bb.satuan_narkotika" class="form-select py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan_narkotika')}">
@@ -221,7 +233,6 @@
                                                 </div>
                                             </template>
                                             
-                                            {{-- SATUAN NON-NARKOTIKA (STRING) --}}
                                             <template x-if="bb.kategori === 'Non-Narkotika'">
                                                 <div class="w-100">
                                                     <input type="text" :name="`barang_bukti[${i}][satuan_non_narkotika]`" x-model="bb.satuan_non_narkotika" 
@@ -372,7 +383,7 @@
                                                 
                                                 <template x-for="(link, index) in links" :key="index">
                                                     <div class="input-group mb-2 input-group-sm">
-                                                        <input type="text" class="form-control" :name="`dokumentasi_links[${index}][nama]`" placeholder="Nama Tautan / File" x-model="link.nama" required>
+                                                        <input type="text" class="form-control" :name="`dokumentasi_links[${index}][nama]`" placeholder="Nama Tautan" x-model="link.nama" required>
                                                         <input type="url" class="form-control" :name="`dokumentasi_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
                                                         <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
                                                     </div>
@@ -409,7 +420,7 @@
                                                 
                                                 <template x-for="(link, index) in links" :key="index">
                                                     <div class="input-group mb-2 input-group-sm">
-                                                        <input type="text" class="form-control" :name="`lampiran_links[${index}][nama]`" placeholder="Nama Tautan / File" x-model="link.nama" required>
+                                                        <input type="text" class="form-control" :name="`lampiran_links[${index}][nama]`" placeholder="Nama Tautan" x-model="link.nama" required>
                                                         <input type="url" class="form-control" :name="`lampiran_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
                                                         <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
                                                     </div>
@@ -456,10 +467,7 @@
 
 @push('scripts')
 <script type="module">
-
     document.addEventListener("DOMContentLoaded", function() {
-
-        // FILEPOND MANAGER CONFIG
         const commonConfig = {
             uploadRoute: '{{ route('upload.temp') }}',
             revertRoute: '{{ route('revert.temp') }}',
@@ -469,28 +477,16 @@
         };
 
         if (window.FilePondManager) {
-            
-            // A. Init Dokumentasi
             window.FilePondManager.create('#fp-dokumentasi', {
-                ...commonConfig,
-                maxSize: '10MB',
-                existingFiles: @json(old('dokumentasi', [])),
+                ...commonConfig, maxSize: '10MB', existingFiles: @json(old('dokumentasi', [])),
             });
-
-            // B. Init Lampiran
             window.FilePondManager.create('#fp-lampiran', {
-                ...commonConfig,
-                maxSize: '10MB',
-                existingFiles: @json(old('lampiran', [])),
+                ...commonConfig, maxSize: '10MB', existingFiles: @json(old('lampiran', [])),
             });
-
-            // C. Validasi Submit - PASTIKAN ID FORM COCOK ('form-tat')
             window.FilePondManager.attachFormSubmit('form-tat', 'btn-submit');
-
         } else {
             console.error("FilePondManager belum dimuat.");
         }
-
     });
 
     document.addEventListener('alpine:init', () => {
@@ -499,6 +495,7 @@
             tsInstances: {}, 
             errors: @json($errors->toArray()), 
             masterNarkotika: @json($masterNarkotika),
+            pekerjaanList: @json(\App\Constants\Pekerjaan::ALL), // Daftar Pekerjaan
 
             init() { 
                 const oldTersangka = @json(old('tersangka', []));
@@ -509,9 +506,15 @@
                 // Init Tersangka
                 if (oldTersangka.length > 0) {
                     oldTersangka.forEach(t => {
+                        const p_val = t.pekerjaan || '';
+                        const p_select = this.pekerjaanList.includes(p_val) ? p_val : (p_val ? 'Lainnya' : '');
+
                         this.tersangkaList.push({
                             temp_id: 't_' + Math.random(),
-                            nama: t.nama || '', nik: t.nik || '', jk: t.jk || 'Laki-laki', usia: t.usia || '', pendidikan: t.pendidikan || '', pekerjaan: t.pekerjaan || '', no_telepon: t.no_telepon || ''
+                            nama: t.nama || '', nik: t.nik || '', jk: t.jk || 'Laki-laki', 
+                            usia: t.usia || '', pendidikan: t.pendidikan || '', 
+                            pekerjaan: p_val, pekerjaan_select: p_select, 
+                            no_telepon: t.no_telepon || ''
                         });
                     });
                 } else { this.addTersangka(); }
@@ -539,20 +542,24 @@
                     oldTM.forEach(t => this.timMedisList.push({ nama: t.nama }));
                 } 
                 
-                // Auto resize textarea
                 this.$nextTick(() => {
-                    document.querySelectorAll('textarea.auto-resize').forEach(el => {
-                        this.autoResize(el);
-                    });
+                    document.querySelectorAll('textarea.auto-resize').forEach(el => this.autoResize(el));
                 });
             },
 
-            // --- REPEATER FUNCTIONS ---
-            addTersangka() { this.tersangkaList.push({ temp_id: 't_'+Date.now(), nama: '', nik: '', jk: 'Laki-laki', usia: '', pendidikan: '', pekerjaan: '', no_telepon: '' }); },
+            addTersangka() { 
+                this.tersangkaList.push({ 
+                    temp_id: 't_'+Date.now(), nama: '', nik: '', jk: 'Laki-laki', 
+                    usia: '', pendidikan: '', pekerjaan: '', pekerjaan_select: '', no_telepon: '' 
+                }); 
+            },
             removeTersangka(i) { if(this.tersangkaList.length > 1) this.tersangkaList.splice(i, 1); },
 
             addBB() { 
-                this.bbList.push({ temp_id: 'bb_'+Date.now(), kategori: 'Narkotika', narkotika_id: '', nama_barang_bukti: '', jumlah: '', satuan_narkotika: 'Gram', satuan_non_narkotika: '' }); 
+                this.bbList.push({ 
+                    temp_id: 'bb_'+Date.now(), kategori: 'Narkotika', narkotika_id: '', 
+                    nama_barang_bukti: '', jumlah: '', satuan_narkotika: 'Gram', satuan_non_narkotika: '' 
+                }); 
             },
             removeBB(i) { const id = this.bbList[i].temp_id; if(this.tsInstances[id]) this.tsInstances[id].destroy(); this.bbList.splice(i, 1); },
             
@@ -564,15 +571,12 @@
 
             addTimHukum() { this.timHukumList.push({ nama: '', instansi: 'Polda' }); },
             removeTimHukum(i) { this.timHukumList.splice(i, 1); },
-
             addTimMedis() { this.timMedisList.push({ nama: '' }); },
             removeTimMedis(i) { this.timMedisList.splice(i, 1); },
 
-            // --- HELPER FUNCTIONS ---
             getQuantityLabel() {
                 if (this.bbList.length === 0) return 'Berat / Jumlah';
-                const allNarkotika = this.bbList.every(bb => bb.kategori === 'Narkotika');
-                return allNarkotika ? 'Berat' : 'Berat / Jumlah';
+                return this.bbList.every(bb => bb.kategori === 'Narkotika') ? 'Berat' : 'Berat / Jumlah';
             },
 
             hasError(field, index, key) { const errorKey = `${field}.${index}.${key}`; return this.errors && this.errors[errorKey]; },

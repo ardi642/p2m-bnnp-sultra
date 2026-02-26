@@ -105,7 +105,6 @@
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'usia')"></div>
                                     </div>
                                     
-                                    {{-- PENDIDIKAN DARI CONSTANT --}}
                                     <div class="col-md-3">
                                         <label class="form-label small fw-semibold text-secondary">Pendidikan <span class="text-danger">*</span></label>
                                         <select :name="`tersangka[${index}][pendidikan]`" x-model="t.pendidikan" 
@@ -118,17 +117,27 @@
                                         <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'pendidikan')"></div>
                                     </div>
 
-                                    {{-- PEKERJAAN DARI CONSTANT --}}
+                                    {{-- PEKERJAAN DENGAN OPSI LAINNYA --}}
                                     <div class="col-md-3">
                                         <label class="form-label small fw-semibold text-secondary">Pekerjaan <span class="text-danger">*</span></label>
-                                        <select :name="`tersangka[${index}][pekerjaan]`" x-model="t.pekerjaan" 
-                                                class="form-select py-2" :class="{'is-invalid': hasError('tersangka', index, 'pekerjaan')}">
+                                        <select x-model="t.pekerjaan_select" 
+                                                @change="if(t.pekerjaan_select !== 'Lainnya') t.pekerjaan = t.pekerjaan_select; else t.pekerjaan = ''"
+                                                class="form-select py-2 mb-2" :class="{'is-invalid': hasError('tersangka', index, 'pekerjaan')}">
                                             <option value="" selected disabled>Pilih Pekerjaan...</option>
-                                            @foreach(\App\Constants\Pekerjaan::ALL as $pj)
-                                                <option value="{{ $pj }}">{{ $pj }}</option>
-                                            @endforeach
+                                            <template x-for="p in pekerjaanList" :key="p">
+                                                <option :value="p" x-text="p"></option>
+                                            </template>
+                                            <option value="Lainnya">Lainnya (Isi Manual)</option>
                                         </select>
-                                        <div class="invalid-feedback" x-text="getErrorMessage('tersangka', index, 'pekerjaan')"></div>
+                                        
+                                        <div x-show="t.pekerjaan_select === 'Lainnya'" x-transition>
+                                            <input type="text" class="form-control py-2" placeholder="Sebutkan pekerjaan..." 
+                                                   x-model="t.pekerjaan" :class="{'is-invalid': hasError('tersangka', index, 'pekerjaan')}">
+                                        </div>
+                                        
+                                        <input type="hidden" :name="`tersangka[${index}][pekerjaan]`" :value="t.pekerjaan">
+                                        
+                                        <div class="invalid-feedback d-block" x-show="hasError('tersangka', index, 'pekerjaan')" x-text="getErrorMessage('tersangka', index, 'pekerjaan')"></div>
                                     </div>
 
                                     <div class="col-md-3">
@@ -193,7 +202,6 @@
                                             <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'jumlah')"></div>
                                         </td>
                                         <td class="align-top">
-                                            {{-- SATUAN NARKOTIKA (ENUM) --}}
                                             <template x-if="bb.kategori === 'Narkotika'">
                                                 <div>
                                                     <select :name="`barang_bukti[${i}][satuan_narkotika]`" x-model="bb.satuan_narkotika" class="form-select py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan_narkotika')}">
@@ -205,7 +213,6 @@
                                                 </div>
                                             </template>
                                             
-                                            {{-- SATUAN NON-NARKOTIKA (STRING) --}}
                                             <template x-if="bb.kategori === 'Non-Narkotika'">
                                                 <div class="w-100">
                                                     <input type="text" :name="`barang_bukti[${i}][satuan_non_narkotika]`" x-model="bb.satuan_non_narkotika" 
@@ -225,7 +232,7 @@
                 </div>
             </div>
 
-            {{-- CARD 4: DETAIL KASUS (TIM HUKUM & MEDIS DINAMIS) --}}
+            {{-- CARD 4: DETAIL KASUS --}}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <h5 class="card-title fw-bold mb-4 text-dark border-bottom pb-2">Detail Kasus & Asesmen</h5>
@@ -253,7 +260,6 @@
                                    class="form-control py-2">
                         </div>
 
-                        {{-- TIM HUKUM DINAMIS --}}
                         <div class="col-md-6">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label class="form-label fw-semibold small text-secondary mb-0">Tim Hukum</label>
@@ -273,15 +279,12 @@
                                         <option value="Kemenkumham">Kemenkumham</option>
                                         <option value="Masyarakat">Masyarakat</option>
                                     </select>
-                                    <button type="button" class="btn btn-outline-danger btn-sm" @click="removeTimHukum(idx)">
-                                        <i class="bi bi-x"></i>
-                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" @click="removeTimHukum(idx)"><i class="bi bi-x"></i></button>
                                 </div>
                             </template>
                             @error('tim_hukum.*.nama') <div class="text-danger small">Nama anggota tim hukum wajib diisi.</div> @enderror
                         </div>
 
-                        {{-- TIM MEDIS DINAMIS --}}
                         <div class="col-md-6">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label class="form-label fw-semibold small text-secondary mb-0">Tim Medis</label>
@@ -293,9 +296,7 @@
                                 <div class="input-group mb-2">
                                     <input type="text" :name="`tim_medis[${idx}][nama]`" x-model="tm.nama" 
                                            class="form-control form-control-sm" placeholder="Nama Dokter/Tim Medis..." required>
-                                    <button type="button" class="btn btn-outline-danger btn-sm" @click="removeTimMedis(idx)">
-                                        <i class="bi bi-x"></i>
-                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" @click="removeTimMedis(idx)"><i class="bi bi-x"></i></button>
                                 </div>
                             </template>
                             @error('tim_medis.*.nama') <div class="text-danger small">Nama tim medis wajib diisi.</div> @enderror
@@ -439,6 +440,7 @@
                                             @endif
                                         </div>
                                     </div>
+                                    
                                     <div class="col-12 col-md-6">
                                         <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
                                             <label class="form-label fw-bold small text-primary mb-1"><i class="bi bi-folder2-open me-2"></i>Dokumentasi Baru</label>
@@ -451,7 +453,7 @@
                                                 <label class="form-label fw-bold small text-primary mb-2"><i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link</label>
                                                 <template x-for="(link, index) in links" :key="index">
                                                     <div class="input-group mb-2 input-group-sm">
-                                                        <input type="text" class="form-control" :name="`dokumentasi_links[${index}][nama]`" placeholder="Nama Tautan / File" x-model="link.nama" required>
+                                                        <input type="text" class="form-control" :name="`dokumentasi_links[${index}][nama]`" placeholder="Nama Tautan" x-model="link.nama" required>
                                                         <input type="url" class="form-control" :name="`dokumentasi_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
                                                         <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
                                                     </div>
@@ -474,7 +476,7 @@
                                                 <label class="form-label fw-bold small text-danger mb-2"><i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link</label>
                                                 <template x-for="(link, index) in links" :key="index">
                                                     <div class="input-group mb-2 input-group-sm">
-                                                        <input type="text" class="form-control" :name="`lampiran_links[${index}][nama]`" placeholder="Nama Tautan / File" x-model="link.nama" required>
+                                                        <input type="text" class="form-control" :name="`lampiran_links[${index}][nama]`" placeholder="Nama Tautan" x-model="link.nama" required>
                                                         <input type="url" class="form-control" :name="`lampiran_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
                                                         <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
                                                     </div>
@@ -519,10 +521,7 @@
 
 @push('scripts')
 <script type="module">
-
     document.addEventListener("DOMContentLoaded", function() {
-
-        // 2. FILEPOND MANAGER
         const commonConfig = {
             uploadRoute: '{{ route('upload.temp') }}',
             revertRoute: '{{ route('revert.temp') }}',
@@ -532,30 +531,16 @@
         };
 
         if (window.FilePondManager) {
-            
-            // A. Init Dokumentasi Baru
             window.FilePondManager.create('#fp-dokumentasi', {
-                ...commonConfig,
-                maxSize: '10MB',
-                // Existing Files disini hanya untuk file BARU yang gagal validasi saat submit, bukan file lama dari DB
-                existingFiles: @json(old('dokumentasi', [])), 
+                ...commonConfig, maxSize: '10MB', existingFiles: @json(old('dokumentasi', [])), 
             });
-
-            // B. Init Lampiran Baru
             window.FilePondManager.create('#fp-lampiran', {
-                ...commonConfig,
-                maxSize: '10MB',
-                existingFiles: @json(old('lampiran', [])), 
+                ...commonConfig, maxSize: '10MB', existingFiles: @json(old('lampiran', [])), 
             });
-
-            // C. Validasi Submit
-            // PERBAIKAN: Pastikan ID ini cocok dengan <form id="form-tat">
             window.FilePondManager.attachFormSubmit('form-tat', 'btn-submit');
-
         } else {
-            console.error("FilePondManager belum dimuat. Pastikan 'npm run build' atau 'npm run dev' berjalan.");
+            console.error("FilePondManager belum dimuat.");
         }
-
     });
 
     document.addEventListener('alpine:init', () => {
@@ -564,6 +549,7 @@
             tsInstances: {}, 
             errors: @json($errors->toArray()), 
             masterNarkotika: @json($masterNarkotika),
+            pekerjaanList: @json(\App\Constants\Pekerjaan::ALL), // Daftar Pekerjaan Konstan
 
             init() { 
                 const oldTersangka = @json(old('tersangka', []));
@@ -578,16 +564,28 @@
                 // Init Tersangka
                 if (oldTersangka.length > 0) {
                     oldTersangka.forEach(t => {
+                        const p_val = t.pekerjaan || '';
+                        const p_select = this.pekerjaanList.includes(p_val) ? p_val : (p_val ? 'Lainnya' : '');
+
                         this.tersangkaList.push({
                             temp_id: 't_' + Math.random(),
-                            nama: t.nama || '', nik: t.nik || '', jk: t.jk || 'Laki-laki', usia: t.usia || '', pendidikan: t.pendidikan || '', pekerjaan: t.pekerjaan || '', no_telepon: t.no_telepon || ''
+                            nama: t.nama || '', nik: t.nik || '', jk: t.jk || 'Laki-laki', 
+                            usia: t.usia || '', pendidikan: t.pendidikan || '', 
+                            pekerjaan: p_val, pekerjaan_select: p_select, 
+                            no_telepon: t.no_telepon || ''
                         });
                     });
                 } else if (dbTersangka.length > 0) {
                     dbTersangka.forEach(t => {
+                        const p_val = t.pekerjaan || '';
+                        const p_select = this.pekerjaanList.includes(p_val) ? p_val : (p_val ? 'Lainnya' : '');
+
                         this.tersangkaList.push({
                             temp_id: 't_' + t.id,
-                            nama: t.nama_tersangka, nik: t.nik, jk: t.jenis_kelamin, usia: t.usia, pendidikan: t.pendidikan, pekerjaan: t.pekerjaan, no_telepon: t.no_telepon
+                            nama: t.nama_tersangka, nik: t.nik, jk: t.jenis_kelamin, 
+                            usia: t.usia, pendidikan: t.pendidikan, 
+                            pekerjaan: p_val, pekerjaan_select: p_select, 
+                            no_telepon: t.no_telepon
                         });
                     });
                 } else { this.addTersangka(); }
@@ -597,24 +595,18 @@
                     oldBB.forEach(b => {
                         this.bbList.push({
                             temp_id: 'bb_' + Math.random(),
-                            kategori: b.kategori || 'Narkotika',
-                            narkotika_id: b.narkotika_id || '', 
-                            nama_barang_bukti: b.nama_barang_bukti || '',
-                            jumlah: b.jumlah || '',
-                            satuan_narkotika: b.satuan_narkotika || 'Gram',
-                            satuan_non_narkotika: b.satuan_non_narkotika || ''
+                            kategori: b.kategori || 'Narkotika', narkotika_id: b.narkotika_id || '', 
+                            nama_barang_bukti: b.nama_barang_bukti || '', jumlah: b.jumlah || '',
+                            satuan_narkotika: b.satuan_narkotika || 'Gram', satuan_non_narkotika: b.satuan_non_narkotika || ''
                         });
                     });
                 } else if (dbBB.length > 0) {
                     dbBB.forEach(b => {
                         this.bbList.push({
                             temp_id: 'bb_' + b.id,
-                            kategori: b.kategori,
-                            narkotika_id: b.narkotika_id || '',
-                            nama_barang_bukti: b.nama_barang_non_narkotika,
-                            jumlah: parseFloat(b.kuantitas),
-                            satuan_narkotika: b.satuan_narkotika || 'Gram',
-                            satuan_non_narkotika: b.satuan_non_narkotika || ''
+                            kategori: b.kategori, narkotika_id: b.narkotika_id || '',
+                            nama_barang_bukti: b.nama_barang_non_narkotika, jumlah: parseFloat(b.kuantitas),
+                            satuan_narkotika: b.satuan_narkotika || 'Gram', satuan_non_narkotika: b.satuan_non_narkotika || ''
                         });
                     });
                 } else { this.addBB(); }
@@ -634,18 +626,12 @@
                 } 
                 
                 this.$nextTick(() => {
-                    document.querySelectorAll('textarea.auto-resize').forEach(el => {
-                        this.autoResize(el);
-                    });
+                    document.querySelectorAll('textarea.auto-resize').forEach(el => this.autoResize(el));
                 });
             },
             
-            autoResize(el) {
-                el.style.height = 'auto';
-                el.style.height = el.scrollHeight + 'px';
-            },
+            autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; },
 
-            // --- FUNGSI HELPER TIM ---
             addTimHukum() { this.timHukumList.push({ nama: '', instansi: 'Polda' }); },
             removeTimHukum(i) { if(this.timHukumList.length > 0) this.timHukumList.splice(i, 1); },
 
@@ -654,14 +640,18 @@
 
             getQuantityLabel() {
                 if (this.bbList.length === 0) return 'Berat / Jumlah';
-                const allNarkotika = this.bbList.every(bb => bb.kategori === 'Narkotika');
-                return allNarkotika ? 'Berat' : 'Berat / Jumlah';
+                return this.bbList.every(bb => bb.kategori === 'Narkotika') ? 'Berat' : 'Berat / Jumlah';
             },
 
             hasError(field, index, key) { const errorKey = `${field}.${index}.${key}`; return this.errors && this.errors[errorKey]; },
             getErrorMessage(field, index, key) { const errorKey = `${field}.${index}.${key}`; return this.errors[errorKey] ? this.errors[errorKey][0] : ''; },
 
-            addTersangka() { this.tersangkaList.push({ temp_id: 't_'+Date.now(), nama: '', nik: '', jk: 'Laki-laki', usia: '', pendidikan: '', pekerjaan: '', no_telepon: '' }); },
+            addTersangka() { 
+                this.tersangkaList.push({ 
+                    temp_id: 't_'+Date.now(), nama: '', nik: '', jk: 'Laki-laki', 
+                    usia: '', pendidikan: '', pekerjaan: '', pekerjaan_select: '', no_telepon: '' 
+                }); 
+            },
             removeTersangka(i) { if(this.tersangkaList.length > 1) this.tersangkaList.splice(i, 1); },
             
             addBB() { 
@@ -675,10 +665,8 @@
             
             resetBB(bb) {
                 if(this.tsInstances[bb.temp_id]) this.tsInstances[bb.temp_id].destroy();
-                bb.narkotika_id = ''; 
-                bb.nama_barang_bukti = '';
-                bb.satuan_narkotika = 'Gram';
-                bb.satuan_non_narkotika = '';
+                bb.narkotika_id = ''; bb.nama_barang_bukti = '';
+                bb.satuan_narkotika = 'Gram'; bb.satuan_non_narkotika = '';
                 this.$nextTick(() => this.initTS(document.getElementById('select_bb_'+bb.temp_id), bb));
             },
 
@@ -697,12 +685,8 @@
 
         Alpine.data('linkManager', (initialData = []) => ({
             links: Array.isArray(initialData) ? initialData : [], 
-            addLink() {
-                this.links.push({ nama: '', url: '' });
-            },
-            removeLink(index) {
-                this.links.splice(index, 1);
-            }
+            addLink() { this.links.push({ nama: '', url: '' }); },
+            removeLink(index) { this.links.splice(index, 1); }
         }));
     });
 

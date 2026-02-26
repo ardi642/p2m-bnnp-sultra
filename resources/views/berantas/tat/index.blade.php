@@ -38,9 +38,25 @@
             </div>
         @endif
 
+        {{-- INFO LINTAS SATKER JIKA FILTER PENCARIAN GLOBAL AKTIF --}}
+        @if(request()->filled('filter_nik') || request()->filled('filter_no_telepon'))
+            <div class="alert alert-info alert-dismissible fade show border-0 shadow-sm mb-4 d-flex align-items-center" role="alert">
+                <i class="bi bi-info-circle-fill fs-3 me-3 text-info"></i>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">Pencarian Seluruh Satker Aktif!</h6>
+                    <span class="small">Karena Anda menggunakan filter NIK atau Nomor Telepon, sistem otomatis menampilkan hasil pencarian dari <strong>Seluruh Satuan Kerja</strong> (tidak terbatas pada data Satker Anda saja).</span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
         {{-- FILTER & SORTING --}}
         @php
-            $allFilters = request()->only(['search', 'bulan', 'tahun', 'satuan_kerja_id', 'kategori_bb', 'narkotika_ids', 'search_non_narkotika']);
+            $allFilters = request()->only([
+                'search', 'bulan', 'tahun', 'satuan_kerja_id', 
+                'kategori_bb', 'narkotika_ids', 'search_non_narkotika',
+                'filter_nik', 'filter_no_telepon'
+            ]);
             if (empty($allFilters['tahun'])) { $allFilters['tahun'] = [date('Y')]; }
             
             $activeFilters = collect($allFilters)->filter(function($value) { 
@@ -93,14 +109,14 @@
                                     <div class="row g-3 text-start">
                                         
                                         <div class="col-12">
-                                            <label class="form-label fw-bold small text-secondary text-uppercase">Kata Kunci</label>
+                                            <label class="form-label fw-bold small text-secondary text-uppercase">Kata Kunci Umum</label>
                                             <div class="input-group shadow-sm">
                                                 <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
                                                 <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Cari No Register, Nama Tersangka..." value="{{ request('search') }}">
                                             </div>
                                         </div>
 
-                                        {{-- LOGIKA ROLE DIKEMBALIKAN KE hasRole('admin') --}}
+
                                         @if(Auth::user()->hasRole('admin'))
                                             <div class="col-lg-6">
                                                 <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Satuan Kerja</label>
@@ -128,7 +144,9 @@
                                             <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Bulan</label>
                                             <div class="shadow-sm bg-white rounded">
                                                 <select id="select-bulan" name="bulan[]" multiple placeholder="Pilih Bulan..." autocomplete="off">
-                                                    @foreach(range(1, 12) as $m) <option value="{{ $m }}" {{ in_array($m, request('bulan', [])) ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($m)->locale('id')->translatedFormat('F') }}</option> @endforeach
+                                                    @foreach(range(1, 12) as $m) 
+                                                        <option value="{{ $m }}" {{ in_array($m, request('bulan', [])) ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($m)->locale('id')->translatedFormat('F') }}</option> 
+                                                    @endforeach
                                                 </select>
                                             </div>
                                         </div>
@@ -137,7 +155,9 @@
                                             <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Tahun</label>
                                             <div class="shadow-sm bg-white rounded">
                                                 <select id="select-tahun" name="tahun[]" multiple placeholder="Pilih Tahun..." autocomplete="off">
-                                                    @foreach($years as $year) <option value="{{ $year }}" {{ in_array($year, request('tahun', [date('Y')])) ? 'selected' : '' }}>{{ $year }}</option> @endforeach
+                                                    @foreach($years as $year) 
+                                                        <option value="{{ $year }}" {{ in_array($year, request('tahun', [date('Y')])) ? 'selected' : '' }}>{{ $year }}</option> 
+                                                    @endforeach
                                                 </select>
                                             </div>
                                         </div>
@@ -164,6 +184,33 @@
                                             </div>
                                         </div>
 
+                                        {{-- PENCARIAN TERSANGKA SPESIFIK (LINTAS SATKER) --}}
+                                        <div class="col-lg-4">
+                                            <label class="form-label fw-bold small text-secondary text-uppercase mb-1">NIK (Tersangka)</label>
+                                            <div class="shadow-sm bg-white rounded">
+                                                <select id="select-nik" name="filter_nik[]" multiple placeholder="NIK" autocomplete="off">
+                                                    @if(request('filter_nik'))
+                                                        @foreach(request('filter_nik') as $nik) 
+                                                            <option value="{{ $nik }}" selected>{{ $nik }}</option> 
+                                                        @endforeach
+                                                    @endif
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-4">
+                                            <label class="form-label fw-bold small text-secondary text-uppercase mb-1">No. Telepon (Tersangka)</label>
+                                            <div class="shadow-sm bg-white rounded">
+                                                <select id="select-nohp" name="filter_no_telepon[]" multiple placeholder="No HP" autocomplete="off">
+                                                    @if(request('filter_no_telepon'))
+                                                        @foreach(request('filter_no_telepon') as $hp) 
+                                                            <option value="{{ $hp }}" selected>{{ $hp }}</option> 
+                                                        @endforeach
+                                                    @endif
+                                                </select>
+                                            </div>
+                                        </div>
+
                                         <div class="col-12 text-end pt-3 border-top mt-4 text-start">
                                             <a href="{{ route('berantas.tat.index') }}" class="btn btn-link text-decoration-none text-muted btn-sm me-2">Reset Filter</a>
                                             <button type="submit" class="btn btn-primary px-4 shadow-sm"><i class="bi bi-funnel-fill me-1"></i> Terapkan</button>
@@ -181,16 +228,24 @@
                                 </div>
                                 <div class="d-flex flex-wrap justify-content-end gap-2">
                                     <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
-                                        <i class="bi bi-briefcase text-muted me-2" style="font-size: 0.8rem;"></i><span class="text-muted" style="font-size: 0.85rem;">Total kasus : </span><span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalKasus, 0, ',', '.') }}</span>
+                                        <i class="bi bi-briefcase text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total kasus : </span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalKasus, 0, ',', '.') }}</span>
                                     </div>
                                     <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
-                                        <i class="bi bi-people text-muted me-2" style="font-size: 0.8rem;"></i><span class="text-muted" style="font-size: 0.85rem;">Total tersangka : </span><span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalTersangka, 0, ',', '.') }}</span>
+                                        <i class="bi bi-people text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total tersangka : </span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalTersangka, 0, ',', '.') }}</span>
                                     </div>
                                     <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
-                                        <i class="bi bi-boxes text-muted me-2" style="font-size: 0.8rem;"></i><span class="text-muted" style="font-size: 0.85rem;">Total barang bukti narkotika : </span><span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalBBNarkotika, 0, ',', '.') }}</span>
+                                        <i class="bi bi-boxes text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total barang bukti narkotika : </span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalBBNarkotika, 0, ',', '.') }}</span>
                                     </div>
                                     <div class="d-flex align-items-center border border-secondary-subtle rounded-3 px-3 py-1 bg-light">
-                                        <i class="bi bi-speedometer2 text-muted me-2" style="font-size: 0.8rem;"></i><span class="text-muted" style="font-size: 0.85rem;">Total berat narkotika : </span><span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalBeratGram, 2, ',', '.') }} Gram</span>
+                                        <i class="bi bi-speedometer2 text-muted me-2" style="font-size: 0.8rem;"></i>
+                                        <span class="text-muted" style="font-size: 0.85rem;">Total berat narkotika : </span>
+                                        <span class="text-dark ms-1" style="font-size: 0.85rem;">{{ number_format($totalBeratGram, 2, ',', '.') }} Gram</span>
                                     </div>
                                 </div>
                             </div>
@@ -229,7 +284,9 @@
                                                                 <span class="text-muted ms-1 small" style="font-size: 0.7rem;">({{ $t->jenis_kelamin }})</span>
                                                             </div>
                                                         </div>
-                                                    @empty <span class="text-muted small fst-italic">-</span> @endforelse
+                                                    @empty 
+                                                        <span class="text-muted small fst-italic">-</span> 
+                                                    @endforelse
                                                 </div>
                                             </td>
 
@@ -237,12 +294,17 @@
                                                 <div class="d-flex flex-column gap-1">
                                                     @forelse($row->barangBukti as $bb)
                                                         <div class="small d-flex align-items-center">
-                                                            @if($bb->kategori === 'Narkotika') <i class="bi bi-capsule text-danger me-2" title="Narkotika"></i> 
-                                                            @else <i class="bi bi-box-seam text-success me-2" title="Non-Narkotika"></i> @endif
+                                                            @if($bb->kategori === 'Narkotika') 
+                                                                <i class="bi bi-capsule text-danger me-2" title="Narkotika"></i> 
+                                                            @else 
+                                                                <i class="bi bi-box-seam text-success me-2" title="Non-Narkotika"></i> 
+                                                            @endif
                                                             <span class="text-dark me-1 fw-semibold">{{ $bb->nama_barang }}</span>
                                                             <span class="text-muted">({{ $formatAngka($bb->kuantitas) }} {{ $bb->satuan }})</span>
                                                         </div>
-                                                    @empty <span class="text-muted small fst-italic">-</span> @endforelse
+                                                    @empty 
+                                                        <span class="text-muted small fst-italic">-</span> 
+                                                    @endforelse
                                                 </div>
                                             </td>
 
@@ -265,9 +327,7 @@
                                             </td>
                                         </tr>
 
-                                        {{-- ================================================= --}}
-                                        {{-- DETAIL EXPANDABLE (CLEAN LOOK, TANPA KOTAK)       --}}
-                                        {{-- ================================================= --}}
+                                        {{-- DETAIL EXPANDABLE --}}
                                         <tr x-show="expanded.includes({{ $row->id }})" x-transition x-data="fileDownloader">
                                             <td colspan="8" class="p-0 border-0">
                                                 <div class="bg-body-tertiary p-4 border-bottom shadow-inner text-start">
@@ -275,7 +335,7 @@
                                                         <div class="card-body">
                                                             <h6 class="card-title fw-bold text-primary border-bottom pb-2 mb-3"><i class="bi bi-info-circle me-2"></i>Detail TAT Lengkap</h6>
                                                             
-                                                            {{-- BAGIAN 1: DATA UTAMA (Tanpa Box) --}}
+                                                            {{-- BAGIAN 1: DATA UTAMA --}}
                                                             <div class="row g-4 text-start mb-4">
                                                                 <div class="col-md-3">
                                                                     <div class="small text-secondary text-uppercase fw-bold mb-1">Satuan Kerja</div>
@@ -293,7 +353,6 @@
                                                                     <div class="small text-secondary text-uppercase fw-bold mb-1">Instansi Pengirim</div>
                                                                     <div class="fw-semibold text-dark">{{ $row->instansi_pengirim ?? '-' }}</div>
                                                                 </div>
-
                                                                 <div class="col-md-3">
                                                                     <div class="small text-secondary text-uppercase fw-bold mb-1">Tgl Penangkapan</div>
                                                                     <div class="text-dark">{{ $row->tanggal_penangkapan ? $row->tanggal_penangkapan->locale('id')->translatedFormat('d F Y') : '-' }}</div>
@@ -306,8 +365,6 @@
                                                                     <div class="small text-secondary text-uppercase fw-bold mb-1">Lembaga Rehab</div>
                                                                     <div class="text-dark fw-bold">{{ $row->lembaga_rehab ?? '-' }}</div>
                                                                 </div>
-
-                                                                {{-- Pasal di bawah, Full Width --}}
                                                                 <div class="col-12">
                                                                     <div class="small text-secondary text-uppercase fw-bold mb-1">Pasal Disangkakan</div>
                                                                     <div class="text-dark" style="white-space: pre-wrap; line-height: 1.6;">{{ $row->pasal_disangkakan ?? '-' }}</div>
@@ -333,7 +390,6 @@
                                                                                 <tr>
                                                                                     <td class="p-3">
                                                                                         <div class="fw-bold text-dark">{{ $t->nama_tersangka }}</div>
-                                                                                        {{-- Jenis Kelamin ditaruh di bawah nama --}}
                                                                                         <div class="small text-muted mt-1"><i class="bi bi-gender-ambiguous me-1"></i>{{ $t->jenis_kelamin }}</div>
                                                                                     </td>
                                                                                     <td class="p-3 font-monospace">{{ $t->nik ?? '-' }}</td>
@@ -387,10 +443,8 @@
 
                                                             {{-- BAGIAN 4: TIM HUKUM, MEDIS & HASIL --}}
                                                             <div class="row g-4 mt-2">
-                                                                {{-- Tim Kiri --}}
                                                                 <div class="col-md-6 border-end">
                                                                     <div class="small text-secondary text-uppercase fw-bold mb-3">Tim Terpadu</div>
-                                                                    
                                                                     <div class="mb-3">
                                                                         <label class="small text-muted fw-bold d-block mb-1">Tim Hukum:</label>
                                                                         @if(is_array($row->tim_hukum) && count($row->tim_hukum) > 0)
@@ -403,7 +457,6 @@
                                                                             <div class="text-muted small fst-italic">-</div>
                                                                         @endif
                                                                     </div>
-
                                                                     <div>
                                                                         <label class="small text-muted fw-bold d-block mb-1">Tim Medis:</label>
                                                                         @if(is_array($row->tim_medis) && count($row->tim_medis) > 0)
@@ -418,10 +471,8 @@
                                                                     </div>
                                                                 </div>
 
-                                                                {{-- Rekomendasi Kanan --}}
                                                                 <div class="col-md-6">
                                                                     <div class="small text-secondary text-uppercase fw-bold mb-3">Hasil Asesmen</div>
-                                                                    
                                                                     <div class="mb-3">
                                                                         <label class="small text-muted fw-bold d-block mb-1">Rekomendasi:</label>
                                                                         @if($row->tindak_lanjut_rekomendasi == 'dilaksanakan')
@@ -430,7 +481,6 @@
                                                                             <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-3 py-2"><i class="bi bi-x-circle-fill me-1"></i> Tidak Dilaksanakan</span>
                                                                         @endif
                                                                     </div>
-
                                                                     <div>
                                                                         <label class="small text-muted fw-bold d-block mb-1">Proses Hukum Lanjut:</label>
                                                                         <div class="text-dark small" style="white-space: pre-wrap;">{{ $row->proses_hukum_lanjut ?? '-' }}</div>
@@ -462,12 +512,13 @@
                                                                             $lampiranIds = $lampirans->where('is_link', false)->pluck('id')->values()->toArray();
                                                                         @endphp
                                                                         
-                                                                        {{-- DOKUMENTASI --}}
                                                                         <div class="col-lg-6">
                                                                             <div class="card h-100 border bg-light shadow-none">
                                                                                 <div class="card-header bg-transparent border-bottom fw-bold text-primary d-flex justify-content-between align-items-center">
                                                                                     <div class="form-check">
-                                                                                        @if(count($fotoIds) > 0)<input class="form-check-input cursor-pointer" type="checkbox" @change="toggleAll({{ json_encode($fotoIds) }})" :checked="isAllSelected({{ json_encode($fotoIds) }})">@endif
+                                                                                        @if(count($fotoIds) > 0)
+                                                                                            <input class="form-check-input cursor-pointer" type="checkbox" @change="toggleAll({{ json_encode($fotoIds) }})" :checked="isAllSelected({{ json_encode($fotoIds) }})">
+                                                                                        @endif
                                                                                         <label class="form-check-label cursor-pointer select-none"><i class="bi bi-images me-2"></i>Dokumentasi</label>
                                                                                     </div>
                                                                                     <span class="badge bg-primary rounded-pill">{{ $fotos->count() }}</span>
@@ -475,26 +526,40 @@
                                                                                 <div class="card-body p-2" style="max-height: 250px; overflow-y: auto;">
                                                                                     @forelse($fotos as $doc)
                                                                                         <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-primary bg-primary bg-opacity-10' : ''">
-                                                                                            @if(!$doc->is_link)<div class="form-check me-2 d-flex align-items-center"><input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="chk-doc-{{ $doc->id }}" name="ids[]" value="{{ $doc->id }}" x-model="selected"></div>@endif
+                                                                                            @if(!$doc->is_link)
+                                                                                                <div class="form-check me-2 d-flex align-items-center">
+                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="chk-doc-{{ $doc->id }}" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                                </div>
+                                                                                            @endif
                                                                                             <label for="chk-doc-{{ $doc->id }}" class="flex-grow-1 text-truncate small cursor-pointer d-flex align-items-center m-0">
-                                                                                                <div class="flex-shrink-0 me-2 text-primary bg-primary bg-opacity-10 p-1 rounded">@if($doc->is_link) <i class="bi bi-link-45deg"></i> @else <img src="{{ Storage::url($doc->path_file) }}" class="object-fit-cover rounded" width="24" height="24"> @endif</div>
+                                                                                                <div class="flex-shrink-0 me-2 text-primary bg-primary bg-opacity-10 p-1 rounded">
+                                                                                                    @if($doc->is_link) <i class="bi bi-link-45deg"></i> @else <img src="{{ Storage::url($doc->path_file) }}" class="object-fit-cover rounded" width="24" height="24"> @endif
+                                                                                                </div>
                                                                                                 <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
                                                                                             </label>
                                                                                             <div class="d-flex gap-1 flex-shrink-0 ms-2">
-                                                                                                @if(!$doc->is_link) <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a> <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-primary"><i class="bi bi-download"></i></a> @else <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-xs btn-outline-info w-100"><i class="bi bi-box-arrow-up-right me-1"></i>Buka</a> @endif
+                                                                                                @if(!$doc->is_link) 
+                                                                                                    <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a> 
+                                                                                                    <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-primary"><i class="bi bi-download"></i></a> 
+                                                                                                @else 
+                                                                                                    <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-xs btn-outline-info w-100"><i class="bi bi-box-arrow-up-right me-1"></i>Buka</a> 
+                                                                                                @endif
                                                                                             </div>
                                                                                         </div>
-                                                                                    @empty <div class="text-center py-3 text-muted small fst-italic">Tidak ada dokumentasi.</div> @endforelse
+                                                                                    @empty 
+                                                                                        <div class="text-center py-3 text-muted small fst-italic">Tidak ada dokumentasi.</div> 
+                                                                                    @endforelse
                                                                                 </div>
                                                                             </div>
                                                                         </div>
 
-                                                                        {{-- LAMPIRAN --}}
                                                                         <div class="col-lg-6">
                                                                             <div class="card h-100 border bg-light shadow-none">
                                                                                 <div class="card-header bg-transparent border-bottom fw-bold text-danger d-flex justify-content-between align-items-center">
                                                                                     <div class="form-check">
-                                                                                        @if(count($lampiranIds) > 0)<input class="form-check-input cursor-pointer" type="checkbox" @change="toggleAll({{ json_encode($lampiranIds) }})" :checked="isAllSelected({{ json_encode($lampiranIds) }})">@endif
+                                                                                        @if(count($lampiranIds) > 0)
+                                                                                            <input class="form-check-input cursor-pointer" type="checkbox" @change="toggleAll({{ json_encode($lampiranIds) }})" :checked="isAllSelected({{ json_encode($lampiranIds) }})">
+                                                                                        @endif
                                                                                         <label class="form-check-label cursor-pointer select-none"><i class="bi bi-paperclip me-2"></i>Lampiran</label>
                                                                                     </div>
                                                                                     <span class="badge bg-danger rounded-pill">{{ $lampirans->count() }}</span>
@@ -502,16 +567,29 @@
                                                                                 <div class="card-body p-2" style="max-height: 250px; overflow-y: auto;">
                                                                                     @forelse($lampirans as $doc)
                                                                                         <div class="d-flex align-items-center bg-white border rounded p-2 mb-2 shadow-sm hover-shadow transition-all" :class="isSelected({{ $doc->id }}) ? 'border-danger bg-danger bg-opacity-10' : ''">
-                                                                                            @if(!$doc->is_link)<div class="form-check me-2 d-flex align-items-center"><input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="chk-lamp-{{ $doc->id }}" name="ids[]" value="{{ $doc->id }}" x-model="selected"></div>@endif
+                                                                                            @if(!$doc->is_link)
+                                                                                                <div class="form-check me-2 d-flex align-items-center">
+                                                                                                    <input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="chk-lamp-{{ $doc->id }}" name="ids[]" value="{{ $doc->id }}" x-model="selected">
+                                                                                                </div>
+                                                                                            @endif
                                                                                             <label for="chk-lamp-{{ $doc->id }}" class="flex-grow-1 text-truncate small cursor-pointer d-flex align-items-center m-0">
-                                                                                                <div class="flex-shrink-0 me-2 text-danger bg-danger bg-opacity-10 p-1 rounded">@if($doc->is_link) <i class="bi bi-link-45deg"></i> @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf"></i> @else <i class="bi bi-file-earmark-text"></i> @endif</div>
+                                                                                                <div class="flex-shrink-0 me-2 text-danger bg-danger bg-opacity-10 p-1 rounded">
+                                                                                                    @if($doc->is_link) <i class="bi bi-link-45deg"></i> @elseif(Str::contains($doc->tipe_file, 'pdf')) <i class="bi bi-file-pdf"></i> @else <i class="bi bi-file-earmark-text"></i> @endif
+                                                                                                </div>
                                                                                                 <span class="text-truncate" title="{{ $doc->nama_file_asli }}">{{ $doc->nama_file_asli }}</span>
                                                                                             </label>
                                                                                             <div class="d-flex gap-1 flex-shrink-0 ms-2">
-                                                                                                @if(!$doc->is_link) <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a> <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-danger"><i class="bi bi-download"></i></a> @else <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-xs btn-outline-info w-100"><i class="bi bi-box-arrow-up-right me-1"></i>Buka</a> @endif
+                                                                                                @if(!$doc->is_link) 
+                                                                                                    <a href="{{ Storage::disk($doc->disk ?? 'public')->url($doc->path_file) }}" target="_blank" class="btn btn-xs btn-outline-secondary"><i class="bi bi-eye"></i></a> 
+                                                                                                    <a href="{{ route('dokumen.download', $doc->id) }}" class="btn btn-xs btn-outline-danger"><i class="bi bi-download"></i></a> 
+                                                                                                @else 
+                                                                                                    <a href="{{ $doc->path_url }}" target="_blank" class="btn btn-xs btn-outline-info w-100"><i class="bi bi-box-arrow-up-right me-1"></i>Buka</a> 
+                                                                                                @endif
                                                                                             </div>
                                                                                         </div>
-                                                                                    @empty <div class="text-center py-3 text-muted small fst-italic">Tidak ada lampiran.</div> @endforelse
+                                                                                    @empty 
+                                                                                        <div class="text-center py-3 text-muted small fst-italic">Tidak ada lampiran.</div> 
+                                                                                    @endforelse
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -570,7 +648,6 @@
     .ts-wrapper.focus .ts-control { box-shadow: none !important; }
     
     .custom-table-scroll { max-height: 70vh; overflow-y: auto; position: relative; border: 1px solid #dee2e6; border-radius: 6px; }
-    /* Sticky Header dengan z-index cukup (10) agar di bawah TomSelect (2000) */
     .custom-table-scroll thead th { position: sticky !important; top: 0 !important; z-index: 10; background-color: #f8f9fa !important; box-shadow: inset 0 -1px 0 #dee2e6; }
     
     .btn-xs { padding: 1px 5px; font-size: 0.75rem; }
@@ -582,14 +659,11 @@
 @push('scripts')
 <script type="module">
     document.addEventListener('alpine:init', () => {
-        // Data Lokal 'fileDownloader' (Checkbox Logic)
         Alpine.data('fileDownloader', () => ({
             selected: [],
-            
             isSelected(id) {
                 return this.selected.includes(id.toString()) || this.selected.includes(id);
             },
-
             toggleAll(ids) {
                 const stringIds = ids.map(String);
                 const allSelected = stringIds.every(id => this.selected.includes(id));
@@ -600,13 +674,11 @@
                     this.selected = [...new Set([...this.selected, ...stringIds])];
                 }
             },
-
             isAllSelected(ids) {
                 if (ids.length === 0) return false;
                 const stringIds = ids.map(String);
                 return stringIds.every(id => this.selected.includes(id));
             },
-
             submitDownload() {
                 if (this.selected.length === 0) {
                     Swal.fire({icon: 'warning', title: 'Pilih File', text: 'Silakan centang minimal satu file.', confirmButtonColor: '#0d6efd'});
@@ -623,6 +695,19 @@
         // Inisialisasi Filter Standar
         ['select-satker', 'select-bulan', 'select-tahun', 'select-narkotika'].forEach(id => { 
             if(document.getElementById(id)) new TomSelect('#' + id, configTomSelect); 
+        });
+
+        // Inisialisasi NIK dan No HP (Multiple text input / tags)
+        ['select-nik', 'select-nohp'].forEach(id => {
+            if(document.getElementById(id)) {
+                 new TomSelect('#' + id, {
+                    plugins: ['remove_button', 'clear_button'],
+                    create: true, 
+                    persist: false,
+                    createOnBlur: true,
+                    maxOptions: null
+                 });
+            }
         });
 
         // Listener untuk Kategori Barang Bukti (Dinamis)
@@ -648,7 +733,6 @@
             updateBBVisibility();
         }
         
-        // Inisialisasi Non-Narkotika (Create Mode)
         if(document.getElementById('select-non-narkotika')) {
              new TomSelect('#select-non-narkotika', {
                 plugins: ['remove_button', 'clear_button'],

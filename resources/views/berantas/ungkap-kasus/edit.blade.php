@@ -86,12 +86,12 @@
                                     </button>
                                 </div>
                             </div>
-                            <div wire:ignore id="map" style="height: 350px; border-radius: 6px; border: 1px solid #dee2e6; z-index: 1;"></div>
+                            <div wire:ignore id="map" style="height: 60vh; border-radius: 6px; border: 1px solid #dee2e6; z-index: 1;"></div>
                         </div>
 
                         <div class="col-12">
                             <label class="form-label fw-bold small text-secondary">Alamat TKP Lengkap <span class="text-danger">*</span></label>
-                            <textarea name="alamat_tkp" class="form-control @error('alamat_tkp') is-invalid @enderror" rows="2" placeholder="Jalan, RT/RW...">{{ old('alamat_tkp', $kasus->alamat_tkp) }}</textarea>
+                            <textarea name="alamat_tkp" class="form-control @error('alamat_tkp') is-invalid @enderror" rows="3" placeholder="Jalan, RT/RW...">{{ old('alamat_tkp', $kasus->alamat_tkp) }}</textarea>
                             @error('alamat_tkp') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-12">
@@ -541,11 +541,11 @@
     document.addEventListener('alpine:init', () => {
         
         Alpine.data('locationPicker', () => ({
-            lat: {{ old('latitude', $kasus->latitude) ? old('latitude', $kasus->latitude) : 'null' }},
-            lng: {{ old('longitude', $kasus->longitude) ? old('longitude', $kasus->longitude) : 'null' }},
+            lat: {{ old('latitude', $kasus->latitude ?? 'null') ? old('latitude', $kasus->latitude ?? 'null') : 'null' }},
+            lng: {{ old('longitude', $kasus->longitude ?? 'null') ? old('longitude', $kasus->longitude ?? 'null') : 'null' }},
             map: null, 
             marker: null,
-            isLoading: false, 
+            isLoading: false,
             
             init() { 
                 this.lat = (this.lat !== null) ? parseFloat(this.lat) : null;
@@ -560,44 +560,56 @@
                 }).addTo(this.map);
 
                 if(this.lat && this.lng) {
-                    this.setPt(this.lat, this.lng, false);
+                    this.updateMarkerPosition(this.lat, this.lng, false);
                 }
 
+                // Saat klik peta, update nilai di form dan beri format .0000000
                 this.map.on('click', e => {
-                    this.setPt(e.latlng.lat, e.latlng.lng);
+                    this.lat = parseFloat(e.latlng.lat).toFixed(7);
+                    this.lng = parseFloat(e.latlng.lng).toFixed(7);
+                    this.updateMarkerPosition(this.lat, this.lng, true);
                 });
                 
                 setTimeout(() => { this.map.invalidateSize(); }, 200);
             },
 
-            setPt(lat, lng, setView = true) {
-                this.lat = parseFloat(lat).toFixed(7); 
-                this.lng = parseFloat(lng).toFixed(7);
+            // Fungsi khusus untuk memindahkan posisi pin (tanpa merusak inputan user)
+            updateMarkerPosition(lat, lng, setView = true) {
+                let pLat = parseFloat(lat);
+                let pLng = parseFloat(lng);
+
+                if (isNaN(pLat) || isNaN(pLng)) return;
                 
                 if(this.marker) {
-                    this.marker.setLatLng([this.lat, this.lng]); 
+                    this.marker.setLatLng([pLat, pLng]); 
                 } else {
-                    this.marker = L.marker([this.lat, this.lng]).addTo(this.map);
+                    this.marker = L.marker([pLat, pLng]).addTo(this.map);
                 }
                 
                 if(setView) {
-                    this.map.setView([this.lat, this.lng], 16); 
+                    // Ambil zoom level saat ini agar tidak ter-reset saat klik/ngetik
+                    this.map.setView([pLat, pLng], this.map.getZoom()); 
                 }
             },
 
+            // Fungsi yang dipanggil saat user mengetik manual di kotak input
             updateMarker() {
-                if (this.lat && this.lng && !isNaN(this.lat) && !isNaN(this.lng)) {
-                    this.setPt(this.lat, this.lng);
+                if (this.lat && this.lng) {
+                    // Hanya update map, JANGAN me-reassign this.lat/lng agar kursor tidak terkunci
+                    this.updateMarkerPosition(this.lat, this.lng, true);
                 }
             },
 
             getGPS() { 
                 this.isLoading = true;
-
                 if(navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                         (p) => { 
-                            this.setPt(p.coords.latitude, p.coords.longitude); 
+                            this.lat = parseFloat(p.coords.latitude).toFixed(7);
+                            this.lng = parseFloat(p.coords.longitude).toFixed(7);
+                            // Kalau GPS, arahkan map dan set zoom default jarak dekat
+                            this.updateMarkerPosition(this.lat, this.lng, false); 
+                            this.map.setView([this.lat, this.lng], 16);
                             this.isLoading = false; 
                         },
                         (err) => { 
@@ -609,11 +621,7 @@
                             
                             Swal.fire('GPS Error', msg, 'error');
                         },
-                        { 
-                            enableHighAccuracy: true, 
-                            timeout: 10000, 
-                            maximumAge: 0 
-                        } 
+                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
                     );
                 } else {
                     this.isLoading = false;

@@ -255,7 +255,7 @@ class UngkapKasusController extends Controller
             'tersangka'             => 'required|array|min:1',
             'tersangka.*.nama'      => 'required|string',
             'tersangka.*.jk'        => 'required|in:Laki-Laki,Perempuan',
-            'tersangka.*.pekerjaan' => ['required', Rule::in(Pekerjaan::ALL)],
+            'tersangka.*.pekerjaan' => ['required', 'string'],
             'tersangka.*.tahap'     => 'required|string',
             
             // BB GROUPS
@@ -388,7 +388,7 @@ class UngkapKasusController extends Controller
             'tersangka'             => 'required|array|min:1',
             'tersangka.*.nama'      => 'required|string',
             'tersangka.*.jk'        => 'required|in:Laki-Laki,Perempuan',
-            'tersangka.*.pekerjaan' => ['required', Rule::in(Pekerjaan::ALL)],
+            'tersangka.*.pekerjaan'    => ['required', 'string'],
             'tersangka.*.tahap'     => 'required|string',
             
             'bb_groups'          => 'required|array|min:1',

@@ -45,7 +45,7 @@ class TatController extends Controller
         // 1. Filter Satker
         if (!$user->hasRole('admin') && !$isGlobalSearch) {
             $query->where('satuan_kerja_id', $user->getSatkerId());
-        } elseif ($user->hasRole('admin') && !$isGlobalSearch) {
+        } elseif ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', (array) $request->satuan_kerja_id);
             }

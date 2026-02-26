@@ -45,7 +45,7 @@ class TatController extends Controller
         // 1. Filter Satker
         if (!$user->hasRole('admin') && !$isGlobalSearch) {
             $query->where('satuan_kerja_id', $user->getSatkerId());
-        } elseif ($user->hasRole('admin')) {
+        } elseif ($user->hasRole('admin') && !$isGlobalSearch) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', (array) $request->satuan_kerja_id);
             }
@@ -108,8 +108,6 @@ class TatController extends Controller
             $s = $request->search;
             $query->where(function($q) use ($s) {
                 $q->where('no_register', 'LIKE', "%{$s}%")
-                  ->orWhere('instansi_pengirim', 'LIKE', "%{$s}%")
-                  ->orWhere('pasal_disangkakan', 'LIKE', "%{$s}%")
                   ->orWhereHas('tersangka', function($sq) use ($s) {
                       $sq->where('nama_tersangka', 'LIKE', "%{$s}%");
                   });

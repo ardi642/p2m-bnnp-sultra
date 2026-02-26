@@ -127,7 +127,7 @@
                                             <template x-for="p in pekerjaanList" :key="p">
                                                 <option :value="p" x-text="p"></option>
                                             </template>
-                                            <option value="Lainnya">Lainnya (Isi Manual)</option>
+                                            <option value="Lainnya" class="fw-bold text-primary">Lainnya (Ketik Manual)...</option>
                                         </select>
                                         
                                         <div x-show="t.pekerjaan_select === 'Lainnya'" x-transition>
@@ -153,82 +153,86 @@
                 </div>
             </div>
 
-            {{-- CARD 3: BARANG BUKTI --}}
+            {{-- CARD 3: BARANG BUKTI (Diubah menjadi Grid Responsive) --}}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="card-title fw-bold mb-0 text-dark">Barang Bukti</h5>
                         <button type="button" class="btn btn-dark btn-sm px-3" @click="addBB">
-                            <i class="bi bi-plus-lg me-1"></i> Tambah Baris
+                            <i class="bi bi-plus-lg me-1"></i> Tambah BB
                         </button>
                     </div>
 
                     @error('barang_bukti') <div class="alert alert-danger small py-1">{{ $message }}</div> @enderror
 
-                    <div class="table-responsive border rounded">
-                        <table class="table table-bordered align-middle mb-0 bg-white">
-                            <thead class="bg-light small">
-                                <tr>
-                                    <th width="20%">Kategori</th>
-                                    <th>Nama Barang (Cari/Ketik)</th>
-                                    <th width="15%" x-text="getQuantityLabel()">Berat / Jumlah</th>
-                                    <th width="15%">Satuan</th>
-                                    <th width="50" class="text-center">Hapus</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="(bb, i) in bbList" :key="bb.temp_id">
-                                    <tr>
-                                        <td class="align-top">
-                                            <select :name="`barang_bukti[${i}][kategori]`" x-model="bb.kategori" class="form-select py-2" @change="resetBB(bb)">
-                                                <option value="Narkotika">Narkotika</option>
-                                                <option value="Non-Narkotika">Non-Narkotika</option>
-                                            </select>
-                                        </td>
-                                        <td class="align-top">
-                                            <div x-show="bb.kategori === 'Narkotika'" class="w-100">
-                                                <div wire:ignore :class="{'border border-danger rounded': hasError('barang_bukti', i, 'narkotika_id')}">
-                                                    <select :id="'select_bb_' + bb.temp_id" :name="`barang_bukti[${i}][narkotika_id]`" x-init="initTS($el, bb)"></select>
-                                                </div>
-                                                <div class="text-danger small mt-1" x-show="hasError('barang_bukti', i, 'narkotika_id')" x-text="getErrorMessage('barang_bukti', i, 'narkotika_id')"></div>
+                    <template x-for="(bb, i) in bbList" :key="bb.temp_id">
+                        <div class="card bg-light border mb-3">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <span class="fw-bold text-secondary small">Data Barang Bukti #<span x-text="i+1"></span></span>
+                                    <button type="button" class="btn btn-sm text-danger" @click="removeBB(i)" x-show="bbList.length > 1">
+                                        <i class="bi bi-trash me-1"></i> Hapus
+                                    </button>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold text-secondary">Kategori</label>
+                                        <select :name="`barang_bukti[${i}][kategori]`" x-model="bb.kategori" class="form-select py-2" @change="resetBB(bb)">
+                                            <option value="Narkotika">Narkotika</option>
+                                            <option value="Non-Narkotika">Non-Narkotika</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-5">
+                                        <label class="form-label small fw-semibold text-secondary">Nama Barang</label>
+                                        <div x-show="bb.kategori === 'Narkotika'" class="w-100">
+                                            <div wire:ignore :class="{'border border-danger rounded': hasError('barang_bukti', i, 'narkotika_id')}">
+                                                <select :id="'select_bb_' + bb.temp_id" :name="`barang_bukti[${i}][narkotika_id]`" x-init="initTS($el, bb)"></select>
                                             </div>
-                                            <div x-show="bb.kategori === 'Non-Narkotika'" class="w-100">
-                                                <input type="text" :name="`barang_bukti[${i}][nama_barang_bukti]`" x-model="bb.nama_barang_bukti" class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'nama_barang_bukti')}" placeholder="Ketik nama barang...">
-                                                <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'nama_barang_bukti')"></div>
+                                            <div class="text-danger small mt-1" x-show="hasError('barang_bukti', i, 'narkotika_id')" x-text="getErrorMessage('barang_bukti', i, 'narkotika_id')"></div>
+                                        </div>
+                                        
+                                        <div x-show="bb.kategori === 'Non-Narkotika'" class="w-100">
+                                            <input type="text" :name="`barang_bukti[${i}][nama_barang_bukti]`" x-model="bb.nama_barang_bukti" 
+                                                   class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'nama_barang_bukti')}"
+                                                   placeholder="Ketik nama barang...">
+                                            <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'nama_barang_bukti')"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-2 col-6">
+                                        <label class="form-label small fw-semibold text-secondary" x-text="bb.kategori === 'Narkotika' ? 'Berat' : 'Jumlah'"></label>
+                                        <input type="number" step="0.0001" :name="`barang_bukti[${i}][jumlah]`" x-model="bb.jumlah" 
+                                               class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'jumlah')}"
+                                               placeholder="0.00">
+                                        <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'jumlah')"></div>
+                                    </div>
+
+                                    <div class="col-md-2 col-6">
+                                        <label class="form-label small fw-semibold text-secondary">Satuan</label>
+                                        <template x-if="bb.kategori === 'Narkotika'">
+                                            <div>
+                                                <select :name="`barang_bukti[${i}][satuan_narkotika]`" x-model="bb.satuan_narkotika" class="form-select py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan_narkotika')}">
+                                                    <option value="Gram">Gram</option>
+                                                    <option value="Kg">Kg</option>
+                                                    <option value="Ton">Ton</option>
+                                                </select>
+                                                <div class="invalid-feedback d-block" x-show="hasError('barang_bukti', i, 'satuan_narkotika')" x-text="getErrorMessage('barang_bukti', i, 'satuan_narkotika')"></div>
                                             </div>
-                                        </td>
-                                        <td class="align-top">
-                                            <input type="number" step="0.0001" :name="`barang_bukti[${i}][jumlah]`" x-model="bb.jumlah" class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'jumlah')}" placeholder="0.00">
-                                            <div class="invalid-feedback" x-text="getErrorMessage('barang_bukti', i, 'jumlah')"></div>
-                                        </td>
-                                        <td class="align-top">
-                                            <template x-if="bb.kategori === 'Narkotika'">
-                                                <div>
-                                                    <select :name="`barang_bukti[${i}][satuan_narkotika]`" x-model="bb.satuan_narkotika" class="form-select py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan_narkotika')}">
-                                                        <option value="Gram">Gram</option>
-                                                        <option value="Kg">Kg</option>
-                                                        <option value="Ton">Ton</option>
-                                                    </select>
-                                                    <div class="invalid-feedback d-block" x-show="hasError('barang_bukti', i, 'satuan_narkotika')" x-text="getErrorMessage('barang_bukti', i, 'satuan_narkotika')"></div>
-                                                </div>
-                                            </template>
-                                            
-                                            <template x-if="bb.kategori === 'Non-Narkotika'">
-                                                <div class="w-100">
-                                                    <input type="text" :name="`barang_bukti[${i}][satuan_non_narkotika]`" x-model="bb.satuan_non_narkotika" 
-                                                           class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan_non_narkotika')}" placeholder="Masukkan satuan">
-                                                    <div class="invalid-feedback d-block" x-show="hasError('barang_bukti', i, 'satuan_non_narkotika')" x-text="getErrorMessage('barang_bukti', i, 'satuan_non_narkotika')"></div>
-                                                </div>
-                                            </template>
-                                        </td>
-                                        <td class="text-center align-top">
-                                            <button type="button" class="btn btn-sm text-danger" @click="removeBB(i)"><i class="bi bi-trash"></i></button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
+                                        </template>
+                                        
+                                        <template x-if="bb.kategori === 'Non-Narkotika'">
+                                            <div class="w-100">
+                                                <input type="text" :name="`barang_bukti[${i}][satuan_non_narkotika]`" x-model="bb.satuan_non_narkotika" 
+                                                       class="form-control py-2" :class="{'is-invalid': hasError('barang_bukti', i, 'satuan_non_narkotika')}" placeholder="Masukkan satuan">
+                                                <div class="invalid-feedback d-block" x-show="hasError('barang_bukti', i, 'satuan_non_narkotika')" x-text="getErrorMessage('barang_bukti', i, 'satuan_non_narkotika')"></div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
 

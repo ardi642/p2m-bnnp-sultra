@@ -43,8 +43,8 @@
             <div class="alert alert-info alert-dismissible fade show border-0 shadow-sm mb-4 d-flex align-items-center" role="alert">
                 <i class="bi bi-info-circle-fill fs-3 me-3 text-info"></i>
                 <div>
-                    <h6 class="alert-heading fw-bold mb-1">Pencarian Seluruh Satker Aktif!</h6>
-                    <span class="small">Karena Anda menggunakan filter NIK atau Nomor Telepon, sistem otomatis menampilkan hasil pencarian dari <strong>Seluruh Satuan Kerja</strong> (tidak terbatas pada data Satker Anda saja).</span>
+                    <h6 class="alert-heading fw-bold mb-1">Pencarian Seluruh Satuan kerja Aktif</h6>
+                    <span class="small">Karena Anda menggunakan filter NIK atau Nomor Telepon, sistem otomatis menampilkan hasil pencarian riwayat tersangka di <strong>Seluruh Satuan Kerja</strong></span>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>

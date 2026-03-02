@@ -44,6 +44,8 @@ use App\Http\Controllers\P2m\IkanController;
 use App\Http\Controllers\P2m\InformasiEdukasiController;
 use App\Http\Controllers\P2m\MonevController;
 use App\Http\Controllers\P2m\PemetaanSdmSdaController;
+use App\Http\Controllers\P2m\PemberdayaanController;
+use App\Http\Controllers\P2m\RtsController;
 use App\Http\Controllers\Rehab\RehabPasienController;
 
 use Illuminate\Support\Facades\Route;
@@ -216,6 +218,14 @@ Route::middleware('auth')->group(function() {
             // Pemetaan SDM & SDA
             Route::get('/pemetaan-sdm-sda', [PemetaanSdmSdaController::class, 'index'])->name("pemetaan-sdm-sda.index");
             Route::get('/pemetaan-sdm-sda/export', [PemetaanSdmSdaController::class, 'export'])->name('pemetaan-sdm-sda.export');
+            // Remaja Teman Sebaya
+            Route::get('/rts', [RtsController::class, 'index'])->name("rts.index");
+            Route::get('/rts/export', [RtsController::class, 'export'])->name('rts.export');
+            // Pemberdayaan
+            Route::get('/pemberdayaan', [PemberdayaanController::class, 'index'])->name("pemberdayaan.index");
+            Route::get('/pemberdayaan/export', [PemberdayaanController::class, 'export'])->name('pemberdayaan.export');
+            
+
         });
 
         // B. WRITE/CREATE/EDIT ACCESS (Hanya Operator P2M & Operator Satker)
@@ -258,6 +268,11 @@ Route::middleware('auth')->group(function() {
             Route::resource('monev', MonevController::class)->except(['index', 'show']);
             // Pemetaan SDM & SDA CRUD
             Route::resource('pemetaan-sdm-sda', PemetaanSdmSdaController::class)->except(['index', 'show']);
+            // Pemberdayaan CRUD
+            Route::resource('pemberdayaan', PemberdayaanController::class)->except(['index', 'show']);
+            // Rts CRUD
+            Route::resource('rts', RtsController::class)->except(['index', 'show']);
+        
         });
     });
 

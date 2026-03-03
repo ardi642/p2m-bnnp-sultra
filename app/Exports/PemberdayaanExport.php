@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Constants\KategoriPemberdayaan;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -41,7 +42,7 @@ class PemberdayaanExport implements FromQuery, WithHeadings, WithMapping, Should
             'Sasaran',
             'Tanggal Pelaksanaan',
             'Tempat',
-            'Pegawai',
+            'Pegawai',           // Berada di Kolom I
             'Jumlah Peserta',
             'Dibuat Pada'
         ];
@@ -51,7 +52,11 @@ class PemberdayaanExport implements FromQuery, WithHeadings, WithMapping, Should
     {
         $listPegawai = [];
         
-        foreach ($row->pegawai as $pegawai) {
+        // Mengurutkan data pegawai berdasarkan kolom 'nama' (A-Z)
+        $pegawaiBerurut = $row->pegawai->sortBy('nama');
+
+        foreach ($pegawaiBerurut as $pegawai) {
+            // Langsung masukkan nama pegawai tanpa nomor urut
             $info = $pegawai->nama;
             
             if ($pegawai->nip) {
@@ -66,18 +71,25 @@ class PemberdayaanExport implements FromQuery, WithHeadings, WithMapping, Should
             $listPegawai[] = $info;
         }
 
-        $pegawaiString = implode("\n", $listPegawai);
+        // Menggabungkan array dengan chr(10) agar Excel membacanya sebagai baris baru (Alt+Enter)
+        $pegawaiString = implode(chr(10), $listPegawai);
+
+        // Ambil label yang rapi dari file Constant
+        $subLabel = KategoriPemberdayaan::SUB_KEGIATAN[$row->sub_kegiatan] ?? $row->sub_kegiatan;
+        
+        $allDetails = KategoriPemberdayaan::getAllDetailLabels();
+        $detailLabel = $allDetails[$row->detail_kegiatan] ?? $row->detail_kegiatan;
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
-            $row->sub_kegiatan,
-            $row->detail_kegiatan,
+            $subLabel,       
+            $detailLabel,    
             $row->nama_kegiatan,
             $row->anggaran_pelaksanaan,
-            $row->sasaran_kegiatan,
+            ucwords($row->sasaran_kegiatan),
             $row->tanggal_pelaksanaan->locale('id')->translatedFormat('d F Y'),
             $row->tempat_kegiatan,
-            $pegawaiString,
+            $pegawaiString,  
             $row->jumlah_peserta,
             $row->created_at->locale('id')->translatedFormat('d F Y H:i'),
         ];
@@ -85,10 +97,17 @@ class PemberdayaanExport implements FromQuery, WithHeadings, WithMapping, Should
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('G')->getAlignment()->setWrapText(true);
-        $sheet->getStyle('A:I')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+        // Ambil batas baris terakhir data
+        $highestRow = $sheet->getHighestRow();
+
+        // Aktifkan Wrap Text secara spesifik di Kolom I (Pegawai)
+        $sheet->getStyle('I1:I' . $highestRow)->getAlignment()->setWrapText(true);
+
+        // Format Rata Atas (Vertical Align Top) untuk semua kolom (A sampai K)
+        $sheet->getStyle('A1:K' . $highestRow)->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
 
         return [
+            // Headings dibuat Bold
             1 => ['font' => ['bold' => true]], 
         ];
     }

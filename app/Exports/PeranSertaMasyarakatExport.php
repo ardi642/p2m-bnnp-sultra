@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Constants\KategoriPeranSertaMasyarakat;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -33,15 +34,15 @@ class PeranSertaMasyarakatExport implements FromQuery, WithHeadings, WithMapping
     public function headings(): array
     {
         return [
-            'Satuan Kerja',
-            'Anggaran',
-            'Kategori Kegiatan',
-            'Nama Kegiatan',
-            'Tanggal Pelaksanaan',
-            'Tempat',
-            'Pegawai',
-            'Jumlah Peserta',
-            'Dibuat Pada'
+            'Satuan Kerja',         // Kolom A
+            'Anggaran',             // Kolom B
+            'Kategori Kegiatan',    // Kolom C
+            'Nama Kegiatan',        // Kolom D
+            'Tanggal Pelaksanaan',  // Kolom E
+            'Tempat',               // Kolom F
+            'Pegawai',              // Kolom G
+            'Jumlah Peserta',       // Kolom H
+            'Dibuat Pada'           // Kolom I
         ];
     }
 
@@ -49,7 +50,11 @@ class PeranSertaMasyarakatExport implements FromQuery, WithHeadings, WithMapping
     {
         $listPegawai = [];
 
-        foreach ($row->pegawai as $pegawai) {
+        // Mengurutkan data pegawai berdasarkan nama (Abjad A-Z)
+        $pegawaiBerurut = $row->pegawai->sortBy('nama');
+
+        foreach ($pegawaiBerurut as $pegawai) {
+            // Langsung masukkan nama tanpa nomor urut
             $info = $pegawai->nama;
 
             if ($pegawai->nip) {
@@ -64,12 +69,17 @@ class PeranSertaMasyarakatExport implements FromQuery, WithHeadings, WithMapping
             $listPegawai[] = $info;
         }
 
-        $pegawaiString = implode("\n", $listPegawai);
+        // Menggabungkan array dengan chr(10) agar di Excel menjadi baris baru (Alt+Enter)
+        $pegawaiString = implode(chr(10), $listPegawai);
+
+        // Ambil label yang rapi dari file Constant
+        $kategoriLabel = KategoriPeranSertaMasyarakat::KATEGORI[$row->kategori_kegiatan] 
+                         ?? ucfirst(str_replace('_', ' ', $row->kategori_kegiatan));
 
         return [
             $row->satuanKerja->satuan_kerja ?? '-',
             $row->anggaran_pelaksanaan,
-            ucfirst(str_replace('_', ' ', $row->kategori_kegiatan)),
+            $kategoriLabel,
             $row->nama_kegiatan,
             $row->tanggal_pelaksanaan->locale('id')->translatedFormat('d F Y'),
             $row->tempat_kegiatan,
@@ -81,10 +91,17 @@ class PeranSertaMasyarakatExport implements FromQuery, WithHeadings, WithMapping
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('H')->getAlignment()->setWrapText(true);
-        $sheet->getStyle('A:J')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+        // Ambil batas baris terakhir untuk efisiensi render style
+        $highestRow = $sheet->getHighestRow();
+
+        // Aktifkan Wrap Text secara spesifik di Kolom G (Pegawai) agar Enter berfungsi
+        $sheet->getStyle('G1:G' . $highestRow)->getAlignment()->setWrapText(true);
+
+        // Format Rata Atas (Vertical Align Top) untuk semua kolom (A sampai I)
+        $sheet->getStyle('A1:I' . $highestRow)->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
 
         return [
+            // Headings dibuat Bold
             1 => ['font' => ['bold' => true]],
         ];
     }

@@ -46,6 +46,7 @@ use App\Http\Controllers\P2m\MonevController;
 use App\Http\Controllers\P2m\PemetaanSdmSdaController;
 use App\Http\Controllers\P2m\PemberdayaanController;
 use App\Http\Controllers\P2m\RtsController;
+use App\Http\Controllers\P2m\PeranSertaMasyarakatController;
 use App\Http\Controllers\Rehab\RehabPasienController;
 
 use Illuminate\Support\Facades\Route;
@@ -55,7 +56,7 @@ use Illuminate\Support\Facades\Storage;
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'index'])->name('login');
     Route::post('/login', [LoginController::class, 'authenticate'])->name('login.authenticate');
-    
+
     // Forgot Password Routes
     Route::get('/forgot-password', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
     Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
@@ -65,7 +66,7 @@ Route::middleware('guest')->group(function () {
 
 // --- AUTHENTICATED ROUTES ---
 Route::middleware('auth')->group(function() {
-    
+
     // Traffic Controller Dashboard (Mengarahkan user sesuai rolenya)
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
 
@@ -101,7 +102,7 @@ Route::middleware('auth')->group(function() {
 
     // Group Route Dokumen
     Route::prefix('dokumen')->name('dokumen.')->group(function () {
-        
+
         // 1. Download Satuan (GET)
         Route::get('/{id}/download', [DokumenController::class, 'download'])
             ->name('download');
@@ -118,7 +119,7 @@ Route::middleware('auth')->group(function() {
 
     // Profile Management
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update'); 
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
     Route::get('/profile/verify-email/{token}', [ProfileController::class, 'verifyNewEmail'])->name('profile.email.verify');
     Route::delete('/profile/cancel-email', [ProfileController::class, 'cancelEmailChange'])->name('profile.email.cancel');
@@ -131,7 +132,7 @@ Route::middleware('auth')->group(function() {
     // Jadi kita tambahkan role mereka di sini.
     Route::middleware(['role:admin,admin_satker,admin_p2m,admin_berantas,admin_rehab'])->group(function() {
         Route::prefix('admin')->name('admin.')->group(function() {
-            
+
             // User Controller (Create Operator, Reset Password, List User)
             Route::resource('users', UserController::class);
             Route::put('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset_password');
@@ -144,7 +145,7 @@ Route::middleware('auth')->group(function() {
     // Hanya Admin Pusat dan Admin Satker yang boleh menambah/mengedit fisik pegawai
     Route::middleware(['role:admin,admin_satker'])->group(function() {
         Route::prefix('admin')->name('admin.')->group(function() {
-            
+
             // Resource Pegawai (Kecuali Index & Show yang sudah ada di atas)
             // Ini menangani: create, store, edit, update, destroy
             Route::resource('pegawai', PegawaiController::class)->except(['index', 'show']);
@@ -156,10 +157,10 @@ Route::middleware('auth')->group(function() {
     // 2. MODUL P2M (Pencegahan)
     // =========================================================================
     Route::prefix('p2m')->name('p2m.')->group(function() {
-        
+
         // Halaman Utama P2M
         Route::get('/', function() { return view('p2m.index'); })->name("index");
-        
+
         // A. READ/VIEW ACCESS (Admin Pusat, Admin Satker, Admin P2M, Operator P2M, Operator Satker)
         // Tambahkan 'admin_p2m' disini
         Route::middleware(['role:admin,admin_satker,admin_p2m,operator_satker,operator_p2m'])->group(function() {
@@ -226,12 +227,15 @@ Route::middleware('auth')->group(function() {
             Route::get('/pemberdayaan/export', [PemberdayaanController::class, 'export'])->name('pemberdayaan.export');
             
 
+            // Peran Serta Masyarakat
+            Route::get('/peran-serta-masyarakat', [PeranSertaMasyarakatController::class, 'index'])->name("peran-serta-masyarakat.index");
+            Route::get('/peran-serta-masyarakat/export', [PeranSertaMasyarakatController::class, 'export'])->name('peran-serta-masyarakat.export');
         });
 
         // B. WRITE/CREATE/EDIT ACCESS (Hanya Operator P2M & Operator Satker)
         // Admin P2M biasanya hanya memantau, tapi jika boleh input, tambahkan 'admin_p2m' disini
         Route::middleware(['role:operator_satker,operator_p2m'])->group(function() {
-            
+
             // Informasi & Edukasi CRUD
             Route::resource('informasi-edukasi', InformasiEdukasiController::class)->except(['index', 'show']);
             // Sosialisasi CRUD
@@ -273,6 +277,8 @@ Route::middleware('auth')->group(function() {
             // Rts CRUD
             Route::resource('rts', RtsController::class)->except(['index', 'show']);
         
+            // Peran Serta Masyarakat CRUD
+            Route::resource('peran-serta-masyarakat', PeranSertaMasyarakatController::class)->except(['index', 'show']);
         });
     });
 
@@ -280,7 +286,7 @@ Route::middleware('auth')->group(function() {
     // 3. MODUL BERANTAS (Pemberantasan)
     // =========================================================================
     Route::prefix('berantas')->name('berantas.')->group(function() {
-        
+
         // A. READ/VIEW ACCESS (Tambahkan 'admin_berantas')
         Route::middleware(['role:admin,admin_satker,admin_berantas,operator_satker,operator_berantas'])->group(function() {
             // Ungkap Kasus
@@ -307,7 +313,7 @@ Route::middleware('auth')->group(function() {
             Route::get('peta-sebaran-bb/{id}', [PetaRegisterBarangBuktiController::class, 'show'])->name('peta-sebaran-bb.show');
 
             // // --- PETA SEBARAN (GIS) ---
-        
+
             // // 1. Peta Ungkap Kasus (Crime Map)
             // Route::get('/peta/ungkap-kasus', [MapController::class, 'ungkapKasusIndex'])
             //     ->name('peta.ungkap-kasus.index');
@@ -329,7 +335,7 @@ Route::middleware('auth')->group(function() {
             Route::post('/narkotika', [NarkotikaController::class, 'store'])->name('narkotika.store');
             Route::put('/narkotika/{id}', [NarkotikaController::class, 'update'])->name('narkotika.update');
             Route::delete('/narkotika/{id}', [NarkotikaController::class, 'destroy'])->name('narkotika.destroy');
-            
+
             Route::resource('register-barang-bukti', RegisterBarangBuktiController::class)->except(['index', 'show']);
         });
 
@@ -340,10 +346,10 @@ Route::middleware('auth')->group(function() {
     // 4. MODUL REHABILITASI
     // =========================================================================
     Route::prefix('rehab')->name('rehab.')->group(function() {
-        
+
         // A. READ/VIEW ACCESS (Melihat Data & Export)
         Route::middleware(['role:admin,admin_satker,admin_rehab,operator_satker,operator_rehab'])->group(function() {
-            
+
             // --- 1. LAPORAN HARIAN ---
             Route::get('/laporan/export-full', [\App\Http\Controllers\Rehab\RehabLaporanController::class, 'exportFull'])->name('laporan.export_full');
             Route::get('/laporan/export/{kategori}', [\App\Http\Controllers\Rehab\RehabLaporanController::class, 'export'])->name('laporan.export');
@@ -352,12 +358,12 @@ Route::middleware('auth')->group(function() {
             // --- 2. DATA PASIEN REHAB ---
             Route::get('/pasien/export', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'export'])->name('pasien.export');
             Route::get('/pasien', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'index'])->name('pasien.index');
-            Route::get('/pasien/{pasien}', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'show'])->name('pasien.show')->where('pasien', '[0-9]+'); 
+            Route::get('/pasien/{pasien}', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'show'])->name('pasien.show')->where('pasien', '[0-9]+');
         });
 
         // B. WRITE ACCESS (Input Data, Target, Edit, Hapus)
         Route::middleware(['role:admin,admin_satker,operator_satker,operator_rehab'])->group(function() {
-            
+
             // --- 1. KELOLA TARGET TAHUNAN ---
             Route::post('/target', [\App\Http\Controllers\Rehab\RehabLaporanController::class, 'storeTarget'])->name('target.store');
             Route::delete('/target/{id}', [\App\Http\Controllers\Rehab\RehabLaporanController::class, 'destroyTarget'])->name('target.destroy');
@@ -369,7 +375,7 @@ Route::middleware('auth')->group(function() {
             // Pendaftaran Pasien Baru
             Route::get('/pasien/create', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'create'])->name('pasien.create');
             Route::post('/pasien', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'store'])->name('pasien.store');
-            
+
             // Edit Identitas Pasien
             Route::get('/pasien/{pasien}/edit', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'edit'])->name('pasien.edit')->where('pasien', '[0-9]+');
             Route::put('/pasien/{pasien}', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'update'])->name('pasien.update')->where('pasien', '[0-9]+');
@@ -377,7 +383,7 @@ Route::middleware('auth')->group(function() {
             // Tambah Riwayat Kedatangan
             Route::get('/pasien/{pasien}/riwayat', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'createRiwayat'])->name('pasien.riwayat.create')->where('pasien', '[0-9]+');
             Route::post('/pasien/{pasien}/riwayat', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'storeRiwayat'])->name('pasien.riwayat.store')->where('pasien', '[0-9]+');
-            
+
             // Edit Data Riwayat
             Route::get('/pasien/riwayat/{id}/edit', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'editRiwayat'])->name('pasien.riwayat.edit')->where('id', '[0-9]+');
             Route::put('/pasien/riwayat/{id}', [\App\Http\Controllers\Rehab\RehabPasienController::class, 'updateRiwayat'])->name('pasien.riwayat.update')->where('id', '[0-9]+');

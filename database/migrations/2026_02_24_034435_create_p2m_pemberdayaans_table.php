@@ -19,8 +19,8 @@ return new class extends Migration
                 ->on('satuan_kerja')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
-            $table->string('sub_kegiatan');
-            $table->string('detail_kegiatan')->nullable();
+            $table->text('sub_kegiatan');
+            $table->text('detail_kegiatan')->nullable();
             $table->enum('anggaran_pelaksanaan', ['DIPA', 'NON DIPA']);
             $table->text('nama_kegiatan');
             $table->enum('sasaran_kegiatan', ['lingkungan pendidikan', 'lingkungan pemerintah', 'lingkungan masyarakat', 'lingkungan swasta']);

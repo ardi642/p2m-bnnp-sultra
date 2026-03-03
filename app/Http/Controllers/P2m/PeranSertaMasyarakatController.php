@@ -3,17 +3,16 @@
 namespace App\Http\Controllers\P2m;
 
 use App\Http\Controllers\Controller;
-use App\Models\P2mPemberdayaan;
+use App\Models\P2mPeranSertaMasyarakat;
 use App\Models\SatuanKerja;
 use App\Models\Pegawai;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
-use App\Exports\PemberdayaanExport;
+use App\Exports\PeranSertaMasyarakatExport;
 use App\Helpers\SearchHelper;
 use App\Models\Dokumen;
 use App\Services\DokumenService;
-use App\Constants\KategoriPemberdayaan;
-use Illuminate\Support\Str;
+use App\Constants\KategoriPeranSertaMasyarakat;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -21,16 +20,18 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 
-class PemberdayaanController extends Controller
+class PeranSertaMasyarakatController extends Controller
 {
     private function getFilteredQuery(Request $request)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
+
         $activeYears = $request->filled('tahun') ? $request->tahun : [date('Y')];
 
-        $query = P2mPemberdayaan::with('pegawai.satuanKerja', 'satuanKerja');
+        $query = P2mPeranSertaMasyarakat::with('pegawai.satuanKerja', 'satuanKerja');
 
+        // Filter Satker
         if ($user->hasRole('admin')) {
             if ($request->filled('satuan_kerja_id')) {
                 $query->whereIn('satuan_kerja_id', $request->satuan_kerja_id);
@@ -40,74 +41,83 @@ class PemberdayaanController extends Controller
             $query->where('satuan_kerja_id', $satkerId);
         }
 
+        // Filter Bulan
         if ($request->filled('bulan')) {
-            $query->where(function ($q) use ($request) {
+            $query->where(function($q) use ($request) {
                 foreach ($request->bulan as $b) {
                     $q->orWhereMonth('tanggal_pelaksanaan', $b);
                 }
             });
         }
 
-        $query->where(function ($q) use ($activeYears) {
+        // Filter Tahun
+        $query->where(function($q) use ($activeYears) {
             foreach ($activeYears as $y) {
                 $q->orWhereYear('tanggal_pelaksanaan', $y);
             }
         });
 
+        // Filter Anggaran
         if ($request->filled('anggaran_pelaksanaan')) {
             $query->whereIn('anggaran_pelaksanaan', $request->anggaran_pelaksanaan);
         }
 
-        if ($request->filled('sasaran_kegiatan')) {
-            $query->whereIn('sasaran_kegiatan', $request->sasaran_kegiatan);
+        // Filter Kategori Kegiatan
+        if ($request->filled('kategori_kegiatan')) {
+            $query->whereIn('kategori_kegiatan', $request->kategori_kegiatan);
         }
 
-        if ($request->filled('sub_kegiatan')) {
-            $query->whereIn('sub_kegiatan', $request->sub_kegiatan);
+        // Filter Nama Kegiatan
+        if ($request->filled('nama_kegiatan')) {
+            $query->whereIn('nama_kegiatan', $request->nama_kegiatan);
         }
 
-        if ($request->filled('detail_kegiatan')) {
-            $query->whereIn('detail_kegiatan', $request->detail_kegiatan);
-        }
-
+        // Filter Pegawai
         if ($request->filled('pegawai_nips')) {
             $nips = $request->pegawai_nips;
             $logic = $request->input('pegawai_logic', 'OR');
+            
             if ($logic === 'AND') {
                 foreach ($nips as $nip) {
-                    $query->whereHas('pegawai', function ($q) use ($nip) {
+                    $query->whereHas('pegawai', function($q) use ($nip) {
                         $q->where('pegawai.nip', $nip);
                     });
                 }
             } else {
-                $query->whereHas('pegawai', function ($q) use ($nips) {
+                $query->whereHas('pegawai', function($q) use ($nips) {
                     $q->whereIn('pegawai.nip', $nips);
                 });
             }
         }
 
+        // Search
         if ($request->filled('search')) {
             $search = $request->search;
             $searchDate = SearchHelper::translateDateInput($search);
-            $query->where(function ($q) use ($search, $searchDate) {
-                $q->where('nama_kegiatan', 'LIKE', "%{$search}%")
-                    ->orWhere('tempat_kegiatan', 'LIKE', "%{$search}%")
-                    ->orWhere('jumlah_peserta', 'LIKE', "%{$search}%");
-                $q->orWhereRaw("LOWER(DATE_FORMAT(tanggal_pelaksanaan, '%W, %d %M %Y')) LIKE ?", ["%{$searchDate}%"]);
+            
+            $query->where(function($q) use ($search, $searchDate) {
+                $q->where('tempat_kegiatan', 'LIKE', "%{$search}%")
+                    ->orWhere('jumlah_peserta', 'LIKE', "%{$search}%")
+                    ->orWhereRaw("LOWER(DATE_FORMAT(tanggal_pelaksanaan, '%W, %d %M %Y')) LIKE ?", ["%{$searchDate}%"]);
             });
         }
 
+        // Sorting
         $sortBy = $request->input('sort_by', 'created_at');
         $rawSortOrder = $request->input('sort_order', 'desc');
         $sortOrder = in_array(strtolower($rawSortOrder), ['asc', 'desc']) ? strtolower($rawSortOrder) : 'desc';
 
-        $allowSort = ['anggaran_pelaksanaan', 'sub_kegiatan', 'detail_kegiatan', 'nama_kegiatan', 'sasaran_kegiatan', 'tanggal_pelaksanaan', 'tempat_kegiatan', 'jumlah_peserta', 'created_at', 'satuan_kerja'];
+        $allowSort = [
+            'anggaran_pelaksanaan', 'nama_kegiatan', 'kategori_kegiatan', 
+            'tanggal_pelaksanaan', 'tempat_kegiatan', 'jumlah_peserta', 
+            'created_at', 'satuan_kerja'
+        ];
 
         if (in_array($sortBy, $allowSort)) {
             if ($sortBy === 'satuan_kerja') {
-                $query->join('satuan_kerja', 'p2m_pemberdayaan.satuan_kerja_id', '=', 'satuan_kerja.id')
-                    ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
-                    ->select('p2m_pemberdayaan.*');
+                $query->join('satuan_kerja', 'p2m_peran_serta_masyarakat.satuan_kerja_id', '=', 'satuan_kerja.id')
+                      ->orderBy('satuan_kerja.satuan_kerja', $sortOrder)
+                      ->select('p2m_peran_serta_masyarakat.*');
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }
@@ -132,7 +142,7 @@ class PemberdayaanController extends Controller
             $satuanKerjas = [];
         }
 
-        $yearQuery = P2mPemberdayaan::selectRaw('YEAR(tanggal_pelaksanaan) as year');
+        $yearQuery = P2mPeranSertaMasyarakat::selectRaw('YEAR(tanggal_pelaksanaan) as year');
 
         if ($user->hasRole(['operator_satker', 'operator_p2m'])) {
             $yearQuery->where('satuan_kerja_id', $user->getSatkerId());
@@ -157,16 +167,16 @@ class PemberdayaanController extends Controller
         $kegiatans = $query->paginate($perPage)->withQueryString();
 
         $satkerLookup = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
+        
+        // Data master dari Constants untuk Alpine Dropdown
+        $kategoriList = KategoriPeranSertaMasyarakat::KATEGORI;
+        $kategoriMap  = KategoriPeranSertaMasyarakat::KEGIATAN_MAP;
+        $allKegiatan  = KategoriPeranSertaMasyarakat::getAllKegiatan();
 
-        // Data Master Constant untuk AlpineJS
-        $subKegiatanList   = KategoriPemberdayaan::SUB_KEGIATAN;
-        $detailKegiatanMap = KategoriPemberdayaan::DETAIL_KEGIATAN_MAP;
-        $allDetailKegiatan = KategoriPemberdayaan::getAllDetailLabels();
-
-        return view('p2m.pemberdayaan.index', compact(
+        return view('p2m.peran-serta-masyarakat.index', compact(
             'kegiatans', 'satuanKerjas', 'years', 'pegawais', 'user', 
-            'satkerLookup', 'totalKegiatan', 'totalPeserta',
-            'subKegiatanList', 'detailKegiatanMap', 'allDetailKegiatan'
+            'satkerLookup', 'totalKegiatan', 'totalPeserta', 
+            'kategoriList', 'kategoriMap', 'allKegiatan'
         ));
     }
 
@@ -184,23 +194,21 @@ class PemberdayaanController extends Controller
             $pegawais = Pegawai::with('satuanKerja')->where('satuan_kerja_id', $satkerId)->orderBy('nama', 'asc')->get();
         }
 
-        $subKegiatanList   = KategoriPemberdayaan::SUB_KEGIATAN;
-        $detailKegiatanMap = KategoriPemberdayaan::DETAIL_KEGIATAN_MAP;
+        $kategoriList = KategoriPeranSertaMasyarakat::KATEGORI;
+        $kategoriMap  = KategoriPeranSertaMasyarakat::KEGIATAN_MAP;
 
-        return view('p2m.pemberdayaan.create', compact('satuanKerjas', 'pegawais', 'subKegiatanList', 'detailKegiatanMap'));
+        return view('p2m.peran-serta-masyarakat.create', compact('satuanKerjas', 'pegawais', 'kategoriList', 'kategoriMap'));
     }
 
-    public function store(Request $request, DokumenService $dokumenService)
+    public function store(Request $request, DokumenService $dokumenService) 
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
         $rules = [
             'anggaran_pelaksanaan' => 'required',
-            'sub_kegiatan'         => ['required', Rule::in(array_keys(KategoriPemberdayaan::SUB_KEGIATAN))],
-            'detail_kegiatan'      => ['required', Rule::in(KategoriPemberdayaan::getAllDetailKeys())],
-            'nama_kegiatan'        => 'required',
-            'sasaran_kegiatan'     => 'required',
+            'kategori_kegiatan'    => ['required', Rule::in(array_keys(KategoriPeranSertaMasyarakat::KATEGORI))],
+            'nama_kegiatan'        => ['required', Rule::in(KategoriPeranSertaMasyarakat::getAllKegiatan())],
             'tanggal_pelaksanaan'  => 'required|date',
             'tempat_kegiatan'      => 'required',
             'jumlah_peserta'       => 'required|numeric',
@@ -220,14 +228,8 @@ class PemberdayaanController extends Controller
         }
 
         $validasi = $request->validate($rules);
-
-        // Validasi ekstra: pastikan detail sesuai dengan parent sub-nya
-        $validDetails = KategoriPemberdayaan::DETAIL_KEGIATAN_MAP;
-        if (!isset($validDetails[$validasi['sub_kegiatan']]) || !array_key_exists($validasi['detail_kegiatan'], $validDetails[$validasi['sub_kegiatan']])) {
-            return back()->withErrors(['detail_kegiatan' => 'Detail tidak sesuai dengan sub kegiatan.'])->withInput();
-        }
-
         $uploadedPaths = [];
+
         DB::beginTransaction();
 
         try {
@@ -237,7 +239,7 @@ class PemberdayaanController extends Controller
                 $dataKegiatan['satuan_kerja_id'] = $user->getSatkerId();
             }
 
-            $kegiatan = P2mPemberdayaan::create($dataKegiatan);
+            $kegiatan = P2mPeranSertaMasyarakat::create($dataKegiatan);
 
             $listPegawai = Pegawai::whereIn('nip', $validasi['pegawai_nips'])->get();
             $attachData = [];
@@ -260,7 +262,8 @@ class PemberdayaanController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('p2m.pemberdayaan.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data.');
+            return redirect()->route('p2m.peran-serta-masyarakat.index')->with('success', 'store')->with('message', 'Berhasil menambahkan data.');
+
         } catch (\Exception $e) {
             DB::rollBack();
             foreach ($uploadedPaths as $path) {
@@ -275,7 +278,7 @@ class PemberdayaanController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $kegiatan = P2mPemberdayaan::with('pegawai', 'dokumen')->findOrFail($id);
+        $kegiatan = P2mPeranSertaMasyarakat::with('pegawai')->findOrFail($id);
 
         if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403, 'Akses Ditolak');
@@ -293,17 +296,19 @@ class PemberdayaanController extends Controller
         }
 
         $selectedPegawaiNips = $kegiatan->pegawai->pluck('nip')->toArray();
-        $subKegiatanList   = KategoriPemberdayaan::SUB_KEGIATAN;
-        $detailKegiatanMap = KategoriPemberdayaan::DETAIL_KEGIATAN_MAP;
+        $kategoriList = KategoriPeranSertaMasyarakat::KATEGORI;
+        $kategoriMap  = KategoriPeranSertaMasyarakat::KEGIATAN_MAP;
 
-        return view('p2m.pemberdayaan.edit', compact('kegiatan', 'satuanKerjas', 'pegawais', 'selectedPegawaiNips', 'subKegiatanList', 'detailKegiatanMap'));
+        return view('p2m.peran-serta-masyarakat.edit', compact(
+            'kegiatan', 'satuanKerjas', 'pegawais', 'selectedPegawaiNips', 'kategoriList', 'kategoriMap'
+        ));
     }
 
     public function update(Request $request, DokumenService $dokumenService, $id)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $kegiatan = P2mPemberdayaan::findOrFail($id);
+        $kegiatan = P2mPeranSertaMasyarakat::findOrFail($id);
 
         if ($user->hasRole(['operator_satker', 'operator_p2m']) && $kegiatan->satuan_kerja_id !== $user->getSatkerId()) {
             abort(403);
@@ -311,10 +316,8 @@ class PemberdayaanController extends Controller
 
         $rules = [
             'anggaran_pelaksanaan' => 'required',
-            'sub_kegiatan'         => ['required', Rule::in(array_keys(KategoriPemberdayaan::SUB_KEGIATAN))],
-            'detail_kegiatan'      => ['required', Rule::in(KategoriPemberdayaan::getAllDetailKeys())],
-            'nama_kegiatan'        => 'required',
-            'sasaran_kegiatan'     => 'required',
+            'kategori_kegiatan'    => ['required', Rule::in(array_keys(KategoriPeranSertaMasyarakat::KATEGORI))],
+            'nama_kegiatan'        => ['required', Rule::in(KategoriPeranSertaMasyarakat::getAllKegiatan())],
             'tanggal_pelaksanaan'  => 'required|date',
             'tempat_kegiatan'      => 'required',
             'jumlah_peserta'       => 'required|numeric',
@@ -333,26 +336,19 @@ class PemberdayaanController extends Controller
         if ($user->isAdmin()) $rules['satuan_kerja_id'] = 'required';
 
         $validasi = $request->validate($rules);
-
-        $validDetails = KategoriPemberdayaan::DETAIL_KEGIATAN_MAP;
-        if (!isset($validDetails[$validasi['sub_kegiatan']]) || !array_key_exists($validasi['detail_kegiatan'], $validDetails[$validasi['sub_kegiatan']])) {
-            return back()->withErrors(['detail_kegiatan' => 'Detail tidak sesuai dengan sub kegiatan.'])->withInput();
-        }
-
         $newFilesMoved = [];
         $filesToDelete = [];
 
         DB::beginTransaction();
 
         try {
-            $dataUpdate = collect($validasi)
-                ->except(['dokumentasi', 'lampiran', 'pegawai_nips', 'delete_files', 'dokumentasi_links', 'lampiran_links'])
-                ->toArray();
+            $dataUpdate = collect($validasi)->except(['dokumentasi', 'lampiran', 'pegawai_nips', 'delete_files', 'dokumentasi_links', 'lampiran_links'])->toArray();
             if ($user->hasRole(['operator_satker', 'operator_p2m'])) unset($dataUpdate['satuan_kerja_id']);
 
             $kegiatan->update($dataUpdate);
 
-            $oldPivotData = DB::table('pegawai_p2m_pemberdayaan')->where('p2m_pemberdayaan_id', $id)->get()->keyBy('pegawai_nip');
+            // Sync Pegawai
+            $oldPivotData = DB::table('pegawai_p2m_peran_serta_masyarakat')->where('p2m_peran_serta_masyarakat_id', $id)->get()->keyBy('pegawai_nip');
             $masterPegawais = Pegawai::whereIn('nip', $validasi['pegawai_nips'])->get()->keyBy('nip');
             $syncData = [];
             foreach ($validasi['pegawai_nips'] as $nip) {
@@ -388,7 +384,8 @@ class PemberdayaanController extends Controller
                 if (Storage::disk('public')->exists($path)) Storage::disk('public')->delete($path);
             }
 
-            return redirect()->route('p2m.pemberdayaan.index')->with('success', 'update')->with('message', 'Data diperbarui');
+            return redirect()->route('p2m.peran-serta-masyarakat.index')->with('success', 'update')->with('message', 'Data diperbarui');
+
         } catch (\Exception $e) {
             DB::rollBack();
             foreach ($newFilesMoved as $path) {
@@ -401,7 +398,8 @@ class PemberdayaanController extends Controller
 
     public function destroy($id)
     {
-        $kegiatan = P2mPemberdayaan::findOrFail($id);
+        $kegiatan = P2mPeranSertaMasyarakat::findOrFail($id);
+
         $filesToDelete = [];
 
         foreach ($kegiatan->dokumen()->cursor() as $doc) {
@@ -431,6 +429,6 @@ class PemberdayaanController extends Controller
     public function export(Request $request)
     {
         $query = $this->getFilteredQuery($request);
-        return Excel::download(new PemberdayaanExport($query), 'Laporan_P2M_Pemberdayaan.xlsx');
+        return Excel::download(new PeranSertaMasyarakatExport($query), 'Laporan_P2M_Peran_Serta_Masyarakat.xlsx');
     }
 }

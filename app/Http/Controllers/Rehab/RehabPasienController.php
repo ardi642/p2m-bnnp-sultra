@@ -31,7 +31,7 @@ class RehabPasienController extends Controller
         return "{$namaBersih}-{$tgl}-{$kodeJk}";
     }
 
-    private function getFilteredQuery(Request $request)
+private function getFilteredQuery(Request $request)
     {
         $user = Auth::user();
         
@@ -61,9 +61,34 @@ class RehabPasienController extends Controller
         if ($request->filled('pendidikan')) {
             $query->whereIn('rehab_riwayat.pendidikan', (array)$request->pendidikan);
         }
+
+        // --- PERUBAHAN LOGIKA PEKERJAAN (HYBRID FILTER) ---
         if ($request->filled('pekerjaan')) {
-            $query->whereIn('rehab_riwayat.pekerjaan', (array)$request->pekerjaan);
+            $inputPekerjaan = (array) $request->pekerjaan;
+            $pekerjaanBawaan = Pekerjaan::ALL; // Mengambil dari Konstanta
+
+            // Pisahkan mana yang pilihan bawaan dan mana yang diketik manual
+            $bawaanTerpilih = array_intersect($inputPekerjaan, $pekerjaanBawaan);
+            $manualTerpilih = array_diff($inputPekerjaan, $pekerjaanBawaan);
+
+            $query->where(function ($q) use ($bawaanTerpilih, $manualTerpilih) {
+                // Jika ada pilihan bawaan, gunakan whereIn
+                if (!empty($bawaanTerpilih)) {
+                    $q->whereIn('rehab_riwayat.pekerjaan', $bawaanTerpilih);
+                }
+
+                // Jika ada pilihan ketik manual, gunakan LIKE
+                if (!empty($manualTerpilih)) {
+                    $q->orWhere(function ($subQ) use ($manualTerpilih) {
+                        foreach ($manualTerpilih as $manual) {
+                            $subQ->orWhere('rehab_riwayat.pekerjaan', 'LIKE', "%{$manual}%");
+                        }
+                    });
+                }
+            });
         }
+        // --------------------------------------------------
+
         if ($request->filled('sumber_pasien')) {
             $query->whereIn('rehab_riwayat.sumber_pasien', (array)$request->sumber_pasien);
         }
@@ -91,7 +116,6 @@ class RehabPasienController extends Controller
             $query->join('satuan_kerja', 'rehab_pasien.satuan_kerja_id', '=', 'satuan_kerja.id')
                   ->orderBy('satuan_kerja.satuan_kerja', $sortOrder);
         } elseif ($sortBy === 'usia') {
-            // Logika sorting khusus untuk usia menggunakan DATEDIFF di SQL
             $query->orderByRaw("DATEDIFF(rehab_riwayat.tanggal_rehab, rehab_pasien.tanggal_lahir) {$sortOrder}");
         } elseif (in_array($sortBy, $pasienSorts)) {
             $query->orderBy('rehab_pasien.' . $sortBy, $sortOrder);
@@ -110,12 +134,7 @@ class RehabPasienController extends Controller
         $satuanKerjas = $user->isAdmin() ? SatuanKerja::orderBy('satuan_kerja')->get() : [];
         $masterNarkotika = BerantasNarkotika::orderBy('nama_narkotika')->get();
         
-        // Mengambil semua nama pekerjaan dari database (termasuk yang diinput manual)
-        $pekerjaans = RehabRiwayat::select('pekerjaan')
-            ->whereNotNull('pekerjaan')
-            ->distinct()
-            ->orderBy('pekerjaan')
-            ->pluck('pekerjaan');
+        $pekerjaans = Pekerjaan::ALL;
         
         $years = RehabRiwayat::selectRaw('YEAR(tanggal_rehab) as year')
             ->distinct()

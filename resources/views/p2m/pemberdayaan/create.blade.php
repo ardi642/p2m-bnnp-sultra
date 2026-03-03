@@ -4,7 +4,6 @@
     <main class="admin-main">
         <div class="container-fluid p-4 p-lg-5">
 
-            {{-- Header Title (SAMA DENGAN EDIT) --}}
             <div class="row justify-content-center mb-4">
                 <div class="col-12 col-lg-10">
                     <div class="d-flex justify-content-between align-items-center">
@@ -12,8 +11,7 @@
                             <h1 class="h3 mb-1 fw-bold text-dark">Input Kegiatan P2M</h1>
                             <p class="text-muted mb-0">Kegiatan P2M Pemberdayaan Alternatif</p>
                         </div>
-                        <a href="{{ route('p2m.pemberdayaan.index') }}"
-                            class="btn btn-outline-secondary d-flex align-items-center gap-2">
+                        <a href="{{ route('p2m.pemberdayaan.index') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
                             <i class="bi bi-arrow-left"></i> Kembali
                         </a>
                     </div>
@@ -28,354 +26,194 @@
                         </div>
 
                         <div class="card-body p-4 p-lg-5">
-
-                            <form action="{{ route('p2m.pemberdayaan.store') }}" method="POST"
-                                enctype="multipart/form-data" id="form-create">
+                            <form action="{{ route('p2m.pemberdayaan.store') }}" method="POST" enctype="multipart/form-data" id="form-create">
                                 @csrf
 
-                                {{-- ==================================================== --}}
-                                {{-- SECTION 1: DATA KEGIATAN --}}
-                                {{-- ==================================================== --}}
                                 <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">
                                     Data Pemberdayaan Alternatif
                                 </h6>
 
-                                <div class="row g-4 mb-5" x-data="{
-                                    subKegiatan: '{{ old('sub_kegiatan') }}',
-                                    detailKegiatan: '{{ old('detail_kegiatan') }}',
-                                
-                                    detailOptions: {
-                                        pembinaan: [
-                                            { value: 'pembinaan_teknis_satker', label: 'Pembinaan Teknis bagi Satker' }
-                                        ],
-                                        pemetaan: [
-                                            { value: 'pemetaan_sdm_sda', label: 'Pemetaan SDM dan SDA' },
-                                            { value: 'rapat_kerja', label: 'Rapat Kerja' }
-                                        ],
-                                        kapasitas: [
-                                            { value: 'bimtek_life_skill', label: 'Bimbingan Teknis Life Skill' },
-                                            { value: 'pengukuran_skm', label: 'Pengukuran SKM' }
-                                        ],
-                                        monev: [
-                                            { value: 'monev_program', label: 'Monev Program Pemberdayaan Alternatif' },
-                                            { value: 'pengukuran_ikkrn', label: 'Pengukuran IKKRN' },
-                                            { value: 'pengukuran_kuesioner', label: 'Pengukuran Kuesioner' }
-                                        ]
-                                    },
-                                
-                                    init() {
-                                        this.subKegiatan = this.subKegiatan?.toLowerCase().trim() ?? ''
-                                        this.detailKegiatan = this.detailKegiatan?.toLowerCase().trim() ?? ''
-                                    }
-                                }" x-init="$watch('subKegiatan', () => detailKegiatan = '')">
-
+                                {{-- BUNGKUS DENGAN ALPINE JS COMPONENT UNTUK DROPDOWN --}}
+                                <div class="row g-4 mb-5" x-data="dropdownPemberdayaan()">
+                                    
                                     @if (auth()->user()->isAdmin())
                                         <div class="col-12 col-lg-6">
-                                            <label class="form-label fw-semibold text-secondary small">Satuan Kerja <span
-                                                    class="text-danger">*</span></label>
-                                            <select class="form-select @error('satuan_kerja_id') is-invalid @enderror"
-                                                name="satuan_kerja_id">
+                                            <label class="form-label fw-semibold text-secondary small">Satuan Kerja <span class="text-danger">*</span></label>
+                                            <select class="form-select @error('satuan_kerja_id') is-invalid @enderror" name="satuan_kerja_id">
                                                 <option value="" selected disabled>-- Pilih Satuan Kerja --</option>
                                                 @foreach ($satuanKerjas as $satuanKerja)
-                                                    <option value="{{ $satuanKerja->id }}" @selected(old('satuan_kerja_id') == $satuanKerja->id)>
-                                                        {{ $satuanKerja->satuan_kerja }}</option>
+                                                    <option value="{{ $satuanKerja->id }}" @selected(old('satuan_kerja_id') == $satuanKerja->id)>{{ $satuanKerja->satuan_kerja }}</option>
                                                 @endforeach
                                             </select>
-                                            @error('satuan_kerja_id')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
+                                            @error('satuan_kerja_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                         </div>
                                     @endif
 
-                                    <div class="col-12 col-lg-6">
-                                        <label class="form-label fw-semibold text-secondary small">
-                                            Sub Kegiatan <span class="text-danger">*</span>
-                                        </label>
-                                        <select class="form-select @error('sub_kegiatan') is-invalid @enderror"
-                                            name="sub_kegiatan" x-model="subKegiatan" required>
-
-                                            <option value="" disabled>-- Pilih Sub Kegiatan --</option>
-                                            <option value="pembinaan">Pembinaan Teknis bagi Satker</option>
-                                            <option value="pemetaan">Pemetaan Kawasan Rawan Narkoba</option>
-                                            <option value="kapasitas">Pengembangan Kapasitas Masyarakat</option>
-                                            <option value="monev">Monitoring dan Evaluasi</option>
-                                        </select>
-                                        @error('sub_kegiatan')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-
-                                    <div class="col-12 col-lg-6" x-show="detailOptions[subKegiatan]" x-transition>
-
-                                        <label class="form-label fw-semibold text-secondary small">
-                                            Detail Kegiatan <span class="text-danger">*</span>
-                                        </label>
-
-                                        <select class="form-select @error('detail_kegiatan') is-invalid @enderror"
-                                            name="detail_kegiatan" x-model="detailKegiatan">
-
-                                            <option value="" disabled>-- Pilih Detail --</option>
-
-                                            <template x-for="item in detailOptions[subKegiatan]" :key="item.value">
-                                                <option :value="item.value" x-text="item.label"></option>
-                                            </template>
-                                        </select>
-
-                                        @error('detail_kegiatan')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-
-                                    <div class="col-12">
-                                        <label class="form-label fw-semibold text-secondary small">Nama Kegiatan <span
-                                                class="text-danger">*</span></label>
-                                        <input type="text"
-                                            class="form-control form-control-lg @error('nama_kegiatan') is-invalid @enderror"
-                                            name="nama_kegiatan" value="{{ old('nama_kegiatan') }}"
-                                            placeholder="Masukkan nama kegiatan">
-                                        @error('nama_kegiatan')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-
                                     <div class="col-12 col-lg-{{ auth()->user()->isAdmin() ? '6' : '12' }}">
-                                        <label class="form-label fw-semibold text-secondary small">Sumber Anggaran <span
-                                                class="text-danger">*</span></label>
-                                        <select class="form-select @error('anggaran_pelaksanaan') is-invalid @enderror"
-                                            name="anggaran_pelaksanaan">
+                                        <label class="form-label fw-semibold text-secondary small">Sumber Anggaran <span class="text-danger">*</span></label>
+                                        <select class="form-select @error('anggaran_pelaksanaan') is-invalid @enderror" name="anggaran_pelaksanaan">
                                             <option value="" disabled selected>-- Pilih Sumber --</option>
                                             <option value="DIPA" @selected(old('anggaran_pelaksanaan') == 'DIPA')>DIPA</option>
                                             <option value="NON DIPA" @selected(old('anggaran_pelaksanaan') == 'NON DIPA')>NON DIPA</option>
                                         </select>
-                                        @error('anggaran_pelaksanaan')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
+                                        @error('anggaran_pelaksanaan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    </div>
+
+                                    {{-- Sub Kegiatan --}}
+                                    <div class="col-12 col-lg-6">
+                                        <label class="form-label fw-semibold text-secondary small">Sub Kegiatan <span class="text-danger">*</span></label>
+                                        <select class="form-select @error('sub_kegiatan') is-invalid @enderror" name="sub_kegiatan" x-model="subKegiatan">
+                                            <option value="" disabled selected>-- Pilih Sub Kegiatan --</option>
+                                            @foreach($subKegiatanList as $val => $label)
+                                                <option value="{{ $val }}">{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('sub_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    </div>
+
+                                    {{-- Detail Kegiatan --}}
+                                    <div class="col-12 col-lg-6">
+                                        <label class="form-label fw-semibold text-secondary small">Detail Kegiatan <span class="text-danger">*</span></label>
+                                        <select class="form-select @error('detail_kegiatan') is-invalid @enderror" name="detail_kegiatan" x-model="detailKegiatan" :disabled="!subKegiatan">
+                                            <option value="" disabled selected>-- Pilih Detail Kegiatan --</option>
+                                            <template x-for="(label, value) in filteredDetails" :key="value">
+                                                <option :value="value" x-text="label"></option>
+                                            </template>
+                                        </select>
+                                        @error('detail_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold text-secondary small">Nama Kegiatan <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control @error('nama_kegiatan') is-invalid @enderror" name="nama_kegiatan" value="{{ old('nama_kegiatan') }}" placeholder="Masukkan nama kegiatan">
+                                        @error('nama_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
 
                                 </div>
 
-
-                                {{-- ==================================================== --}}
-                                {{-- SECTION 2: DETAIL PELAKSANAAN --}}
-                                {{-- ==================================================== --}}
                                 <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">
                                     Detail Pelaksanaan
                                 </h6>
 
                                 <div class="row g-4 mb-5">
                                     <div class="col-12 col-md-6">
-                                        <label class="form-label fw-semibold text-secondary small">Tanggal Pelaksanaan <span
-                                                class="text-danger">*</span></label>
-                                        <input type="date"
-                                            class="form-control @error('tanggal_pelaksanaan') is-invalid @enderror"
-                                            name="tanggal_pelaksanaan" value="{{ old('tanggal_pelaksanaan') }}">
-                                        @error('tanggal_pelaksanaan')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
+                                        <label class="form-label fw-semibold text-secondary small">Tanggal Pelaksanaan <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control @error('tanggal_pelaksanaan') is-invalid @enderror" name="tanggal_pelaksanaan" value="{{ old('tanggal_pelaksanaan') }}">
+                                        @error('tanggal_pelaksanaan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
 
                                     <div class="col-12 col-md-6">
-                                        <label class="form-label fw-semibold text-secondary small">Target Sasaran <span
-                                                class="text-danger">*</span></label>
-                                        <select class="form-select @error('sasaran_kegiatan') is-invalid @enderror"
-                                            name="sasaran_kegiatan">
+                                        <label class="form-label fw-semibold text-secondary small">Target Sasaran <span class="text-danger">*</span></label>
+                                        <select class="form-select @error('sasaran_kegiatan') is-invalid @enderror" name="sasaran_kegiatan">
                                             <option value="" selected disabled>-- Pilih Lingkungan --</option>
-                                            <option value="lingkungan pemerintah" @selected(old('sasaran_kegiatan') == 'lingkungan pemerintah')>Lingkungan
-                                                Pemerintah</option>
-                                            <option value="lingkungan pendidikan" @selected(old('sasaran_kegiatan') == 'lingkungan pendidikan')>Lingkungan
-                                                Pendidikan</option>
-                                            <option value="lingkungan masyarakat" @selected(old('sasaran_kegiatan') == 'lingkungan masyarakat')>Lingkungan
-                                                Masyarakat</option>
-                                            <option value="lingkungan swasta" @selected(old('sasaran_kegiatan') == 'lingkungan swasta')>Lingkungan Swasta
-                                            </option>
+                                            <option value="lingkungan pemerintah" @selected(old('sasaran_kegiatan') == 'lingkungan pemerintah')>Lingkungan Pemerintah</option>
+                                            <option value="lingkungan pendidikan" @selected(old('sasaran_kegiatan') == 'lingkungan pendidikan')>Lingkungan Pendidikan</option>
+                                            <option value="lingkungan masyarakat" @selected(old('sasaran_kegiatan') == 'lingkungan masyarakat')>Lingkungan Masyarakat</option>
+                                            <option value="lingkungan swasta" @selected(old('sasaran_kegiatan') == 'lingkungan swasta')>Lingkungan Swasta</option>
                                         </select>
-                                        @error('sasaran_kegiatan')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
+                                        @error('sasaran_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
 
                                     <div class="col-12">
-                                        <label class="form-label fw-semibold text-secondary small">Lokasi / Tempat Kegiatan
-                                            <span class="text-danger">*</span></label>
-                                        <input type="text"
-                                            class="form-control @error('tempat_kegiatan') is-invalid @enderror"
-                                            name="tempat_kegiatan" value="{{ old('tempat_kegiatan') }}"
-                                            placeholder="Masukkan lokasi kegiatan">
-                                        @error('tempat_kegiatan')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
+                                        <label class="form-label fw-semibold text-secondary small">Lokasi / Tempat Kegiatan <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control @error('tempat_kegiatan') is-invalid @enderror" name="tempat_kegiatan" value="{{ old('tempat_kegiatan') }}" placeholder="Masukkan lokasi kegiatan">
+                                        @error('tempat_kegiatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
 
 
-                                {{-- ==================================================== --}}
-                                {{-- SECTION 3: TIM PELAKSANA & KELENGKAPAN --}}
-                                {{-- ==================================================== --}}
                                 <h6 class="text-uppercase text-secondary fw-bold small mb-3 border-bottom pb-2">
                                     Tim Pelaksana & Kelengkapan
                                 </h6>
 
                                 <div class="row g-4 mb-4">
                                     <div class="col-12 col-lg-8">
-                                        <label class="form-label fw-semibold text-secondary small">Pegawai Bertugas <span
-                                                class="text-danger">*</span></label>
-                                        <select id="select-pegawai" name="pegawai_nips[]" multiple
-                                            placeholder="Pilih pegawai..." autocomplete="off">
+                                        <label class="form-label fw-semibold text-secondary small">Pegawai Bertugas <span class="text-danger">*</span></label>
+                                        <select id="select-pegawai" class="form-select @error('pegawai_nips') is-invalid @enderror" name="pegawai_nips[]" multiple placeholder="Pilih pegawai..." autocomplete="off">
                                             <option value="">Pilih pegawai...</option>
-                                            @foreach ($pegawais as $pgw)
+                                            @forelse ($pegawais as $pgw)
                                                 <option value="{{ $pgw->nip }}" @selected(collect(old('pegawai_nips'))->contains($pgw->nip))>
                                                     {{ $pgw->nama }} ({{ $pgw->nip }})
                                                 </option>
-                                            @endforeach
+                                            @empty
+                                                <option disabled>Tidak ada pegawai tersedia</option>
+                                            @endforelse
                                         </select>
-                                        @error('pegawai_nips')
-                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                        @enderror
+                                        @error('pegawai_nips') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                     </div>
 
                                     <div class="col-12 col-lg-4">
-                                        <label class="form-label fw-semibold text-secondary small">Jumlah Peserta <span
-                                                class="text-danger">*</span></label>
+                                        <label class="form-label fw-semibold text-secondary small">Jumlah Peserta <span class="text-danger">*</span></label>
                                         <div class="input-group">
-                                            <input type="number"
-                                                class="form-control @error('jumlah_peserta') is-invalid @enderror"
-                                                name="jumlah_peserta" value="{{ old('jumlah_peserta') }}"
-                                                placeholder="0">
+                                            <input type="number" class="form-control @error('jumlah_peserta') is-invalid @enderror" name="jumlah_peserta" value="{{ old('jumlah_peserta') }}" placeholder="0">
                                             <span class="input-group-text bg-light text-secondary">Orang</span>
                                         </div>
-                                        @error('jumlah_peserta')
-                                            <div class="text-danger small mt-1">{{ $message }}</div>
-                                        @enderror
+                                        @error('jumlah_peserta') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                     </div>
 
-                                    {{-- ========================================== --}}
-                                    {{-- AREA UPLOAD FILE & LINK (HYBRID) --}}
-                                    {{-- ========================================== --}}
                                     <div class="col-12 mt-5">
                                         <div class="bg-light p-4 rounded-3 border border-dashed">
-
                                             <label class="form-label fw-bold h6 mb-3 text-dark d-block border-bottom pb-2">
                                                 <i class="bi bi-cloud-arrow-up me-2"></i>Upload File & Link (Opsional)
                                             </label>
 
                                             <div class="row g-3">
-
-                                                {{-- KOLOM KIRI: DOKUMENTASI --}}
                                                 <div class="col-12 col-md-6">
-                                                    <div
-                                                        class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
+                                                    <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
                                                         <label class="form-label fw-bold small text-primary mb-1">
                                                             <i class="bi bi-folder2-open me-2"></i>Dokumentasi
                                                         </label>
 
-                                                        {{-- 1. File Upload --}}
                                                         <div class="mb-3">
-                                                            <p class="text-muted small mb-2" style="font-size: 0.75rem">
-                                                                Upload dokumentasi. Maksimal 10MB.</p>
-                                                            <input type="file" id="fp-dokumentasi"
-                                                                name="dokumentasi[]" multiple>
-                                                            @error('dokumentasi')
-                                                                <div class="text-danger small">{{ $message }}</div>
-                                                            @enderror
+                                                            <p class="text-muted small mb-2" style="font-size: 0.75rem">Upload dokumentasi. Maksimal 10MB.</p>
+                                                            <input type="file" id="fp-dokumentasi" name="dokumentasi[]" multiple>
+                                                            @error('dokumentasi') <div class="text-danger small">{{ $message }}</div> @enderror
                                                         </div>
 
                                                         <hr class="border-secondary-subtle my-3">
 
-                                                        {{-- 2. Link Input (Alpine) --}}
                                                         <div x-data="linkManager({{ \Illuminate\Support\Js::from(array_values(old('dokumentasi_links', []))) }})">
-                                                            <label class="form-label fw-bold small text-primary mb-2">
-                                                                <i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link
-                                                            </label>
-
-                                                            <template x-for="(link, index) in links"
-                                                                :key="index">
+                                                            <label class="form-label fw-bold small text-primary mb-2"><i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link</label>
+                                                            <template x-for="(link, index) in links" :key="index">
                                                                 <div class="input-group mb-2 input-group-sm">
-                                                                    <input type="text" class="form-control"
-                                                                        :name="`dokumentasi_links[${index}][nama]`"
-                                                                        placeholder="Nama Tautan / File"
-                                                                        x-model="link.nama" required>
-
-                                                                    <input type="url" class="form-control"
-                                                                        :name="`dokumentasi_links[${index}][url]`"
-                                                                        placeholder="https://" x-model="link.url"
-                                                                        required>
-
-                                                                    <button type="button" class="btn btn-outline-danger"
-                                                                        @click="removeLink(index)">
-                                                                        <i class="bi bi-x"></i>
-                                                                    </button>
+                                                                    <input type="text" class="form-control" :name="`dokumentasi_links[${index}][nama]`" placeholder="Nama Tautan / File" x-model="link.nama" required>
+                                                                    <input type="url" class="form-control" :name="`dokumentasi_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
+                                                                    <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
                                                                 </div>
                                                             </template>
-
-                                                            @error('dokumentasi_links.*')
-                                                                <div class="text-danger small mb-2">Pastikan nama dan URL diisi
-                                                                    dengan benar.</div>
-                                                            @enderror
-
-                                                            <button type="button"
-                                                                class="btn btn-xs btn-outline-primary dashed-border w-100 mt-1"
-                                                                @click="addLink()">
+                                                            @error('dokumentasi_links.*') <div class="text-danger small mb-2">Pastikan nama dan URL diisi dengan benar.</div> @enderror
+                                                            <button type="button" class="btn btn-xs btn-outline-primary dashed-border w-100 mt-1" @click="addLink()">
                                                                 <i class="bi bi-plus-circle me-1"></i> Tambah Link
                                                             </button>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                {{-- KOLOM KANAN: LAMPIRAN --}}
                                                 <div class="col-12 col-md-6">
-                                                    <div
-                                                        class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
+                                                    <div class="bg-white p-3 rounded border h-100 d-flex flex-column shadow-sm">
                                                         <label class="form-label fw-bold small text-danger mb-1">
                                                             <i class="bi bi-paperclip me-2"></i>Lampiran Pendukung
                                                         </label>
 
-                                                        {{-- 1. File Upload --}}
                                                         <div class="mb-3">
-                                                            <p class="text-muted small mb-2" style="font-size: 0.75rem">
-                                                                Upload file pendukung. Maksimal 10MB.</p>
-                                                            <input type="file" id="fp-lampiran" name="lampiran[]"
-                                                                multiple>
-                                                            @error('lampiran')
-                                                                <div class="text-danger small">{{ $message }}</div>
-                                                            @enderror
+                                                            <p class="text-muted small mb-2" style="font-size: 0.75rem">Upload file pendukung. Maksimal 10MB.</p>
+                                                            <input type="file" id="fp-lampiran" name="lampiran[]" multiple>
+                                                            @error('lampiran') <div class="text-danger small">{{ $message }}</div> @enderror
                                                         </div>
 
                                                         <hr class="border-secondary-subtle my-3">
 
-                                                        {{-- 2. Link Input (Alpine) --}}
                                                         <div x-data="linkManager({{ \Illuminate\Support\Js::from(array_values(old('lampiran_links', []))) }})">
-                                                            <label class="form-label fw-bold small text-danger mb-2">
-                                                                <i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link
-                                                            </label>
-
-                                                            <template x-for="(link, index) in links"
-                                                                :key="index">
+                                                            <label class="form-label fw-bold small text-danger mb-2"><i class="bi bi-link-45deg me-1"></i>Atau Tautkan Link</label>
+                                                            <template x-for="(link, index) in links" :key="index">
                                                                 <div class="input-group mb-2 input-group-sm">
-                                                                    <input type="text" class="form-control"
-                                                                        :name="`lampiran_links[${index}][nama]`"
-                                                                        placeholder="Nama Tautan / File"
-                                                                        x-model="link.nama" required>
-
-                                                                    <input type="url" class="form-control"
-                                                                        :name="`lampiran_links[${index}][url]`"
-                                                                        placeholder="https://" x-model="link.url"
-                                                                        required>
-
-                                                                    <button type="button" class="btn btn-outline-danger"
-                                                                        @click="removeLink(index)">
-                                                                        <i class="bi bi-x"></i>
-                                                                    </button>
+                                                                    <input type="text" class="form-control" :name="`lampiran_links[${index}][nama]`" placeholder="Nama Tautan / File" x-model="link.nama" required>
+                                                                    <input type="url" class="form-control" :name="`lampiran_links[${index}][url]`" placeholder="https://" x-model="link.url" required>
+                                                                    <button type="button" class="btn btn-outline-danger" @click="removeLink(index)"><i class="bi bi-x"></i></button>
                                                                 </div>
                                                             </template>
-
-                                                            @error('lampiran_links.*')
-                                                                <div class="text-danger small mb-2">Pastikan nama dan URL diisi
-                                                                    dengan benar.</div>
-                                                            @enderror
-
-                                                            <button type="button"
-                                                                class="btn btn-xs btn-outline-danger dashed-border w-100 mt-1"
-                                                                @click="addLink()">
+                                                            @error('lampiran_links.*') <div class="text-danger small mb-2">Pastikan nama dan URL diisi dengan benar.</div> @enderror
+                                                            <button type="button" class="btn btn-xs btn-outline-danger dashed-border w-100 mt-1" @click="addLink()">
                                                                 <i class="bi bi-plus-circle me-1"></i> Tambah Link
                                                             </button>
                                                         </div>
@@ -385,13 +223,10 @@
                                             </div>
                                         </div>
                                     </div>
-
                                 </div>
 
-                                <div
-                                    class="d-flex flex-column-reverse flex-lg-row justify-content-end gap-2 pt-3 border-top mt-4">
-                                    <button type="button" onclick="window.location.reload()"
-                                        class="btn btn-light border text-secondary px-4">
+                                <div class="d-flex flex-column-reverse flex-lg-row justify-content-end gap-2 pt-3 border-top mt-4">
+                                    <button type="button" onclick="window.location.reload()" class="btn btn-light border text-secondary px-4">
                                         <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                                     </button>
                                     <button type="submit" id="btn-submit" class="btn btn-primary px-5 shadow-sm">
@@ -410,67 +245,59 @@
 
 @push('styles')
     @vite(['resources/css/filepond.css'])
-
     <style>
-        .dashed-border {
-            border-style: dashed !important;
-            border-width: 1px !important;
-        }
-
-        .ts-control {
-            border: 1px solid #dee2e6;
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.375rem;
-            box-shadow: none;
-        }
-
-        .ts-control.focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-
-        .filepond--panel-root {
-            background-color: #ffffff;
-            border: 1px solid #dee2e6;
-        }
-
-        .border-dashed {
-            border-style: dashed !important;
-            border-width: 2px !important;
-        }
-
-        .filepond--item {
-            width: 100%;
-        }
+        .dashed-border { border-style: dashed !important; border-width: 1px !important; }
+        .ts-control { border: 1px solid #dee2e6; padding: 0.5rem 0.75rem; border-radius: 0.375rem; box-shadow: none; }
+        .ts-control.focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+        .filepond--panel-root { background-color: #ffffff; border: 1px solid #dee2e6; }
+        .border-dashed { border-style: dashed !important; border-width: 2px !important; }
+        .filepond--item { width: 100%; }
     </style>
 @endpush
 
 @push('scripts')
-    {{-- Load JS FilePond via Vite --}}
     @vite(['resources/js/filepond.js'])
 
     <script type="module">
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener('alpine:init', () => {
 
+            // ALPINE COMPONENT UNTUK DEPENDENT DROPDOWN
+            Alpine.data('dropdownPemberdayaan', () => ({
+                subKegiatan: '{{ old("sub_kegiatan") }}',
+                detailKegiatan: '{{ old("detail_kegiatan") }}',
+                map: @json($detailKegiatanMap),
+                
+                get filteredDetails() {
+                    return this.subKegiatan ? (this.map[this.subKegiatan] || {}) : {};
+                },
+
+                init() {
+                    this.$watch('subKegiatan', () => {
+                        // Jika sub_kegiatan berubah, pastikan detail yang aktif masih valid, kalau tidak reset.
+                        if (!Object.keys(this.filteredDetails).includes(this.detailKegiatan)) {
+                            this.detailKegiatan = '';
+                        }
+                    });
+                }
+            }));
+
+            // ALPINE JS LINK MANAGER
+            Alpine.data('linkManager', (initialData = []) => ({
+                links: Array.isArray(initialData) ? initialData : [],
+                addLink() { this.links.push({ nama: '', url: '' }); },
+                removeLink(index) { this.links.splice(index, 1); }
+            }));
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
             // 1. TOM SELECT
             if (typeof TomSelect !== 'undefined') {
                 new TomSelect("#select-pegawai", {
-                    create: false,
-                    sortField: {
-                        field: "text",
-                        direction: "asc"
-                    },
-                    maxItems: null,
-                    placeholder: "Pilih pegawai...",
-                    plugins: ['remove_button', 'clear_button'],
+                    create: false, sortField: { field: "text", direction: "asc" }, maxItems: null,
+                    placeholder: "Pilih pegawai...", plugins: ['remove_button', 'clear_button'],
                     render: {
-                        option: function(data, escape) {
-                            return '<div class="d-flex align-items-center"><i class="bi bi-person me-2 text-muted"></i>' +
-                                escape(data.text) + '</div>';
-                        },
-                        item: function(data, escape) {
-                            return '<div>' + escape(data.text) + '</div>';
-                        }
+                        option: function(data, escape) { return '<div class="d-flex align-items-center"><i class="bi bi-person me-2 text-muted"></i>' + escape(data.text) + '</div>'; },
+                        item: function(data, escape) { return '<div>' + escape(data.text) + '</div>'; }
                     }
                 });
             }
@@ -485,45 +312,10 @@
             };
 
             if (window.FilePondManager) {
-
-                // A. Init Dokumentasi (Format Bebas, Max 10MB)
-                window.FilePondManager.create('#fp-dokumentasi', {
-                    ...commonConfig,
-                    maxSize: '10MB',
-                    existingFiles: @json(old('dokumentasi', [])),
-                });
-
-                // B. Init Lampiran Pendukung (Format Bebas, Max 10MB)
-                window.FilePondManager.create('#fp-lampiran', {
-                    ...commonConfig,
-                    maxSize: '10MB',
-                    existingFiles: @json(old('lampiran', [])),
-                });
-
-                // C. Validasi Submit
+                window.FilePondManager.create('#fp-dokumentasi', { ...commonConfig, maxSize: '10MB', existingFiles: @json(old('dokumentasi', [])), });
+                window.FilePondManager.create('#fp-lampiran', { ...commonConfig, maxSize: '10MB', existingFiles: @json(old('lampiran', [])), });
                 window.FilePondManager.attachFormSubmit('form-create', 'btn-submit');
-
-            } else {
-                console.error(
-                    "FilePondManager belum dimuat. Pastikan 'npm run build' atau 'npm run dev' berjalan.");
             }
-
-        });
-
-        // 3. ALPINE JS LINK MANAGER
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('linkManager', (initialData = []) => ({
-                links: Array.isArray(initialData) ? initialData : [],
-                addLink() {
-                    this.links.push({
-                        nama: '',
-                        url: ''
-                    });
-                },
-                removeLink(index) {
-                    this.links.splice(index, 1);
-                }
-            }));
         });
     </script>
 @endpush

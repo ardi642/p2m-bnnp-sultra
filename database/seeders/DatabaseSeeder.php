@@ -41,9 +41,15 @@ class DatabaseSeeder extends Seeder
             P2mPemetaanSdmSdaSeeder::class
         ]);
 
+        // $this->call([
+        //     BerantasUngkapKasusSeeder::class,
+        //     BerantasRegisterBarangBuktiSeeder::class,
+        // ]);
+
         $this->call([
-            BerantasUngkapKasusSeeder::class,
-            BerantasRegisterBarangBuktiSeeder::class,
+            RehabTargetSeeder::class,
+            RehabLaporanSeeder::class,
+            RehabPasienSeeder::class,
         ]);
 
 

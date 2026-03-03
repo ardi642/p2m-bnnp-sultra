@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\HasDokumen;
 
 class RehabRiwayat extends Model
 {
-    use HasDokumen;
+    use HasFactory, HasDokumen;
 
     protected $table = 'rehab_riwayat';
     protected $guarded = ['id'];

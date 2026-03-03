@@ -223,7 +223,7 @@
             <div class="card-body p-0 p-lg-4">
                 {{-- Form Filter --}}
                 {{-- PERBAIKAN Z-INDEX DI SINI: Tambah 'position-relative' dan 'style="z-index: 1050;"' agar dropdown TomSelect tidak tertutup header tabel --}}
-                <div x-show="showFilter" x-transition class="mb-4 position-relative" style="z-index: 1050;">
+                <div x-show="showFilter" x-transition class="mb-4 position-relative" style="z-index: 1030;">
                     <form action="{{ route('rehab.laporan.index') }}" method="GET" class="bg-light p-4 rounded border" id="form-filter">
                         <input type="hidden" name="breakdown_year" value="{{ $breakdownYear }}">
                         <div class="row g-3">
@@ -319,8 +319,8 @@
                                 <th class="py-3 ps-3">No</th>
                                 <th class="py-3 text-nowrap">{!! $sortLink('tanggal', 'Tanggal') !!}</th>
                                 <th class="py-3 text-start">{!! $sortLink('satuan_kerja_id', 'Satuan Kerja') !!}</th>
-                                <th class="py-3 text-info">{!! $sortLink('realisasi_rawat_jalan', 'RJ') !!}</th>
-                                <th class="py-3 text-success">{!! $sortLink('realisasi_pasca_rehab', 'Pasca') !!}</th>
+                                <th class="py-3 text-info">{!! $sortLink('realisasi_rawat_jalan', 'Rawat Jalan') !!}</th>
+                                <th class="py-3 text-success">{!! $sortLink('realisasi_pasca_rehab', 'Pasca Rehab') !!}</th>
                                 <th class="py-3 text-warning-emphasis">{!! $sortLink('realisasi_skhpn', 'SKHPN') !!}</th>
                                 <th class="py-3 text-nowrap">{!! $sortLink('created_at', 'Dibuat') !!}</th>
                                 <th class="py-3 pe-3">Aksi</th>
@@ -545,7 +545,7 @@
                                         </select>
                                         <template x-if="targetForm.isEdit"><input type="hidden" name="tahun" :value="targetForm.tahun"></template>
                                     </div>
-                                    <div class="col-md-4"><label class="small fw-bold text-info">Target RJ</label><input type="number" name="target_rawat_jalan" class="form-control" x-model="targetForm.rj" required min="0" placeholder="0"></div>
+                                    <div class="col-md-4"><label class="small fw-bold text-info">Target Rajal</label><input type="number" name="target_rawat_jalan" class="form-control" x-model="targetForm.rj" required min="0" placeholder="0"></div>
                                     <div class="col-md-4"><label class="small fw-bold text-success">Target Pasca</label><input type="number" name="target_pasca_rehab" class="form-control" x-model="targetForm.pasca" required min="0" placeholder="0"></div>
                                     <div class="col-md-4"><label class="small fw-bold text-warning-emphasis">Target SKHPN</label><input type="number" name="target_skhpn" class="form-control" x-model="targetForm.skhpn" required min="0" placeholder="0"></div>
                                     <div class="col-12 text-end"><button type="submit" class="btn btn-sm" :class="targetForm.isEdit ? 'btn-warning' : 'btn-primary'">Simpan</button></div>

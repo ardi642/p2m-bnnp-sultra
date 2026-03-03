@@ -4,20 +4,20 @@
            // FITUR PENTING: Mengembalikan posisi scroll dari memori browser
            // agar saat klik menu, sidebar tidak kembali ke atas.
            $el.scrollTop = localStorage.getItem('sidebar_scroll_pos') || 0;
-           
+
            // Simpan posisi setiap kali user melakukan scroll
            $el.addEventListener('scroll', () => {
                localStorage.setItem('sidebar_scroll_pos', $el.scrollTop);
            });
        ">
-       
+
     <div class="sidebar-content py-3">
         <nav class="nav flex-column">
-            
+
             {{-- DASHBOARD --}}
-            <a href="{{ route('dashboard.index') }}" 
+            <a href="{{ route('dashboard.index') }}"
                class="nav-link dashboard-link d-flex align-items-center gap-3 {{ Request::is('dashboard*') ? 'active' : '' }}">
-                <i class="bi bi-grid-fill fs-5"></i> 
+                <i class="bi bi-grid-fill fs-5"></i>
                 <span>Dashboard</span>
             </a>
 
@@ -33,15 +33,14 @@
                     ['route' => 'p2m.elektronik.index', 'label' => 'Media Elektronik', 'url' => 'p2m/elektronik*'],
                     ['route' => 'p2m.non-elektronik.index', 'label' => 'Media Non-Elektronik', 'url' => 'p2m/non-elektronik*'],
                     ['route' => 'p2m.online.index', 'label' => 'Media Online', 'url' => 'p2m/online*'],
-                    ['route' => 'p2m.tes-urine.index', 'label' => 'Tes Urine', 'url' => 'p2m/tes-urine*'],
                     ['route' => 'p2m.desa-kelurahan-bersinar.index', 'label' => 'Desa / Kelurahan Bersinar', 'url' => 'p2m/desa-kelurahan-bersinar*'],
                     ['route' => 'p2m.asistensi-relawan.index', 'label' => 'Asistensi Relawan', 'url' => 'p2m/asistensi-relawan*'],
                     ['route' => 'p2m.pelatihan.index', 'label' => 'Pelatihan Soft Skill', 'url' => 'p2m/pelatihan*'],
                     ['route' => 'p2m.rts.index', 'label' => 'Remaja Teman Sebaya', 'url' => 'p2m/rts*'],
                     ['route' => 'p2m.keluarga.index', 'label' => 'Ketahanan Keluarga', 'url' => 'p2m/keluarga*'],
                     ['route' => 'p2m.ikan.index', 'label' => 'Integrasi Kurikulum Anti Narkotika', 'url' => 'p2m/ikan*'],
-                    ['route' => 'p2m.monev.index', 'label' => 'Peran Serta Masyarakat', 'url' => 'p2m/monev*'],
-                    ['route' => 'p2m.pemetaan-sdm-sda.index', 'label' => 'Pemetaan SDM dan SDA', 'url' => 'p2m/pemetaan-sdm-sda*'],
+                    ['route' => 'p2m.tes-urine.index', 'label' => 'Tes Urine', 'url' => 'p2m/tes-urine*'],
+                    ['route' => 'p2m.peran-serta-masyarakat.index', 'label' => 'Peran Serta Masyarakat', 'url' => 'p2m/peran-serta-masyarakat*'],
                     ['route' => 'p2m.pemberdayaan.index', 'label' => 'Pemberdayaan Alternatif', 'url' => 'p2m/pemberdayaan*'],
                 ] as $menu)
                     <a href="{{ route($menu['route']) }}" class="nav-link {{ Request::is($menu['url']) ? 'active' : '' }}">
@@ -96,13 +95,13 @@
                 </div>
 
                 {{-- Semua Admin di atas boleh melihat Data Pegawai --}}
-                <a href="{{ route('admin.pegawai.index') }}" 
+                <a href="{{ route('admin.pegawai.index') }}"
                    class="nav-link {{ Request::is('admin/pegawai*') ? 'active' : '' }}">
                     Data Pegawai
                 </a>
 
                 {{-- Semua Admin di atas boleh melakukan Manajemen User (reset password/create operator) --}}
-                <a href="{{ route('admin.users.index') }}" 
+                <a href="{{ route('admin.users.index') }}"
                    class="nav-link {{ Request::is('admin/users*') ? 'active' : '' }}">
                     Manajemen User
                 </a>
@@ -121,8 +120,8 @@
             <form action="{{ route('logout') }}" method="POST" id="sidebar-logout-form">
                 @csrf
             </form>
-            
-            <a href="#" class="nav-link text-danger" 
+
+            <a href="#" class="nav-link text-danger"
                onclick="event.preventDefault(); document.getElementById('sidebar-logout-form').submit();">
                <i class="bi bi-box-arrow-right me-2 d-inline-block"></i> Logout
             </a>

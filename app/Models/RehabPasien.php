@@ -3,10 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class RehabPasien extends Model
 {
+    use HasFactory;
     protected $table = 'rehab_pasien';
     protected $guarded = ['id'];
     protected $casts = [

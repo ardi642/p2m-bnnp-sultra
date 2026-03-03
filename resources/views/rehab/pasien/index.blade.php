@@ -121,10 +121,14 @@
                             
                             <div class="col-md-3">
                                 <label class="form-label fw-bold small text-secondary">Pekerjaan</label>
-                                {{-- Menampilkan list semua pekerjaan (termasuk yang manual) dari Database --}}
+                                @php
+                                    // Gabungkan konstanta dengan request agar tag ketikan manual tidak hilang saat refresh
+                                    $reqPekerjaan = request('pekerjaan', []);
+                                    $mergedPekerjaan = array_unique(array_merge($pekerjaans, $reqPekerjaan));
+                                @endphp
                                 <select id="sel-kerja" name="pekerjaan[]" multiple placeholder="Pilih/Ketik Pekerjaan...">
-                                    @foreach($pekerjaans as $p) 
-                                        <option value="{{ $p }}" {{ in_array($p, request('pekerjaan', [])) ? 'selected' : '' }}>{{ $p }}</option> 
+                                    @foreach($mergedPekerjaan as $p) 
+                                        <option value="{{ $p }}" {{ in_array($p, $reqPekerjaan) ? 'selected' : '' }}>{{ $p }}</option> 
                                     @endforeach
                                 </select>
                             </div>
@@ -172,7 +176,6 @@
                                 <th class="py-3 bg-light">{!! $sortLink('nama_pasien', 'Nama Pasien') !!}</th>
                                 <th class="py-3 bg-light">{!! $sortLink('jenis_kelamin', 'Jenis Kelamin') !!}</th>
                                 <th class="py-3 bg-light">{!! $sortLink('tanggal_rehab', 'Tgl Masuk Rehab') !!}</th>
-                                {{-- Perubahan sort parameter menjadi 'usia' agar ditangkap DATEDIFF di Controller --}}
                                 <th class="py-3 bg-light text-center">{!! $sortLink('usia', 'Usia Masuk') !!}</th>
                                 <th class="py-3 bg-light">{!! $sortLink('pekerjaan', 'Pekerjaan') !!}</th>
                                 <th class="py-3 bg-light">{!! $sortLink('pendidikan', 'Pendidikan') !!}</th>
@@ -252,20 +255,6 @@
 <style>
     [x-cloak] { display: none !important; }
     .ts-dropdown { z-index: 2000 !important; }
-    .ts-control { 
-        border: 1px solid #ced4da !important; 
-        border-radius: 0.375rem !important;
-        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075) !important;
-        padding-top: 0.5rem !important; 
-        padding-bottom: 0.5rem !important; 
-        background-color: #ffffff !important; 
-        min-height: 40px; 
-    }
-    .ts-wrapper.focus .ts-control { 
-        border-color: #86b7fe !important; 
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important; 
-    }
-    .ts-control > input { font-size: 0.875rem; }
     .custom-table-scroll { max-height: 70vh; overflow-y: auto; }
 </style>
 @endpush
@@ -273,10 +262,20 @@
 @push('scripts')
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const conf = { plugins: ['remove_button', 'clear_button'], create: false, maxOptions: null };
-        ['sel-satker','sel-tahun','sel-bulan','sel-jk','sel-sumber','sel-narko','sel-kerja','sel-didik'].forEach(id => { 
-            if(document.getElementById(id)) new TomSelect('#'+id, conf); 
+        // Konfigurasi bawaan (hanya bisa memilih dari list)
+        const confDefault = { plugins: ['remove_button', 'clear_button'], create: false, maxOptions: null };
+        // Konfigurasi khusus (bisa pilih list ATAU ketik teks manual sendiri)
+        const confBebasKetik = { plugins: ['remove_button', 'clear_button'], create: true, maxOptions: null };
+
+        // Aplikasikan confDefault ke semua dropdown kecuali pekerjaan
+        ['sel-satker','sel-tahun','sel-bulan','sel-jk','sel-sumber','sel-narko','sel-didik'].forEach(id => { 
+            if(document.getElementById(id)) new TomSelect('#'+id, confDefault); 
         });
+
+        // Aplikasikan confBebasKetik KHUSUS untuk pekerjaan
+        if(document.getElementById('sel-kerja')) {
+            new TomSelect('#sel-kerja', confBebasKetik);
+        }
     });
 
     window.confirmDelete = function(id) {

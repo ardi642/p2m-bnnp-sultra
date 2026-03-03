@@ -49,9 +49,9 @@ class P2mTesUrineFactory extends Factory
             'nama_instansi' => $this->faker->company() . ' ' . $this->faker->city(),
             
             'sasaran_kegiatan' => $this->faker->randomElement([
-                'instansi pemerintah', 
+                'lingkungan pemerintah', 
                 'lingkungan pendidikan', 
-                'pekerja swasta', 
+                'lingkungan swasta', 
                 'lingkungan masyarakat'
             ]),
             

@@ -132,9 +132,9 @@
                                                 <label class="form-label fw-bold small text-secondary text-uppercase mb-1">Sasaran</label>
                                                 <div class="shadow-sm bg-white rounded">
                                                     <select id="select-sasaran" name="sasaran_kegiatan[]" multiple placeholder="Pilih Sasaran..." autocomplete="off">
-                                                        <option value="instansi pemerintah" {{ in_array('instansi pemerintah', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Instansi Pemerintah</option>
+                                                        <option value="lingkungan pemerintah" {{ in_array('lingkungan pemerintah', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Pemerintah</option>
                                                         <option value="lingkungan pendidikan" {{ in_array('lingkungan pendidikan', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Pendidikan</option>
-                                                        <option value="pekerja swasta" {{ in_array('pekerja swasta', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Pekerja Swasta</option>
+                                                        <option value="lingkungan swasta" {{ in_array('lingkungan swasta', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Swasta</option>
                                                         <option value="lingkungan masyarakat" {{ in_array('lingkungan masyarakat', request('sasaran_kegiatan', [])) ? 'selected' : '' }}>Lingkungan Masyarakat</option>
                                                     </select>
                                                 </div>
@@ -252,9 +252,9 @@
                                                 <td>
                                                     @php 
                                                     $sasaranClass = match($data->sasaran_kegiatan) { 
-                                                        'instansi pemerintah' => 'bg-danger', 
+                                                        'lingkungan pemerintah' => 'bg-danger', 
                                                         'lingkungan pendidikan' => 'bg-warning', 
-                                                        'pekerja swasta' => 'bg-primary', 
+                                                        'lingkungan swasta' => 'bg-primary', 
                                                         default => 'bg-secondary' 
                                                     }; 
                                                     @endphp

@@ -229,6 +229,7 @@
                                         <th class="py-3 bg-light text-center" style="width: 110px">{!! $sortLink('tanggal_pelaksanaan', 'Tanggal') !!}</th>
                                         <th class="py-3 bg-light text-start">Pegawai</th>
                                         <th class="py-3 bg-light text-center">{!! $sortLink('jumlah_peserta', 'Peserta') !!}</th>
+                                        <th class="py-3 bg-light text-center">{!! $sortLink('created_at', 'Dibuat') !!}</th>
                                         <th class="py-3 bg-light pe-3 text-center">Aksi</th>
                                     </tr>
                                 </thead>
@@ -265,6 +266,7 @@
                                             </td>
 
                                             <td class="text-center fw-bold">{{ $data->jumlah_peserta }}</td>
+                                            <td class="small text-muted text-nowrap text-center">{{ $data->created_at->locale('id')->translatedFormat('d M Y') }}</td>
                                             <td class="pe-3">
                                                 <div class="btn-group btn-group-sm shadow-sm">
                                                     <button type="button" class="btn btn-light border text-secondary py-1" @click="toggleExpand({{ $data->id }})">
@@ -281,7 +283,7 @@
 
                                         {{-- TR DETAIL --}}
                                         <tr x-show="isExpanded({{ $data->id }})" x-transition>
-                                            <td colspan="10" class="p-0 border-0">
+                                            <td colspan="11" class="p-0 border-0">
                                                 <div class="bg-body-tertiary p-4 border-bottom shadow-inner text-start" x-data="fileDownloader">
                                                     <div class="card border-0 shadow-sm">
                                                         <div class="card-body">

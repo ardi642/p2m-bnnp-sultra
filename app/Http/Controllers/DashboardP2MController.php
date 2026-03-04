@@ -421,26 +421,29 @@ class DashboardP2MController extends Controller
         }
 
         // ====================================================================
-        // DATA RINCIAN SPESIFIK & DRILL DOWN 
+        // DATA RINCIAN SPESIFIK & DRILL DOWN (DENGAN NAMA SATKER)
         // ====================================================================
         $tableData = [];
 
         if ($type === 'peran_serta_masyarakat') {
             $qPsm = DB::table('p2m_peran_serta_masyarakat')
+                ->leftJoin('satuan_kerja', 'p2m_peran_serta_masyarakat.satuan_kerja_id', '=', 'satuan_kerja.id')
                 ->select(
+                    'satuan_kerja.satuan_kerja as nama_satker',
                     'kategori_kegiatan', 
                     'nama_kegiatan', 
-                    DB::raw('COUNT(id) as frekuensi'), 
+                    DB::raw('COUNT(p2m_peran_serta_masyarakat.id) as frekuensi'), 
                     DB::raw('SUM(jumlah_peserta) as peserta')
                 )
-                ->groupBy('kategori_kegiatan', 'nama_kegiatan');
+                ->groupBy('satuan_kerja.satuan_kerja', 'kategori_kegiatan', 'nama_kegiatan');
             
-            if ($mySatker) $qPsm->where('satuan_kerja_id', $mySatker);
+            if ($mySatker) $qPsm->where('p2m_peran_serta_masyarakat.satuan_kerja_id', $mySatker);
             $qPsm = $applyCompTime($qPsm)->get();
 
             $mapKat = KategoriPeranSertaMasyarakat::KATEGORI;
             foreach ($qPsm as $r) {
                 $tableData[] = [
+                    'satker'    => $r->nama_satker ?? 'Tidak Diketahui',
                     'kategori'  => $mapKat[$r->kategori_kegiatan] ?? ucwords(str_replace('_', ' ', $r->kategori_kegiatan)),
                     'nama'      => $r->nama_kegiatan,
                     'frekuensi' => (int)$r->frekuensi,
@@ -449,38 +452,50 @@ class DashboardP2MController extends Controller
                 ];
             }
 
-            $qUrine = DB::table('p2m_tes_urine');
-            if ($mySatker) $qUrine->where('satuan_kerja_id', $mySatker);
-            $qUrine = $applyCompTime($qUrine);
+            $qUrine = DB::table('p2m_tes_urine')
+                ->leftJoin('satuan_kerja', 'p2m_tes_urine.satuan_kerja_id', '=', 'satuan_kerja.id')
+                ->select(
+                    'satuan_kerja.satuan_kerja as nama_satker',
+                    DB::raw('COUNT(p2m_tes_urine.id) as frekuensi'),
+                    DB::raw('SUM(jumlah_peserta) as peserta'),
+                    DB::raw('SUM(jumlah_positif) as positif')
+                )
+                ->groupBy('satuan_kerja.satuan_kerja');
+                
+            if ($mySatker) $qUrine->where('p2m_tes_urine.satuan_kerja_id', $mySatker);
+            $qUrine = $applyCompTime($qUrine)->get();
             
-            $tuCount = (clone $qUrine)->count();
-            if ($tuCount > 0) {
+            foreach($qUrine as $tu) {
                 $tableData[] = [
+                    'satker'    => $tu->nama_satker ?? 'Tidak Diketahui',
                     'kategori'  => $mapKat['pengembangan_kapasitas'] ?? 'Pengembangan Kapasitas & Pembinaan',
                     'nama'      => 'Deteksi Dini Tes Urine Uji Narkoba',
-                    'frekuensi' => $tuCount,
-                    'peserta'   => (int)(clone $qUrine)->sum('jumlah_peserta'),
-                    'positif'   => (int)(clone $qUrine)->sum('jumlah_positif')
+                    'frekuensi' => (int)$tu->frekuensi,
+                    'peserta'   => (int)$tu->peserta,
+                    'positif'   => (int)$tu->positif
                 ];
             }
 
         } elseif ($type === 'pemberdayaan') {
             $qPa = DB::table('p2m_pemberdayaan')
+                ->leftJoin('satuan_kerja', 'p2m_pemberdayaan.satuan_kerja_id', '=', 'satuan_kerja.id')
                 ->select(
+                    'satuan_kerja.satuan_kerja as nama_satker',
                     'sub_kegiatan', 
                     'detail_kegiatan', 
-                    DB::raw('COUNT(id) as frekuensi'), 
+                    DB::raw('COUNT(p2m_pemberdayaan.id) as frekuensi'), 
                     DB::raw('SUM(jumlah_peserta) as peserta')
                 )
-                ->groupBy('sub_kegiatan', 'detail_kegiatan');
+                ->groupBy('satuan_kerja.satuan_kerja', 'sub_kegiatan', 'detail_kegiatan');
             
-            if ($mySatker) $qPa->where('satuan_kerja_id', $mySatker);
+            if ($mySatker) $qPa->where('p2m_pemberdayaan.satuan_kerja_id', $mySatker);
             $qPa = $applyCompTime($qPa)->get();
 
             $mapSub = KategoriPemberdayaan::SUB_KEGIATAN;
             $mapDet = KategoriPemberdayaan::getAllDetailLabels();
             foreach ($qPa as $r) {
                 $tableData[] = [
+                    'satker'    => $r->nama_satker ?? 'Tidak Diketahui',
                     'kategori'  => $mapSub[$r->sub_kegiatan] ?? ucwords(str_replace('_', ' ', $r->sub_kegiatan)),
                     'nama'      => $mapDet[$r->detail_kegiatan] ?? ucwords(str_replace('_', ' ', $r->detail_kegiatan)),
                     'frekuensi' => (int)$r->frekuensi,
@@ -490,6 +505,7 @@ class DashboardP2MController extends Controller
             }
         }
 
+        // Pengurutan bawaan
         usort($tableData, function($a, $b) {
             if ($a['kategori'] === $b['kategori']) {
                 return $b['peserta'] <=> $a['peserta'];

@@ -287,21 +287,22 @@
                 </div>
             </div>
 
-            {{-- Grafik Rincian Spesifik dengan Drill-down --}}
+            {{-- Grafik Rincian Spesifik dengan Drill-down 3 LEVEL --}}
             <div class="col-12" x-show="detailType === 'peran_serta_masyarakat' || detailType === 'pemberdayaan'">
                 <div class="card border-0 shadow-sm bg-white rounded-4">
                     
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
                         
-                        {{-- JUDUL DI KIRI (Hitam Polos) --}}
+                        {{-- JUDUL DI KIRI (Hitam Polos, disesuaikan dengan level kedalaman) --}}
                         <h6 class="fw-bold text-dark mb-0">
-                            <span x-show="drilldownLevel === 1">Level 1: Kinerja <span x-text="detailTypeName"></span> (<span x-text="timeLabelText"></span>)</span>
+                            <span x-show="drilldownLevel === 1">Level 1: Kinerja Program <span x-text="detailTypeName"></span> (<span x-text="timeLabelText"></span>)</span>
                             <span x-show="drilldownLevel === 2">Level 2: Detail Kegiatan - <span x-text="selectedKategori"></span></span>
+                            <span x-show="drilldownLevel === 3">Level 3: Sebaran Satuan Kerja - <span x-text="selectedKegiatan"></span></span>
                         </h6>
 
-                        {{-- SAKELAR METRIK DI KANAN --}}
+                        {{-- SAKELAR METRIK & TOMBOL KEMBALI DI KANAN --}}
                         <div class="d-flex align-items-center gap-2">
-                            <button x-show="drilldownLevel === 2" @click="goBackLevel1()" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold px-3">
+                            <button x-show="drilldownLevel > 1" @click="goBack()" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold px-3">
                                 <i class="bi bi-arrow-left me-1"></i> Kembali
                             </button>
 
@@ -314,8 +315,8 @@
                     </div>
 
                     <div class="card-body px-4 pb-4 pt-2">
-                        <p x-show="drilldownLevel === 1 && tableData.length > 0" class="text-muted small mb-4">
-                            <i class="bi bi-info-circle me-1"></i> Tips Interaktif: Silakan klik salah satu batang grafik di bawah ini untuk melihat rincian kegiatannya (Level 2).
+                        <p x-show="drilldownLevel < 3 && tableData.length > 0" class="text-muted small mb-4">
+                            <i class="bi bi-info-circle me-1"></i> Tips Interaktif: Silakan klik salah satu batang grafik di bawah ini untuk melihat rincian datanya lebih dalam.
                         </p>
 
                         <div class="w-100" x-show="tableData.length > 0" style="overflow-x: auto;">
@@ -359,9 +360,10 @@
             tabComp: 'anggaran', 
             adminTrendType: 'bar', 
             
-            // State untuk Drill-down
-            drilldownLevel: 1,
+            // State untuk Drill-down 3 Level
+            drilldownLevel: 1, // 1: Kategori, 2: Kegiatan, 3: Satker
             selectedKategori: '',
+            selectedKegiatan: '',
             drilldownMetric: 'kegiatan', // Default Sakelar adalah Total Kegiatan
 
             config: { 
@@ -407,10 +409,12 @@
 
             get timeLabelText() {
                 if (this.filterMonth === 'all') {
-                    return `Tahun ${this.globalYear}`;
+                    // Update: Ditambahkan kata "Periode"
+                    return `Periode Tahun ${this.globalYear}`; 
                 } else {
                     const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-                    return `${months[this.filterMonth - 1]} ${this.globalYear}`;
+                    // Update: Pastikan ada kata "Bulan"
+                    return `Bulan ${months[this.filterMonth - 1]} ${this.globalYear}`;
                 }
             },
             
@@ -426,9 +430,14 @@
                 return 'Berdasarkan ' + (maps[this.tabComp] || 'Kategori'); 
             },
 
-            goBackLevel1() {
-                this.drilldownLevel = 1;
-                this.selectedKategori = '';
+            goBack() {
+                if (this.drilldownLevel === 3) {
+                    this.drilldownLevel = 2;
+                    this.selectedKegiatan = '';
+                } else if (this.drilldownLevel === 2) {
+                    this.drilldownLevel = 1;
+                    this.selectedKategori = '';
+                }
                 this.renderDetailChart();
             },
 
@@ -450,6 +459,7 @@
                         
                         this.drilldownLevel = 1;
                         this.selectedKategori = '';
+                        this.selectedKegiatan = '';
 
                         if (this.tabTrend === 'peserta' && this.config.unit === '-') this.tabTrend = 'kegiatan'; 
                         
@@ -572,7 +582,7 @@
                 this.chartInst.comp.render();
             },
 
-            // --- FUNGSI CHART DRILL-DOWN ---
+            // --- FUNGSI CHART DRILL-DOWN (3 LEVEL) ---
             renderDetailChart() {
                 if (!this.$refs.chartDetail || this.tableData.length === 0) return;
                 
@@ -583,15 +593,13 @@
                 
                 let isPeserta = this.drilldownMetric === 'peserta';
                 
-                // Cek apakah batang indikasi merah boleh dimunculkan
-                let showPositif = isPeserta && 
-                                  this.drilldownLevel === 2 && 
-                                  this.selectedKategori.includes('Pengembangan Kapasitas');
-
                 const colorPalette = ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#0dcaf0', '#20c997', '#ffc107'];
                 let categoryColors = {};
                 let colorIdx = 0;
+                
+                let showPositif = false;
 
+                // ================== LEVEL 1: KATEGORI ==================
                 if (this.drilldownLevel === 1) {
                     let grouped = {};
                     this.tableData.forEach(row => {
@@ -609,7 +617,7 @@
 
                     for (let kat in grouped) {
                         categories.push(kat);
-                        colors.push(categoryColors[kat]); // Terapkan Rainbow
+                        colors.push(categoryColors[kat]); 
                         
                         if (isPeserta) {
                             s1.push(grouped[kat].peserta);
@@ -617,37 +625,85 @@
                             s1.push(grouped[kat].frekuensi);
                         }
                     }
-
-                } else if (this.drilldownLevel === 2) {
-                    let filteredData = this.tableData.filter(row => row.kategori === this.selectedKategori);
+                } 
+                // ================== LEVEL 2: NAMA KEGIATAN ==================
+                else if (this.drilldownLevel === 2) {
+                    showPositif = isPeserta && this.selectedKategori.includes('Pengembangan Kapasitas');
                     let baseColor = isPeserta ? '#0d6efd' : '#198754';
                     
+                    let filteredData = this.tableData.filter(row => row.kategori === this.selectedKategori);
+                    let grouped = {};
+                    
                     filteredData.forEach(row => {
-                        categories.push(row.nama);
-                        
-                        if (isPeserta) {
-                            if (showPositif) {
-                                // Jangan disatukan (unstacked), tampilkan dua bar (total peserta vs positif)
-                                s1.push(row.peserta);
-                                s2.push(row.positif || 0);
-                            } else {
-                                s1.push(row.peserta);
-                            }
-                        } else {
-                            s1.push(row.frekuensi);
-                        }
-                        colors.push(baseColor);
+                        if (!grouped[row.nama]) grouped[row.nama] = { peserta: 0, frekuensi: 0, positif: 0 };
+                        grouped[row.nama].peserta += row.peserta;
+                        grouped[row.nama].frekuensi += row.frekuensi;
+                        grouped[row.nama].positif += (row.positif || 0);
                     });
+
+                    for (let nama in grouped) {
+                        categories.push(nama);
+                        colors.push(baseColor);
+                        if (isPeserta) {
+                            s1.push(grouped[nama].peserta);
+                            if (showPositif) s2.push(grouped[nama].positif);
+                        } else {
+                            s1.push(grouped[nama].frekuensi);
+                        }
+                    }
+                }
+                // ================== LEVEL 3: SEBARAN SATKER ==================
+                else if (this.drilldownLevel === 3) {
+                    showPositif = isPeserta && this.selectedKegiatan.toLowerCase().includes('tes urine');
+                    let baseColor = isPeserta ? '#0d6efd' : '#198754';
+
+                    let filteredData = this.tableData.filter(row => row.kategori === this.selectedKategori && row.nama === this.selectedKegiatan);
+                    let grouped = {};
+
+                    // 1. Masukkan data satker yang ada transaksinya
+                    filteredData.forEach(row => {
+                        if (!grouped[row.satker]) grouped[row.satker] = { peserta: 0, frekuensi: 0, positif: 0 };
+                        grouped[row.satker].peserta += row.peserta;
+                        grouped[row.satker].frekuensi += row.frekuensi;
+                        grouped[row.satker].positif += (row.positif || 0);
+                    });
+
+                    // 2. Tambahkan semua Satker (meskipun 0) jika sedang login sbg admin wilayah/provinsi
+                    if (this.rawData.comp_labels && this.rawData.comp_labels.length > 0) {
+                        this.rawData.comp_labels.forEach(s => {
+                            if (!grouped[s]) {
+                                grouped[s] = { peserta: 0, frekuensi: 0, positif: 0 };
+                            }
+                        });
+                    }
+
+                    // Urutkan satker dari kontribusi terbesar ke terkecil
+                    let sortedSatkers = Object.keys(grouped).sort((a, b) => {
+                        let valA = isPeserta ? grouped[a].peserta : grouped[a].frekuensi;
+                        let valB = isPeserta ? grouped[b].peserta : grouped[b].frekuensi;
+                        return valB - valA; 
+                    });
+
+                    for (let satker of sortedSatkers) {
+                        categories.push(satker);
+                        colors.push(baseColor);
+                        if (isPeserta) {
+                            s1.push(grouped[satker].peserta);
+                            if (showPositif) s2.push(grouped[satker].positif);
+                        } else {
+                            s1.push(grouped[satker].frekuensi);
+                        }
+                    }
                 }
 
-                let dynamicHeight = Math.max(300, categories.length * 85);
-
+                // Berikan ruang tinggi proporsional, khusus level 3 (satker) beri ruang lebih banyak per bar
+                let dynamicHeight = Math.max(300, categories.length * (this.drilldownLevel === 3 ? 60 : 85));
                 let series = [];
                 let chartColors = [];
 
                 if (isPeserta) {
                     if (showPositif) {
-                        // Terpisah di atas bawah (karena parameter stacked akan diset false)
+                        // Terpisah di atas bawah (stacked: false)
                         series = [
                             { name: 'Jumlah Peserta / Orang', data: s1 },
                             { name: 'Indikasi Positif', data: s2 }
@@ -671,38 +727,45 @@
                     chart: {
                         type: 'bar',
                         height: dynamicHeight,
-                        stacked: false, // PASTI FALSE: Agar bar peserta dan positif terpisah atas bawah
+                        stacked: false, // Terpisah atas bawah
                         toolbar: { show: false },
                         fontFamily: 'inherit',
                         events: {
                             dataPointSelection: (event, chartContext, config) => {
                                 if (this.drilldownLevel === 1) {
-                                    let clickedCat = categories[config.dataPointIndex];
-                                    this.selectedKategori = clickedCat;
+                                    this.selectedKategori = categories[config.dataPointIndex];
                                     this.drilldownLevel = 2;
                                     this.renderDetailChart();
+                                } else if (this.drilldownLevel === 2) {
+                                    this.selectedKegiatan = categories[config.dataPointIndex];
+                                    this.drilldownLevel = 3;
+                                    this.renderDetailChart();
                                 }
+                                // Level 3 tidak ada klik lagi (sudah paling ujung)
                             }
                         }
                     },
                     plotOptions: {
                         bar: {
                             horizontal: true,
-                            barHeight: '55%',
+                            barHeight: '65%',
                             borderRadius: 4,
                             distributed: (this.drilldownLevel === 1), 
-                            cursor: this.drilldownLevel === 1 ? 'pointer' : 'default',
-                            dataLabels: { position: 'center' } // Menempatkan kotak data di tengah bar
+                            cursor: this.drilldownLevel < 3 ? 'pointer' : 'default',
+                            // Pindahkan posisi label ke pangkal batang (bottom) agar nilai 0 tetap kelihatan rapi
+                            dataLabels: { position: 'bottom' } 
                         }
                     },
                     colors: chartColors,
                     dataLabels: {
                         enabled: true,
-                        textAnchor: 'middle', // Teks benar-benar di tengah kotak
+                        // Mulai dari kiri pangkal batang, geser dikit agar tidak nempel sumbu
+                        textAnchor: 'start', 
+                        offsetX: 10,
                         style: { colors: ['#fff'], fontSize: '13px', fontWeight: 'bold' },
                         formatter: (val, opt) => {
-                            if (!val) return ""; 
-                            let text = new Intl.NumberFormat('id-ID').format(val);
+                            // Update: Sekarang nilai 0 juga diprint (tidak disembunyikan)
+                            let text = new Intl.NumberFormat('id-ID').format(val || 0);
                             
                             if (isPeserta) {
                                 if (showPositif && opt.seriesIndex === 1) return text + " Positif";
@@ -711,7 +774,6 @@
                                 return text + " Kegiatan";
                             }
                         },
-                        offsetX: 0,
                         dropShadow: { enabled: true, top: 1, left: 1, blur: 1, color: '#000', opacity: 0.5 }
                     },
                     xaxis: {
@@ -728,7 +790,7 @@
                         theme: 'light',
                         y: {
                             formatter: function(val) {
-                                return new Intl.NumberFormat('id-ID').format(val) + (isPeserta ? " Orang" : " Kegiatan");
+                                return new Intl.NumberFormat('id-ID').format(val || 0) + (isPeserta ? " Orang" : " Kegiatan");
                             }
                         }
                     },

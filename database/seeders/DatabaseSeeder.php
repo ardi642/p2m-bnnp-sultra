@@ -37,8 +37,10 @@ class DatabaseSeeder extends Seeder
             P2mTesUrineSeeder::class,
             P2mDesaKelurahanBersinarSeeder::class,
             P2mSafariReligiSeeder::class,
-            P2mMonevSeeder::class,
-            P2mPemetaanSdmSdaSeeder::class
+            P2mPeranSertaMasyarakatSeeder::class,
+            P2mPemberdayaanSeeder::class,
+            // P2mMonevSeeder::class,
+            // P2mPemetaanSdmSdaSeeder::class
         ]);
 
         // $this->call([

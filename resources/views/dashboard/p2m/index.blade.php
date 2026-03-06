@@ -189,7 +189,7 @@
             </div>
         </div>
 
-        {{-- RANKING CHART (HORIZONTAL BARS) --}}
+        {{-- RANKING CHART --}}
         <div class="card border-0 shadow-sm mb-5 bg-white rounded-3">
             <div class="card-body p-4">
                 <div x-ref="rankingChart" style="min-height: 400px;"></div>
@@ -228,7 +228,8 @@
                     <div class="d-flex align-items-center bg-white rounded-3 px-3 py-1 border border-primary border-opacity-50">
                         <i class="bi bi-funnel-fill text-primary me-2"></i>
                         <select x-model="filterMonth" class="form-select border-0 bg-transparent fw-bold text-primary shadow-none cursor-pointer pe-4" style="min-width: 180px; outline: none;">
-                            <option value="all">Akumulasi Tahunan</option>
+                            <option value="all">Total Akumulasi</option>
+                            <option value="per_bulan">Per Bulan</option>
                             <option value="1">Bulan Januari</option>
                             <option value="2">Bulan Februari</option>
                             <option value="3">Bulan Maret</option>
@@ -253,7 +254,7 @@
                 <div class="card border-0 shadow-sm h-100 bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
                         <div>
-                            <template x-if="isMultiSatker">
+                            <template x-if="isMultiSatker && filterMonth === 'per_bulan'">
                                 <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
                                     <i class="bi bi-eye text-muted me-2"></i>
                                     <select x-model="adminTrendType" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4" style="min-width: 180px;">
@@ -268,39 +269,53 @@
                             <button x-show="config.unit !== '-'" @click="tabTrend = 'peserta'" :class="tabTrend === 'peserta' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Jumlah Orang / Peserta</button>
                         </div>
                     </div>
-                    <div class="card-body px-4 pb-4 pt-0"><div x-ref="chartTrend" style="min-height: 400px;"></div></div>
+                    <div class="card-body px-4 pb-4 pt-0">
+                        <div style="max-height: 65vh; overflow-y: auto; overflow-x: auto;" class="pe-2 w-100">
+                            <div x-ref="chartTrend"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
             {{-- Grafik Proporsi --}}
             <div class="col-12" x-show="config.has_anggaran || config.has_sasaran || config.has_kategori || config.has_sub_kegiatan">
                 <div class="card border-0 shadow-sm h-100 bg-white rounded-4">
-                    <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex justify-content-center align-items-center gap-3">
-                        <div class="d-flex bg-light p-1 rounded-pill flex-wrap justify-content-center">
-                            <button x-show="config.has_anggaran" @click="tabComp = 'anggaran'" :class="tabComp === 'anggaran' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Berdasarkan Anggaran</button>
-                            <button x-show="config.has_sasaran" @click="tabComp = 'sasaran'" :class="tabComp === 'sasaran' ? 'btn-warning text-dark shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Berdasarkan Sasaran Wilayah</button>
-                            <button x-show="config.has_kategori" @click="tabComp = 'kategori'" :class="tabComp === 'kategori' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Berdasarkan Kategori Kegiatan</button>
-                            <button x-show="config.has_sub_kegiatan" @click="tabComp = 'sub_kegiatan'" :class="tabComp === 'sub_kegiatan' ? 'btn-info text-dark shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Berdasarkan Sub Kegiatan</button>
+                    <div class="card-header bg-transparent border-0 pt-4 pb-3 d-flex justify-content-center align-items-center gap-3">
+                        <div class="d-flex bg-light p-1 rounded-3 flex-wrap justify-content-center border shadow-sm">
+                            <button x-show="config.has_anggaran" @click="tabComp = 'anggaran'" :class="tabComp === 'anggaran' ? 'btn-white text-dark shadow-sm border' : 'btn-transparent text-secondary border-0'" class="btn btn-md fw-bold px-4 rounded-3">Berdasarkan Anggaran</button>
+                            <button x-show="config.has_sasaran" @click="tabComp = 'sasaran'" :class="tabComp === 'sasaran' ? 'btn-white text-dark shadow-sm border' : 'btn-transparent text-secondary border-0'" class="btn btn-md fw-bold px-4 rounded-3">Berdasarkan Sasaran Wilayah</button>
+                            <button x-show="config.has_kategori" @click="tabComp = 'kategori'" :class="tabComp === 'kategori' ? 'btn-white text-dark shadow-sm border' : 'btn-transparent text-secondary border-0'" class="btn btn-md fw-bold px-4 rounded-3">Berdasarkan Kategori Kegiatan</button>
+                            <button x-show="config.has_sub_kegiatan" @click="tabComp = 'sub_kegiatan'" :class="tabComp === 'sub_kegiatan' ? 'btn-white text-dark shadow-sm border' : 'btn-transparent text-secondary border-0'" class="btn btn-md fw-bold px-4 rounded-3">Berdasarkan Sub Kegiatan</button>
                         </div>
                     </div>
-                    <div class="card-body px-4 pb-4 pt-0"><div x-ref="chartComp" style="min-height: 450px;"></div></div>
+                    
+                    <div class="px-4 pt-2 pb-3 d-flex justify-content-center border-bottom border-light">
+                        <div class="d-inline-flex overflow-auto max-w-100 gap-2" style="white-space: nowrap;">
+                            <button @click="compToggle = 'all'" :class="compToggle === 'all' ? 'btn-dark' : 'btn-outline-dark bg-white'" class="btn btn-sm rounded-pill px-4 fw-bold shadow-sm">Semua Proporsi (Gabungan)</button>
+                            <template x-for="opt in (rawData?.comp[tabComp]?.options || [])">
+                                <button @click="compToggle = opt.id" :class="compToggle === opt.id ? 'btn-primary' : 'btn-outline-primary bg-white'" class="btn btn-sm rounded-pill px-4 fw-bold shadow-sm" x-text="opt.label"></button>
+                            </template>
+                        </div>
+                    </div>
+
+                    {{-- WADAH GRAFIK PROPORSI --}}
+                    <div class="card-body px-4 pb-4 pt-4">
+                        <div x-ref="chartComp"></div>
+                    </div>
                 </div>
             </div>
 
-            {{-- Grafik Rincian Spesifik dengan Drill-down 3 LEVEL --}}
+            {{-- Grafik Rincian Spesifik --}}
             <div class="col-12" x-show="detailType === 'peran_serta_masyarakat' || detailType === 'pemberdayaan'">
                 <div class="card border-0 shadow-sm bg-white rounded-4">
                     
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-                        
-                        {{-- JUDUL DI KIRI (Hitam Polos, disesuaikan dengan level kedalaman) --}}
                         <h6 class="fw-bold text-dark mb-0">
                             <span x-show="drilldownLevel === 1">Level 1: Kinerja Program <span x-text="detailTypeName"></span> (<span x-text="timeLabelText"></span>)</span>
-                            <span x-show="drilldownLevel === 2">Level 2: Detail Kegiatan - <span x-text="selectedKategori"></span></span>
-                            <span x-show="drilldownLevel === 3">Level 3: Sebaran Satuan Kerja - <span x-text="selectedKegiatan"></span></span>
+                            <span x-show="drilldownLevel === 2">Level 2: Detail Kegiatan - <span class="text-primary" x-text="selectedKategori"></span></span>
+                            <span x-show="drilldownLevel === 3">Level 3: Sebaran Satuan Kerja - <span class="text-primary" x-text="selectedKegiatan"></span></span>
                         </h6>
 
-                        {{-- SAKELAR METRIK & TOMBOL KEMBALI DI KANAN --}}
                         <div class="d-flex align-items-center gap-2">
                             <button x-show="drilldownLevel > 1" @click="goBack()" class="btn btn-sm btn-outline-secondary rounded-pill fw-bold px-3">
                                 <i class="bi bi-arrow-left me-1"></i> Kembali
@@ -311,7 +326,6 @@
                                 <button @click="drilldownMetric = 'peserta'" :class="drilldownMetric === 'peserta' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-3 border-0">Peserta (Orang)</button>
                             </div>
                         </div>
-                        
                     </div>
 
                     <div class="card-body px-4 pb-4 pt-2">
@@ -333,7 +347,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 </main>
 @endsection
@@ -358,13 +371,13 @@
             detailType: 'informasi_edukasi', 
             tabTrend: 'kegiatan', 
             tabComp: 'anggaran', 
+            compToggle: 'all',
             adminTrendType: 'bar', 
             
-            // State untuk Drill-down 3 Level
-            drilldownLevel: 1, // 1: Kategori, 2: Kegiatan, 3: Satker
+            drilldownLevel: 1, 
             selectedKategori: '',
             selectedKegiatan: '',
-            drilldownMetric: 'kegiatan', // Default Sakelar adalah Total Kegiatan
+            drilldownMetric: 'kegiatan', 
 
             config: { 
                 unit: 'Peserta', has_anggaran: true, has_sasaran: true, 
@@ -373,7 +386,9 @@
             isMultiSatker: false, 
             rawData: null, 
             tableData: [],
-            chartInst: { rank: null, trend: null, comp: null, detail: null },
+            
+            // Mengubah tipe chart.comp menjadi array untuk mendukung 12 bulan
+            chartInst: { rank: null, trend: null, comp: [], detail: null },
             
             getColors() { return ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#0dcaf0', '#dc3545', '#20c997', '#ffc107', '#6c757d']; },
 
@@ -385,11 +400,18 @@
                 this.$watch('globalYear', () => { this.fetchGlobal(); this.fetchDetail(); });
                 
                 ['detailType', 'adminTrendType', 'filterMonth'].forEach(p => { 
-                    this.$watch(p, () => this.fetchDetail()); 
+                    this.$watch(p, () => { 
+                        this.compToggle = 'all'; 
+                        this.fetchDetail(); 
+                    }); 
                 });
                 
                 this.$watch('tabTrend', () => this.renderTrend());
-                this.$watch('tabComp', () => this.renderComp());
+                this.$watch('tabComp', () => {
+                    this.compToggle = 'all'; 
+                    this.renderComp();
+                });
+                this.$watch('compToggle', () => this.renderComp());
                 this.$watch('drilldownMetric', () => this.renderDetailChart());
             },
 
@@ -409,11 +431,11 @@
 
             get timeLabelText() {
                 if (this.filterMonth === 'all') {
-                    // Update: Ditambahkan kata "Periode"
-                    return `Periode Tahun ${this.globalYear}`; 
+                    return `Total Akumulasi Tahun ${this.globalYear}`; 
+                } else if (this.filterMonth === 'per_bulan') {
+                    return `Tren Per Bulan Tahun ${this.globalYear}`;
                 } else {
                     const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-                    // Update: Pastikan ada kata "Bulan"
                     return `Bulan ${months[this.filterMonth - 1]} ${this.globalYear}`;
                 }
             },
@@ -504,32 +526,43 @@
 
             renderTrend() {
                 if (!this.$refs.chartTrend || !this.rawData) return;
+                
                 let dataSeries = this.tabTrend === 'kegiatan' ? this.rawData.trend.kegiatan : this.rawData.trend.peserta;
-                let isHeatmap = this.isMultiSatker && this.adminTrendType === 'heatmap';
+                let isPerBulan = this.filterMonth === 'per_bulan';
+                let isHeatmap = this.isMultiSatker && this.adminTrendType === 'heatmap' && isPerBulan;
+                let metricLabel = this.tabTrend === 'kegiatan' ? 'Kegiatan' : 'Orang';
+                
+                let numSeries = dataSeries.length;
+                let calculatedHeight = isHeatmap ? Math.max(450, numSeries * 60) : 450;
                 
                 let opts = { 
                     series: dataSeries, 
-                    chart: { type: isHeatmap ? 'heatmap' : 'bar', height: 400, toolbar: { show: true }, fontFamily: 'inherit' }, 
-                    xaxis: { categories: this.rawData.trend_labels }, 
-                    title: { 
-                        text: `${this.dynamicTrendMetric} - ${this.detailTypeName} (Tren 12 Bulan Tahun ${this.globalYear})`, 
-                        align: 'center', margin: 20, 
-                        style: { fontSize: '18px', fontWeight: '500', color: '#212529' } 
-                    } 
+                    chart: { type: isHeatmap ? 'heatmap' : 'bar', height: calculatedHeight, toolbar: { show: true }, fontFamily: 'inherit' }, 
+                    title: { text: `${this.dynamicTrendMetric} - ${this.detailTypeName} (${this.timeLabelText})`, align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } } 
                 };
 
                 if (isHeatmap) {
-                    opts.colors = ['#0d6efd']; opts.legend = { show: false };
-                    opts.dataLabels = { enabled: true, formatter: (val) => (val || 0).toLocaleString('id-ID'), style: { colors: ['#212529'], fontSize: '13px' } };
+                    opts.xaxis = { categories: this.rawData.trend_labels };
+                    opts.colors = ['#0d6efd']; 
+                    opts.legend = { show: false };
+                    opts.dataLabels = { enabled: true, formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : "", style: { colors: ['#212529'], fontSize: '13px' } };
                     opts.plotOptions = { heatmap: { shadeIntensity: 0.6, radius: 4, useFillColorAsStroke: false } };
                     opts.yaxis = { labels: { style: { fontWeight: 'bold' } } };
                 } else {
-                    opts.colors = this.isMultiSatker ? this.getColors() : ['#0d6efd'];
-                    opts.plotOptions = { bar: { borderRadius: 4, columnWidth: this.isMultiSatker ? '85%' : '50%' } };
-                    opts.tooltip = { shared: true, intersect: false };
-                    opts.dataLabels = { enabled: !this.isMultiSatker, formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : "" };
-                    if (this.isMultiSatker) opts.legend = { position: 'top', fontWeight: 'bold', offsetY: -10 };
-                    opts.yaxis = { labels: { formatter: (v) => Math.round(v||0) } };
+                    opts.plotOptions = { bar: { horizontal: false, borderRadius: 2, columnWidth: '70%', barHeight: '70%', distributed: (numSeries === 1 && this.isMultiSatker && !isPerBulan) } };
+                    if (opts.plotOptions.bar.distributed) {
+                        opts.colors = this.getColors(); opts.legend = { show: false };
+                    } else if (this.isMultiSatker) {
+                        opts.colors = this.getColors(); opts.legend = { position: 'top', fontWeight: 'bold', offsetY: -10 };
+                    } else {
+                        opts.colors = ['#0d6efd']; opts.legend = { show: false };
+                    }
+
+                    opts.xaxis = { categories: this.rawData.trend_labels, labels: { formatter: (v) => typeof v === 'number' ? Math.round(v) : v } };
+                    opts.yaxis = { labels: { style: { fontWeight: 'bold' } } };
+                    opts.stroke = { show: true, width: 2, colors: ['#ffffff'] };
+                    opts.tooltip = { shared: true, intersect: false, y: { formatter: (val) => new Intl.NumberFormat('id-ID').format(val) + ' ' + metricLabel } };
+                    opts.dataLabels = { enabled: false };
                 }
                 
                 if (this.chartInst.trend) this.chartInst.trend.destroy(); 
@@ -537,69 +570,211 @@
                 this.chartInst.trend.render();
             },
 
+            // --- FUNGSI CHART KOMPARASI (PROPORSI) ---
             renderComp() {
                 if (!this.$refs.chartComp || !this.rawData || !this.tabComp) return;
                 
-                let dataSeries = this.rawData.comp[this.tabComp];
-                let colors = this.tabComp === 'anggaran' ? ['#198754', '#fd7e14'] : this.getColors();
-                
-                let opts = { 
-                    series: dataSeries, 
-                    chart: { type: 'bar', height: 450, stacked: true, toolbar: { show: false }, fontFamily: 'inherit' }, 
-                    plotOptions: { 
-                        bar: { 
-                            horizontal: true, 
-                            columnWidth: this.isMultiSatker ? '50%' : '30%', 
-                            borderRadius: 6, 
-                            borderRadiusApplication: 'end', 
-                        } 
-                    }, 
-                    xaxis: { labels: { style: { fontSize: '12px', fontWeight: 'bold' } } }, 
-                    yaxis: { 
-                        categories: this.rawData.comp_labels,
-                        labels: { style: { fontSize: '12px', fontWeight: 'bold' } } 
-                    },
-                    colors: colors, 
-                    legend: { position: 'top', fontWeight: 'bold', offsetY: -10 }, 
-                    tooltip: { shared: true, intersect: false }, 
-                    title: { 
-                        text: `${this.dynamicCompMetric} - ${this.detailTypeName} (${this.timeLabelText})`, 
-                        align: 'center', margin: 20, 
-                        style: { fontSize: '18px', fontWeight: '500', color: '#212529' } 
-                    }, 
-                    dataLabels: { 
-                        enabled: true, 
-                        formatter: function(val, opt) { 
-                            if (!val) return ""; 
-                            let t = 0; opt.w.config.series.forEach(s => t += s.data[opt.dataPointIndex]); 
-                            return t === 0 ? "" : val + " (" + Math.round((val/t)*100) + "%)"; 
-                        }, style: { fontSize: '12px', colors: ['#212529'] } 
-                    } 
-                };
-                
-                if (this.chartInst.comp) this.chartInst.comp.destroy(); 
-                this.chartInst.comp = new ApexCharts(this.$refs.chartComp, opts); 
-                this.chartInst.comp.render();
+                let compData = this.rawData.comp[this.tabComp];
+                if (!compData) return;
+
+                let isPerBulan = this.filterMonth === 'per_bulan';
+                let isMulti = this.isMultiSatker;
+                let container = this.$refs.chartComp;
+
+                // 1. Bersihkan seluruh chart lama di dalam container
+                if (this.chartInst.comp) {
+                    if (Array.isArray(this.chartInst.comp)) {
+                        this.chartInst.comp.forEach(c => c.destroy());
+                    } else {
+                        this.chartInst.comp.destroy();
+                    }
+                }
+                this.chartInst.comp = [];
+                container.innerHTML = ''; 
+
+                let colors = this.getColors();
+
+                // =========================================================================
+                // SKENARIO KHUSUS: Seluruh Satuan Kerja + Per Bulan + SEMUA PROPORSI (GABUNGAN)
+                // Menggunakan layout Opsi B: 1 Bulan 1 Layar, Scrollable Vertical
+                // =========================================================================
+                if (isPerBulan && isMulti && this.compToggle === 'all') {
+                    
+                    container.classList.add('snap-container', 'custom-scrollbar');
+                    let months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+                    // Cari max global agar ukuran sumbu X sama dari Jan - Des
+                    let globalMax = 0;
+                    compData.options.forEach(opt => {
+                        (compData.detailed[opt.id] || []).forEach(s => {
+                            s.data.forEach(val => { if (val > globalMax) globalMax = val; });
+                        });
+                    });
+                    let maxX = globalMax > 0 ? Math.ceil(globalMax * 1.15) : undefined; 
+
+                    for (let m = 0; m < 12; m++) {
+                        let monthSeries = [];
+                        let satkerNames = [];
+                        
+                        compData.options.forEach(opt => {
+                            (compData.detailed[opt.id] || []).forEach(s => {
+                                if (!satkerNames.includes(s.name)) satkerNames.push(s.name);
+                            });
+                        });
+
+                        compData.options.forEach(opt => {
+                            let dataForOpt = [];
+                            satkerNames.forEach(sName => {
+                                let match = (compData.detailed[opt.id] || []).find(s => s.name === sName);
+                                dataForOpt.push(match ? match.data[m] : 0);
+                            });
+                            monthSeries.push({ name: opt.label, data: dataForOpt });
+                        });
+
+                        let monthDiv = document.createElement('div');
+                        monthDiv.className = 'month-block w-100';
+                        
+                        let title = document.createElement('h5');
+                        title.className = 'text-center fw-bold text-primary mb-4 pb-2 border-bottom border-primary border-opacity-25 d-inline-block mx-auto';
+                        title.innerHTML = `<i class="bi bi-calendar-event me-2"></i>BULAN ${months[m].toUpperCase()} ${this.globalYear}`;
+                        
+                        let titleWrapper = document.createElement('div');
+                        titleWrapper.className = 'text-center';
+                        titleWrapper.appendChild(title);
+                        monthDiv.appendChild(titleWrapper);
+
+                        let chartDiv = document.createElement('div');
+                        monthDiv.appendChild(chartDiv);
+                        container.appendChild(monthDiv);
+
+                        let calculatedHeight = Math.max(300, satkerNames.length * (monthSeries.length * 35));
+
+                        let opts = {
+                            series: monthSeries,
+                            chart: { type: 'bar', height: calculatedHeight, stacked: false, toolbar: { show: false }, fontFamily: 'inherit' },
+                            colors: colors,
+                            plotOptions: {
+                                bar: { horizontal: true, barHeight: '75%', dataLabels: { position: 'top' }, borderRadius: 2 }
+                            },
+                            dataLabels: {
+                                enabled: true,
+                                textAnchor: 'start', 
+                                style: { colors: ['#212529'], fontSize: '11px', fontWeight: 'bold' },
+                                formatter: function (val) { return val > 0 ? val : ''; }, 
+                                offsetX: 5 
+                            },
+                            stroke: { show: true, width: 1, colors: ['#fff'] },
+                            xaxis: { categories: satkerNames, max: maxX, labels: { style: { fontWeight: 'bold' } } },
+                            yaxis: { labels: { style: { fontWeight: 'bold', fontSize: '13px' }, maxWidth: 250 } },
+                            tooltip: { shared: true, intersect: false, y: { formatter: function(val) { return val + " Kegiatan"; } } },
+                            legend: { position: 'top', fontWeight: 'bold' }
+                        };
+
+                        let chart = new ApexCharts(chartDiv, opts);
+                        chart.render();
+                        this.chartInst.comp.push(chart); 
+                    }
+                } 
+                // =========================================================================
+                // SKENARIO REGULER & TOGGLE KHUSUS (Single Chart)
+                // Mengembalikan seperti sedia kala (X = Bulan, Series = Satker)
+                // =========================================================================
+                else {
+                    container.classList.remove('snap-container', 'custom-scrollbar');
+                    
+                    let dataSeries = [];
+                    let chartType = 'bar';
+                    let isStacked = false; 
+                    let isHorizontal = false; // Default Vertikal (Menjulang ke atas)
+                    let labels = [];
+
+                    if (this.compToggle === 'all') {
+                        // Skenario Akumulasi biasa (karena Per Bulan isMulti sudah di-if di atas)
+                        if (!isPerBulan && !isMulti) {
+                            chartType = 'donut';
+                            dataSeries = compData.aggregated.map(s => s.data[0] || 0);
+                            labels = compData.aggregated.map(s => s.name);
+                            if (this.tabComp === 'anggaran') colors = compData.aggregated.map(s => s.name === 'DIPA' ? '#198754' : '#fd7e14');
+                        } else {
+                            dataSeries = compData.aggregated;
+                            labels = this.rawData.comp_labels;
+                            isStacked = true;
+                            if (this.tabComp === 'anggaran') colors = ['#198754', '#fd7e14'];
+                        }
+                    } else {
+                        // Skenario Klik Toggle Khusus (Misal Klik "DIPA" atau "NON DIPA")
+                        let optLabel = compData.options.find(o => o.id === this.compToggle)?.label || this.compToggle;
+                        
+                        if (isPerBulan && isMulti) {
+                            // Dikembalikan seperti aslinya: Sumbu X adalah Bulan, Bar-nya adalah Satuan Kerja
+                            dataSeries = compData.detailed[this.compToggle] || [];
+                            labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                            isHorizontal = false; 
+                            isStacked = false; 
+                            colors = this.getColors(); // Multi-warna untuk 6 satker
+                        } else {
+                            let found = compData.aggregated.find(s => s.name === optLabel);
+                            dataSeries = found ? [found] : [];
+                            labels = this.rawData.comp_labels;
+                            isHorizontal = false;
+                            isStacked = false;
+                            if (this.tabComp === 'anggaran') colors = optLabel === 'DIPA' ? ['#198754'] : ['#fd7e14'];
+                            else colors = ['#0d6efd'];
+                        }
+                    }
+
+                    let chartDiv = document.createElement('div');
+                    container.appendChild(chartDiv);
+
+                    let calculatedHeight = 450; // Tinggi default
+
+                    let opts = { 
+                        series: dataSeries, 
+                        chart: { type: chartType, height: calculatedHeight, stacked: isStacked, toolbar: { show: true }, fontFamily: 'inherit' }, 
+                        colors: colors, 
+                        title: { text: `${this.dynamicCompMetric} - ${this.detailTypeName} (${this.timeLabelText})`, align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500' } }, 
+                    };
+
+                    if (chartType === 'donut') {
+                        opts.labels = labels;
+                        opts.plotOptions = { pie: { donut: { size: '65%' } } };
+                        opts.dataLabels = { enabled: true, formatter: function (val, opts) { return opts.w.config.series[opts.seriesIndex] + " Kegiatan (" + val.toFixed(1) + "%)" } };
+                        opts.legend = { position: 'bottom', fontSize: '14px', fontWeight: 'bold' };
+                        opts.tooltip = { y: { formatter: (val) => val + ' Kegiatan' } };
+                    } else {
+                        opts.plotOptions = { 
+                            bar: { 
+                                horizontal: isHorizontal, 
+                                borderRadius: 2, 
+                                columnWidth: '70%', 
+                                barHeight: '70%' 
+                            } 
+                        };
+                        opts.xaxis = { categories: labels, labels: { style: { fontSize: '12px', fontWeight: 'bold' } } };
+                        opts.yaxis = { labels: { style: { fontSize: '13px', fontWeight: 'bold' } } };
+                        opts.legend = { position: 'top', fontWeight: 'bold', offsetY: -10 };
+                        opts.tooltip = { shared: true, intersect: false, y: { formatter: function (val) { return val + " Kegiatan"; } } };
+                        opts.stroke = { show: true, width: 1, colors: ['#ffffff'] };
+                        // Di mode Vertikal ini, angka di ujung batang di-disable agar tidak menumpuk padat
+                        opts.dataLabels = { enabled: false }; 
+                    }
+
+                    let chart = new ApexCharts(chartDiv, opts);
+                    chart.render();
+                    this.chartInst.comp = chart;
+                }
             },
 
-            // --- FUNGSI CHART DRILL-DOWN (3 LEVEL) ---
+            // --- FUNGSI CHART DRILL-DOWN ---
             renderDetailChart() {
                 if (!this.$refs.chartDetail || this.tableData.length === 0) return;
                 
-                let categories = [];
-                let s1 = []; // Data utama (Biru/Hijau)
-                let s2 = []; // Data khusus Positif Narkoba (Merah)
-                let colors = [];
-                
+                let categories = []; let s1 = []; let s2 = []; let colors = [];
                 let isPeserta = this.drilldownMetric === 'peserta';
                 
                 const colorPalette = ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#0dcaf0', '#20c997', '#ffc107'];
-                let categoryColors = {};
-                let colorIdx = 0;
-                
-                let showPositif = false;
+                let categoryColors = {}; let colorIdx = 0; let showPositif = false;
 
-                // ================== LEVEL 1: KATEGORI ==================
                 if (this.drilldownLevel === 1) {
                     let grouped = {};
                     this.tableData.forEach(row => {
@@ -616,17 +791,11 @@
                     });
 
                     for (let kat in grouped) {
-                        categories.push(kat);
-                        colors.push(categoryColors[kat]); 
-                        
-                        if (isPeserta) {
-                            s1.push(grouped[kat].peserta);
-                        } else {
-                            s1.push(grouped[kat].frekuensi);
-                        }
+                        categories.push(kat); colors.push(categoryColors[kat]); 
+                        if (isPeserta) s1.push(grouped[kat].peserta);
+                        else s1.push(grouped[kat].frekuensi);
                     }
                 } 
-                // ================== LEVEL 2: NAMA KEGIATAN ==================
                 else if (this.drilldownLevel === 2) {
                     showPositif = isPeserta && this.selectedKategori.includes('Pengembangan Kapasitas');
                     let baseColor = isPeserta ? '#0d6efd' : '#198754';
@@ -642,17 +811,13 @@
                     });
 
                     for (let nama in grouped) {
-                        categories.push(nama);
-                        colors.push(baseColor);
+                        categories.push(nama); colors.push(baseColor);
                         if (isPeserta) {
                             s1.push(grouped[nama].peserta);
                             if (showPositif) s2.push(grouped[nama].positif);
-                        } else {
-                            s1.push(grouped[nama].frekuensi);
-                        }
+                        } else s1.push(grouped[nama].frekuensi);
                     }
                 }
-                // ================== LEVEL 3: SEBARAN SATKER ==================
                 else if (this.drilldownLevel === 3) {
                     showPositif = isPeserta && this.selectedKegiatan.toLowerCase().includes('tes urine');
                     let baseColor = isPeserta ? '#0d6efd' : '#198754';
@@ -660,7 +825,6 @@
                     let filteredData = this.tableData.filter(row => row.kategori === this.selectedKategori && row.nama === this.selectedKegiatan);
                     let grouped = {};
 
-                    // 1. Masukkan data satker yang ada transaksinya
                     filteredData.forEach(row => {
                         if (!grouped[row.satker]) grouped[row.satker] = { peserta: 0, frekuensi: 0, positif: 0 };
                         grouped[row.satker].peserta += row.peserta;
@@ -668,16 +832,6 @@
                         grouped[row.satker].positif += (row.positif || 0);
                     });
 
-                    // 2. Tambahkan semua Satker (meskipun 0) jika sedang login sbg admin wilayah/provinsi
-                    if (this.rawData.comp_labels && this.rawData.comp_labels.length > 0) {
-                        this.rawData.comp_labels.forEach(s => {
-                            if (!grouped[s]) {
-                                grouped[s] = { peserta: 0, frekuensi: 0, positif: 0 };
-                            }
-                        });
-                    }
-
-                    // Urutkan satker dari kontribusi terbesar ke terkecil
                     let sortedSatkers = Object.keys(grouped).sort((a, b) => {
                         let valA = isPeserta ? grouped[a].peserta : grouped[a].frekuensi;
                         let valB = isPeserta ? grouped[b].peserta : grouped[b].frekuensi;
@@ -685,51 +839,34 @@
                     });
 
                     for (let satker of sortedSatkers) {
-                        categories.push(satker);
-                        colors.push(baseColor);
+                        categories.push(satker); colors.push(baseColor);
                         if (isPeserta) {
                             s1.push(grouped[satker].peserta);
                             if (showPositif) s2.push(grouped[satker].positif);
-                        } else {
-                            s1.push(grouped[satker].frekuensi);
-                        }
+                        } else s1.push(grouped[satker].frekuensi);
                     }
                 }
 
-                // Berikan ruang tinggi proporsional, khusus level 3 (satker) beri ruang lebih banyak per bar
-                let dynamicHeight = Math.max(300, categories.length * (this.drilldownLevel === 3 ? 60 : 85));
-                let series = [];
-                let chartColors = [];
+                let dynamicHeight = Math.max(300, categories.length * 85);
+                let series = []; let chartColors = [];
 
                 if (isPeserta) {
                     if (showPositif) {
-                        // Terpisah di atas bawah (stacked: false)
-                        series = [
-                            { name: 'Jumlah Peserta / Orang', data: s1 },
-                            { name: 'Indikasi Positif', data: s2 }
-                        ];
+                        series = [{ name: 'Jumlah Peserta / Orang', data: s1 }, { name: 'Indikasi Positif', data: s2 }];
                         chartColors = ['#0d6efd', '#dc3545'];
                     } else {
-                        series = [
-                            { name: 'Jumlah Peserta / Orang', data: s1 }
-                        ];
+                        series = [{ name: 'Jumlah Peserta / Orang', data: s1 }];
                         chartColors = this.drilldownLevel === 1 ? colors : ['#0d6efd'];
                     }
                 } else {
-                    series = [
-                        { name: 'Total Kegiatan', data: s1 }
-                    ];
+                    series = [{ name: 'Total Kegiatan', data: s1 }];
                     chartColors = this.drilldownLevel === 1 ? colors : ['#198754'];
                 }
 
                 let opts = {
                     series: series,
                     chart: {
-                        type: 'bar',
-                        height: dynamicHeight,
-                        stacked: false, // Terpisah atas bawah
-                        toolbar: { show: false },
-                        fontFamily: 'inherit',
+                        type: 'bar', height: dynamicHeight, stacked: false, toolbar: { show: false }, fontFamily: 'inherit',
                         events: {
                             dataPointSelection: (event, chartContext, config) => {
                                 if (this.drilldownLevel === 1) {
@@ -741,51 +878,21 @@
                                     this.drilldownLevel = 3;
                                     this.renderDetailChart();
                                 }
-                                // Level 3 tidak ada klik lagi (sudah paling ujung)
                             }
                         }
                     },
+                    stroke: { show: true, width: 3, colors: ['#ffffff'] },
                     plotOptions: {
                         bar: {
-                            horizontal: true,
-                            barHeight: '65%',
-                            borderRadius: 4,
+                            horizontal: true, barHeight: '80%', borderRadius: 4,
                             distributed: (this.drilldownLevel === 1), 
                             cursor: this.drilldownLevel < 3 ? 'pointer' : 'default',
-                            // Pindahkan posisi label ke pangkal batang (bottom) agar nilai 0 tetap kelihatan rapi
-                            dataLabels: { position: 'bottom' } 
                         }
                     },
                     colors: chartColors,
-                    dataLabels: {
-                        enabled: true,
-                        // Mulai dari kiri pangkal batang, geser dikit agar tidak nempel sumbu
-                        textAnchor: 'start', 
-                        offsetX: 10,
-                        style: { colors: ['#fff'], fontSize: '13px', fontWeight: 'bold' },
-                        formatter: (val, opt) => {
-                            // Update: Sekarang nilai 0 juga diprint (tidak disembunyikan)
-                            let text = new Intl.NumberFormat('id-ID').format(val || 0);
-                            
-                            if (isPeserta) {
-                                if (showPositif && opt.seriesIndex === 1) return text + " Positif";
-                                return text + " Orang";
-                            } else {
-                                return text + " Kegiatan";
-                            }
-                        },
-                        dropShadow: { enabled: true, top: 1, left: 1, blur: 1, color: '#000', opacity: 0.5 }
-                    },
-                    xaxis: {
-                        categories: categories, 
-                        labels: { formatter: (val) => new Intl.NumberFormat('id-ID').format(val) }
-                    },
-                    yaxis: {
-                        labels: {
-                            style: { fontSize: '12px', fontWeight: '600' },
-                            maxWidth: 400 
-                        }
-                    },
+                    dataLabels: { enabled: false },
+                    xaxis: { categories: categories },
+                    yaxis: { labels: { style: { fontSize: '12px', fontWeight: '600' }, maxWidth: 400 } },
                     tooltip: {
                         theme: 'light',
                         y: {
@@ -794,12 +901,7 @@
                             }
                         }
                     },
-                    legend: { 
-                        show: showPositif,
-                        position: 'top',
-                        horizontalAlign: 'left',
-                        fontWeight: 'bold'
-                    }
+                    legend: { show: showPositif, position: 'top', horizontalAlign: 'left', fontWeight: 'bold' }
                 };
 
                 if (this.chartInst.detail) this.chartInst.detail.destroy();
@@ -809,4 +911,40 @@
         }));
     });
 </script>
+
+<style>
+    /* CSS Khusus UX "One Month, One View" dengan gaya Snap Scrolling */
+    .snap-container {
+        max-height: 80vh; 
+        overflow-y: auto;
+        scroll-snap-type: y mandatory;
+        scroll-behavior: smooth;
+        padding-right: 10px;
+    }
+    .month-block {
+        scroll-snap-align: start;
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding-top: 1.5rem;
+        padding-bottom: 2.5rem;
+    }
+    
+    /* Scrollbar styling agar cantik dipandang */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1; 
+        border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #c1c1c1; 
+        border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8; 
+    }
+</style>
 @endpush

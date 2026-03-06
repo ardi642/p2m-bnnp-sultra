@@ -265,163 +265,297 @@ class DashboardP2MController extends Controller
         $hasKategori = $config['has_kategori'] ?? false;
         $hasSubGiat  = $config['has_sub_kegiatan'] ?? false;
 
-        $trendLabels = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des']; 
-        $timePoints  = range(1, 12);
-
-        $applyTrendTime = function($q, $val) use ($year, $dateCol) {
-            return $q->whereYear($dateCol, $year)->whereMonth($dateCol, $val);
-        };
-
         $applyCompTime = function($q) use ($year, $month, $dateCol) {
             $q->whereYear($dateCol, $year);
-            if ($month !== 'all') {
+            if ($month !== 'all' && $month !== 'per_bulan') {
                 $q->whereMonth($dateCol, $month);
             }
             return $q;
         };
 
+        // ====================================================================
+        // 1. DATA TREN GRAFIK UTAMA
+        // ====================================================================
         $chartKegiatan = []; 
-        $chartPeserta = []; 
-        
-        $barAnggaranDipa = []; 
-        $barAnggaranNon = [];
-        $barSasaran = $hasSasaran ? array_fill_keys($config['sasaran_list'], []) : [];
-        $barKategori = $hasKategori ? array_fill_keys($config['kategori_list'], []) : [];
-        $barSubGiat = $hasSubGiat ? array_fill_keys($config['sub_kegiatan_list'], []) : [];
-        $compLabels = [];
+        $chartPeserta = [];
+        $trendLabels = [];
 
-        if ($isMultiSatker) {
-            $satkers = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
-            $compLabels = $satkers->pluck('satuan_kerja')->toArray();
+        if ($month === 'per_bulan') {
+            $trendLabels = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+            $timePoints  = range(1, 12);
 
-            foreach ($satkers as $satker) {
+            if ($isMultiSatker) {
+                $satkers = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+                foreach ($satkers as $satker) {
+                    $dataGiat = []; $dataPeserta = []; 
+                    foreach ($timePoints as $timeVal) {
+                        $q = DB::table($table)->where('satuan_kerja_id', $satker->id)->whereYear($dateCol, $year)->whereMonth($dateCol, $timeVal);
+                        $dataGiat[] = $q->count();
+                        $dataPeserta[] = $valCol ? (clone $q)->sum($valCol) : 0;
+                        
+                        if ($type === 'peran_serta_masyarakat') {
+                            $qUrine = DB::table('p2m_tes_urine')->where('satuan_kerja_id', $satker->id)->whereYear('tanggal_pelaksanaan', $year)->whereMonth('tanggal_pelaksanaan', $timeVal);
+                            $dataGiat[count($dataGiat)-1] += $qUrine->count();
+                            $dataPeserta[count($dataPeserta)-1] += $qUrine->sum('jumlah_peserta');
+                        }
+                    }
+                    $chartKegiatan[] = ['name' => $satker->satuan_kerja, 'data' => $dataGiat];
+                    $chartPeserta[]  = ['name' => $satker->satuan_kerja, 'data' => $dataPeserta];
+                }
+            } else {
                 $dataGiat = []; $dataPeserta = []; 
                 foreach ($timePoints as $timeVal) {
-                    $q = DB::table($table)->where('satuan_kerja_id', $satker->id);
-                    $q = $applyTrendTime($q, $timeVal);
+                    $q = DB::table($table)->whereYear($dateCol, $year)->whereMonth($dateCol, $timeVal);
+                    if ($mySatker) $q->where('satuan_kerja_id', $mySatker);
                     $dataGiat[] = $q->count();
                     $dataPeserta[] = $valCol ? (clone $q)->sum($valCol) : 0;
                     
                     if ($type === 'peran_serta_masyarakat') {
-                        $qUrine = DB::table('p2m_tes_urine')->where('satuan_kerja_id', $satker->id);
-                        $qUrine = $applyTrendTime($qUrine, $timeVal);
+                        $qUrine = DB::table('p2m_tes_urine')->whereYear('tanggal_pelaksanaan', $year)->whereMonth('tanggal_pelaksanaan', $timeVal);
+                        if ($mySatker) $qUrine->where('satuan_kerja_id', $mySatker);
                         $dataGiat[count($dataGiat)-1] += $qUrine->count();
                         $dataPeserta[count($dataPeserta)-1] += $qUrine->sum('jumlah_peserta');
                     }
                 }
-                $chartKegiatan[] = ['name' => $satker->satuan_kerja, 'data' => $dataGiat];
-                $chartPeserta[]  = ['name' => $satker->satuan_kerja, 'data' => $dataPeserta];
-
-                $qComp = DB::table($table)->where('satuan_kerja_id', $satker->id);
-                $qComp = $applyCompTime($qComp);
-
-                if ($hasAnggaran) {
-                    $barAnggaranDipa[] = (clone $qComp)->where($config['col_anggaran'], 'DIPA')->count();
-                    $barAnggaranNon[]  = (clone $qComp)->where($config['col_anggaran'], 'NON DIPA')->count();
-                }
-                if ($hasSasaran) {
-                    foreach ($config['sasaran_list'] as $sas) { 
-                        $barSasaran[$sas][] = (clone $qComp)->where('sasaran_kegiatan', $sas)->count(); 
-                    }
-                }
-                if ($hasKategori) {
-                    foreach ($config['kategori_list'] as $kat) { 
-                        $valKat = (clone $qComp)->where('kategori_kegiatan', $kat)->count();
-                        if ($kat === 'pengembangan_kapasitas') {
-                            $qUrine = DB::table('p2m_tes_urine')->where('satuan_kerja_id', $satker->id);
-                            $valKat += $applyCompTime($qUrine)->count();
-                        }
-                        $barKategori[$kat][] = $valKat; 
-                    }
-                }
-                if ($hasSubGiat) {
-                    foreach ($config['sub_kegiatan_list'] as $sub) { 
-                        $barSubGiat[$sub][] = (clone $qComp)->where('sub_kegiatan', $sub)->count(); 
-                    }
-                }
+                $chartKegiatan[] = ['name' => 'Jumlah Kegiatan', 'data' => $dataGiat];
+                $chartPeserta[]  = ['name' => 'Jumlah ' . $config['unit_label'], 'data' => $dataPeserta];
             }
         } else {
-            $satkerName = 'Satuan Kerja';
-            if ($mySatker) {
-                $stk = SatuanKerja::find($mySatker);
-                if ($stk) $satkerName = $stk->satuan_kerja;
-            }
-            $compLabels = [$satkerName];
-
-            $dataGiat = []; $dataPeserta = []; 
-            foreach ($timePoints as $timeVal) {
-                $q = DB::table($table);
+            $monthNames = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+            $labelTime = $month === 'all' ? 'Total Akumulasi' : 'Bulan ' . $monthNames[(int)$month];
+            
+            if ($isMultiSatker) {
+                $satkers = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+                $trendLabels = $satkers->pluck('satuan_kerja')->toArray();
+                
+                $dataGiat = []; $dataPeserta = [];
+                foreach ($satkers as $satker) {
+                    $q = DB::table($table)->where('satuan_kerja_id', $satker->id)->whereYear($dateCol, $year);
+                    if ($month !== 'all') $q->whereMonth($dateCol, $month);
+                    
+                    $dataGiat[] = $q->count();
+                    $pesertaCount = $valCol ? (clone $q)->sum($valCol) : 0;
+                    
+                    if ($type === 'peran_serta_masyarakat') {
+                        $qUrine = DB::table('p2m_tes_urine')->where('satuan_kerja_id', $satker->id)->whereYear('tanggal_pelaksanaan', $year);
+                        if ($month !== 'all') $qUrine->whereMonth('tanggal_pelaksanaan', $month);
+                        
+                        $dataGiat[count($dataGiat)-1] += $qUrine->count();
+                        $pesertaCount += $qUrine->sum('jumlah_peserta');
+                    }
+                    $dataPeserta[] = $pesertaCount;
+                }
+                $chartKegiatan[] = ['name' => 'Total Kegiatan', 'data' => $dataGiat];
+                $chartPeserta[]  = ['name' => 'Jumlah ' . $config['unit_label'], 'data' => $dataPeserta];
+            } else {
+                $trendLabels = [$labelTime];
+                $q = DB::table($table)->whereYear($dateCol, $year);
                 if ($mySatker) $q->where('satuan_kerja_id', $mySatker);
-                $q = $applyTrendTime($q, $timeVal);
-                $dataGiat[] = $q->count();
-                $dataPeserta[] = $valCol ? (clone $q)->sum($valCol) : 0;
+                if ($month !== 'all') $q->whereMonth($dateCol, $month);
+                
+                $giat = $q->count();
+                $peserta = $valCol ? (clone $q)->sum($valCol) : 0;
                 
                 if ($type === 'peran_serta_masyarakat') {
-                    $qUrine = DB::table('p2m_tes_urine');
+                    $qUrine = DB::table('p2m_tes_urine')->whereYear('tanggal_pelaksanaan', $year);
                     if ($mySatker) $qUrine->where('satuan_kerja_id', $mySatker);
-                    $qUrine = $applyTrendTime($qUrine, $timeVal);
-                    $dataGiat[count($dataGiat)-1] += $qUrine->count();
-                    $dataPeserta[count($dataPeserta)-1] += $qUrine->sum('jumlah_peserta');
+                    if ($month !== 'all') $qUrine->whereMonth('tanggal_pelaksanaan', $month);
+                    
+                    $giat += $qUrine->count();
+                    $peserta += $qUrine->sum('jumlah_peserta');
                 }
-            }
-            $chartKegiatan[] = ['name' => 'Jumlah Kegiatan', 'data' => $dataGiat];
-            $chartPeserta[]  = ['name' => 'Jumlah ' . $config['unit_label'], 'data' => $dataPeserta];
-
-            $qComp = DB::table($table);
-            if ($mySatker) $qComp->where('satuan_kerja_id', $mySatker);
-            $qComp = $applyCompTime($qComp);
-
-            if ($hasAnggaran) {
-                $barAnggaranDipa[] = (clone $qComp)->where($config['col_anggaran'], 'DIPA')->count();
-                $barAnggaranNon[]  = (clone $qComp)->where($config['col_anggaran'], 'NON DIPA')->count();
-            }
-            if ($hasSasaran) {
-                foreach ($config['sasaran_list'] as $sas) { 
-                    $barSasaran[$sas][] = (clone $qComp)->where('sasaran_kegiatan', $sas)->count(); 
-                }
-            }
-            if ($hasKategori) {
-                foreach ($config['kategori_list'] as $kat) { 
-                    $valKat = (clone $qComp)->where('kategori_kegiatan', $kat)->count();
-                    if ($kat === 'pengembangan_kapasitas') {
-                        $qUrine = DB::table('p2m_tes_urine');
-                        if ($mySatker) $qUrine->where('satuan_kerja_id', $mySatker);
-                        $valKat += $applyCompTime($qUrine)->count();
-                    }
-                    $barKategori[$kat][] = $valKat; 
-                }
-            }
-            if ($hasSubGiat) {
-                foreach ($config['sub_kegiatan_list'] as $sub) { 
-                    $barSubGiat[$sub][] = (clone $qComp)->where('sub_kegiatan', $sub)->count(); 
-                }
-            }
-        }
-
-        $sasaranSeries = []; 
-        $kategoriSeries = []; 
-        $subGiatSeries = [];
-
-        if ($hasSasaran) {
-            foreach ($barSasaran as $label => $dataArr) { 
-                $sasaranSeries[] = ['name' => ucwords(str_replace('lingkungan ', '', $label)), 'data' => $dataArr]; 
-            }
-        }
-        if ($hasKategori) {
-            $map = KategoriPeranSertaMasyarakat::KATEGORI;
-            foreach ($barKategori as $label => $dataArr) { 
-                $kategoriSeries[] = ['name' => $map[$label] ?? $label, 'data' => $dataArr]; 
-            }
-        }
-        if ($hasSubGiat) {
-            $map = KategoriPemberdayaan::SUB_KEGIATAN;
-            foreach ($barSubGiat as $label => $dataArr) { 
-                $subGiatSeries[] = ['name' => $map[$label] ?? $label, 'data' => $dataArr]; 
+                $chartKegiatan[] = ['name' => 'Total Kegiatan', 'data' => [$giat]];
+                $chartPeserta[]  = ['name' => 'Jumlah ' . $config['unit_label'], 'data' => [$peserta]];
             }
         }
 
         // ====================================================================
-        // DATA RINCIAN SPESIFIK & DRILL DOWN (DENGAN NAMA SATKER)
+        // 2. DATA PROPORSI KINERJA (Dimensi yang dioptimasi untuk Filter Sekunder)
+        // ====================================================================
+        
+        // Ambil SEMUA data dalam 1 atau 2 query untuk diolah di memori. Jauh lebih cepat!
+        $qAll = DB::table($table)->whereYear($dateCol, $year);
+        if ($month !== 'all' && $month !== 'per_bulan') $qAll->whereMonth($dateCol, $month);
+        if (!$isMultiSatker && $mySatker) $qAll->where('satuan_kerja_id', $mySatker);
+        $allRecords = $qAll->get();
+
+        $urineRecords = collect();
+        if ($type === 'peran_serta_masyarakat' || $hasKategori) {
+             $qu = DB::table('p2m_tes_urine')->whereYear('tanggal_pelaksanaan', $year);
+             if ($month !== 'all' && $month !== 'per_bulan') $qu->whereMonth('tanggal_pelaksanaan', $month);
+             if (!$isMultiSatker && $mySatker) $qu->where('satuan_kerja_id', $mySatker);
+             $urineRecords = $qu->get();
+        }
+
+        $compResult = [
+            'anggaran'     => ['options' => ['DIPA', 'NON DIPA'], 'aggregated' => [], 'detailed' => []],
+            'sasaran'      => ['options' => $config['sasaran_list'] ?? [], 'aggregated' => [], 'detailed' => []],
+            'kategori'     => ['options' => $config['kategori_list'] ?? [], 'aggregated' => [], 'detailed' => []],
+            'sub_kegiatan' => ['options' => $config['sub_kegiatan_list'] ?? [], 'aggregated' => [], 'detailed' => []],
+        ];
+
+        $satkerMap = SatuanKerja::pluck('satuan_kerja', 'id')->toArray();
+        $mySatkerName = $mySatker ? ($satkerMap[$mySatker] ?? 'Satuan Kerja') : 'Satuan Kerja';
+
+        if ($month === 'per_bulan') {
+            $compLabels = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+            
+            // Inisialisasi array 0
+            foreach (['anggaran', 'sasaran', 'kategori', 'sub_kegiatan'] as $catKey) {
+                foreach ($compResult[$catKey]['options'] as $opt) {
+                    $compResult[$catKey]['aggregated'][$opt] = array_fill(0, 12, 0);
+                    if ($isMultiSatker) {
+                        foreach ($satkerMap as $sId => $sName) {
+                            $compResult[$catKey]['detailed'][$opt][$sName] = array_fill(0, 12, 0);
+                        }
+                    }
+                }
+            }
+
+            foreach ($allRecords as $r) {
+                $mIndex = (int)date('n', strtotime($r->$dateCol)) - 1;
+                $sName = $satkerMap[$r->satuan_kerja_id] ?? 'Unknown';
+
+                if ($hasAnggaran) {
+                    $val = $r->{$config['col_anggaran']};
+                    if (in_array($val, $compResult['anggaran']['options'])) {
+                        $compResult['anggaran']['aggregated'][$val][$mIndex]++;
+                        if ($isMultiSatker) $compResult['anggaran']['detailed'][$val][$sName][$mIndex]++;
+                    }
+                }
+                if ($hasSasaran) {
+                    $val = $r->sasaran_kegiatan;
+                    if (in_array($val, $compResult['sasaran']['options'])) {
+                        $compResult['sasaran']['aggregated'][$val][$mIndex]++;
+                        if ($isMultiSatker) $compResult['sasaran']['detailed'][$val][$sName][$mIndex]++;
+                    }
+                }
+                if ($hasKategori) {
+                    $val = $r->kategori_kegiatan;
+                    if (in_array($val, $compResult['kategori']['options'])) {
+                        $compResult['kategori']['aggregated'][$val][$mIndex]++;
+                        if ($isMultiSatker) $compResult['kategori']['detailed'][$val][$sName][$mIndex]++;
+                    }
+                }
+                if ($hasSubGiat) {
+                    $val = $r->sub_kegiatan;
+                    if (in_array($val, $compResult['sub_kegiatan']['options'])) {
+                        $compResult['sub_kegiatan']['aggregated'][$val][$mIndex]++;
+                        if ($isMultiSatker) $compResult['sub_kegiatan']['detailed'][$val][$sName][$mIndex]++;
+                    }
+                }
+            }
+
+            if ($hasKategori) {
+                foreach ($urineRecords as $ur) {
+                    $mIndex = (int)date('n', strtotime($ur->tanggal_pelaksanaan)) - 1;
+                    $sName = $satkerMap[$ur->satuan_kerja_id] ?? 'Unknown';
+                    $val = 'pengembangan_kapasitas';
+                    if (in_array($val, $compResult['kategori']['options'])) {
+                        $compResult['kategori']['aggregated'][$val][$mIndex]++;
+                        if ($isMultiSatker) $compResult['kategori']['detailed'][$val][$sName][$mIndex]++;
+                    }
+                }
+            }
+
+        } else {
+            $compLabels = $isMultiSatker ? array_values(SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja')->toArray()) : [$mySatkerName];
+            $labelIndexes = array_flip($compLabels);
+
+            foreach (['anggaran', 'sasaran', 'kategori', 'sub_kegiatan'] as $catKey) {
+                foreach ($compResult[$catKey]['options'] as $opt) {
+                    $compResult[$catKey]['aggregated'][$opt] = array_fill(0, count($compLabels), 0);
+                }
+            }
+
+            foreach ($allRecords as $r) {
+                $sName = $isMultiSatker ? ($satkerMap[$r->satuan_kerja_id] ?? null) : $mySatkerName;
+                if (!$sName || !isset($labelIndexes[$sName])) continue;
+                $sIndex = $labelIndexes[$sName];
+
+                if ($hasAnggaran) {
+                    $val = $r->{$config['col_anggaran']};
+                    if (isset($compResult['anggaran']['aggregated'][$val])) {
+                        $compResult['anggaran']['aggregated'][$val][$sIndex]++;
+                    }
+                }
+                if ($hasSasaran) {
+                    $val = $r->sasaran_kegiatan;
+                    if (isset($compResult['sasaran']['aggregated'][$val])) {
+                        $compResult['sasaran']['aggregated'][$val][$sIndex]++;
+                    }
+                }
+                if ($hasKategori) {
+                    $val = $r->kategori_kegiatan;
+                    if (isset($compResult['kategori']['aggregated'][$val])) {
+                        $compResult['kategori']['aggregated'][$val][$sIndex]++;
+                    }
+                }
+                if ($hasSubGiat) {
+                    $val = $r->sub_kegiatan;
+                    if (isset($compResult['sub_kegiatan']['aggregated'][$val])) {
+                        $compResult['sub_kegiatan']['aggregated'][$val][$sIndex]++;
+                    }
+                }
+            }
+
+            if ($hasKategori) {
+                foreach ($urineRecords as $ur) {
+                    $sName = $isMultiSatker ? ($satkerMap[$ur->satuan_kerja_id] ?? null) : $mySatkerName;
+                    if (!$sName || !isset($labelIndexes[$sName])) continue;
+                    $sIndex = $labelIndexes[$sName];
+                    $val = 'pengembangan_kapasitas';
+                    if (isset($compResult['kategori']['aggregated'][$val])) {
+                        $compResult['kategori']['aggregated'][$val][$sIndex]++;
+                    }
+                }
+            }
+        }
+
+        // Format data menjadi struktur Series untuk ApexCharts
+        $formattedComp = [];
+        foreach (['anggaran', 'sasaran', 'kategori', 'sub_kegiatan'] as $catKey) {
+            $formattedComp[$catKey] = [
+                'options' => [],
+                'aggregated' => [],
+                'detailed' => []
+            ];
+
+            $displayMap = [];
+            if ($catKey === 'sasaran') {
+                foreach ($compResult[$catKey]['options'] as $o) $displayMap[$o] = ucwords(str_replace('lingkungan ', '', $o));
+            } elseif ($catKey === 'kategori') {
+                $mapK = KategoriPeranSertaMasyarakat::KATEGORI;
+                foreach ($compResult[$catKey]['options'] as $o) $displayMap[$o] = $mapK[$o] ?? ucwords(str_replace('_', ' ', $o));
+            } elseif ($catKey === 'sub_kegiatan') {
+                $mapS = KategoriPemberdayaan::SUB_KEGIATAN;
+                foreach ($compResult[$catKey]['options'] as $o) $displayMap[$o] = $mapS[$o] ?? ucwords(str_replace('_', ' ', $o));
+            } else {
+                foreach ($compResult[$catKey]['options'] as $o) $displayMap[$o] = $o;
+            }
+
+            foreach ($compResult[$catKey]['options'] as $opt) {
+                $formattedComp[$catKey]['options'][] = ['id' => $opt, 'label' => $displayMap[$opt]];
+                $formattedComp[$catKey]['aggregated'][] = [
+                    'name' => $displayMap[$opt],
+                    'data' => $compResult[$catKey]['aggregated'][$opt]
+                ];
+
+                if ($month === 'per_bulan' && $isMultiSatker) {
+                    $detailedSeries = [];
+                    foreach ($compResult[$catKey]['detailed'][$opt] as $sName => $dataArr) {
+                        $detailedSeries[] = [
+                            'name' => $sName,
+                            'data' => $dataArr
+                        ];
+                    }
+                    $formattedComp[$catKey]['detailed'][$opt] = $detailedSeries;
+                }
+            }
+        }
+
+        // ====================================================================
+        // 3. DATA RINCIAN SPESIFIK & DRILL DOWN (DENGAN NAMA SATKER)
         // ====================================================================
         $tableData = [];
 
@@ -505,7 +639,6 @@ class DashboardP2MController extends Controller
             }
         }
 
-        // Pengurutan bawaan
         usort($tableData, function($a, $b) {
             if ($a['kategori'] === $b['kategori']) {
                 return $b['peserta'] <=> $a['peserta'];
@@ -523,12 +656,7 @@ class DashboardP2MController extends Controller
             'trend_labels' => $trendLabels,
             'comp_labels'  => $compLabels,
             'trend' => ['kegiatan' => $chartKegiatan, 'peserta' => $chartPeserta],
-            'comp' => [
-                'anggaran' => [['name' => 'DIPA', 'data' => $barAnggaranDipa], ['name' => 'NON DIPA', 'data' => $barAnggaranNon]],
-                'sasaran' => $sasaranSeries,
-                'kategori' => $kategoriSeries,
-                'sub_kegiatan' => $subGiatSeries
-            ],
+            'comp'  => $formattedComp, // Struktur baru yang kaya dimensi
             'detail_table' => $tableData
         ]);
     }

@@ -300,7 +300,7 @@
 
                     {{-- WADAH GRAFIK PROPORSI --}}
                     <div class="card-body px-4 pb-4 pt-4">
-                        <div x-ref="chartComp"></div>
+                        <div x-ref="chartComp" class="w-100"></div>
                     </div>
                 </div>
             </div>
@@ -387,7 +387,6 @@
             rawData: null, 
             tableData: [],
             
-            // Mengubah tipe chart.comp menjadi array untuk mendukung 12 bulan
             chartInst: { rank: null, trend: null, comp: [], detail: null },
             
             getColors() { return ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#0dcaf0', '#dc3545', '#20c997', '#ffc107', '#6c757d']; },
@@ -596,20 +595,25 @@
 
                 // =========================================================================
                 // SKENARIO KHUSUS: Seluruh Satuan Kerja + Per Bulan + SEMUA PROPORSI (GABUNGAN)
-                // Menggunakan layout Opsi B: 1 Bulan 1 Layar, Scrollable Vertical
+                // Menggunakan layout Opsi B (Grouped Horizontal Bar) dgn wadah relatif (vh)
                 // =========================================================================
                 if (isPerBulan && isMulti && this.compToggle === 'all') {
                     
-                    container.classList.add('snap-container', 'custom-scrollbar');
+                    // Gunakan custom scrollbar biasa tanpa scroll-snap yang kaku
+                    container.classList.add('custom-scrollbar');
+                    container.style.maxHeight = '85vh'; // Batasan tinggi wadah utama
+                    container.style.overflowY = 'auto';
+
                     let months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-                    // Cari max global agar ukuran sumbu X sama dari Jan - Des
+                    // Cari max global agar sumbu X sama dari Jan - Des 
                     let globalMax = 0;
                     compData.options.forEach(opt => {
                         (compData.detailed[opt.id] || []).forEach(s => {
                             s.data.forEach(val => { if (val > globalMax) globalMax = val; });
                         });
                     });
+                    // Buffer ruang agar label angka tidak mentok dinding chart
                     let maxX = globalMax > 0 ? Math.ceil(globalMax * 1.15) : undefined; 
 
                     for (let m = 0; m < 12; m++) {
@@ -631,30 +635,40 @@
                             monthSeries.push({ name: opt.label, data: dataForOpt });
                         });
 
+                        // Wrapper per bulan
                         let monthDiv = document.createElement('div');
-                        monthDiv.className = 'month-block w-100';
-                        
-                        let title = document.createElement('h5');
-                        title.className = 'text-center fw-bold text-primary mb-4 pb-2 border-bottom border-primary border-opacity-25 d-inline-block mx-auto';
-                        title.innerHTML = `<i class="bi bi-calendar-event me-2"></i>BULAN ${months[m].toUpperCase()} ${this.globalYear}`;
+                        monthDiv.className = 'w-100 mb-5 pb-3 border-bottom border-2 border-light';
+                        // Memastikan setiap blok bulan berukuran tepat satu viewport (misal 75vh)
+                        monthDiv.style.height = '75vh'; 
+                        monthDiv.style.display = 'flex';
+                        monthDiv.style.flexDirection = 'column';
                         
                         let titleWrapper = document.createElement('div');
-                        titleWrapper.className = 'text-center';
-                        titleWrapper.appendChild(title);
+                        titleWrapper.className = 'text-center flex-shrink-0 mb-3'; 
+                        titleWrapper.innerHTML = `<h5 class="fw-bold text-primary d-inline-block border-bottom border-primary border-opacity-25 pb-2"><i class="bi bi-calendar-event me-2"></i>BULAN ${months[m].toUpperCase()} ${this.globalYear}</h5>`;
                         monthDiv.appendChild(titleWrapper);
 
                         let chartDiv = document.createElement('div');
+                        // Trik Flexbox: Biarkan Chart mengambil 100% dari sisa tinggi monthDiv
+                        chartDiv.style.flexGrow = '1';
+                        chartDiv.style.minHeight = '0';
+                        chartDiv.style.width = '100%';
+                        
                         monthDiv.appendChild(chartDiv);
                         container.appendChild(monthDiv);
 
-                        let calculatedHeight = Math.max(300, satkerNames.length * (monthSeries.length * 35));
-
                         let opts = {
                             series: monthSeries,
-                            chart: { type: 'bar', height: calculatedHeight, stacked: false, toolbar: { show: false }, fontFamily: 'inherit' },
+                            chart: { 
+                                type: 'bar', 
+                                height: '100%', // <-- Kunci responsivitas (tidak pakai px)
+                                stacked: false, 
+                                toolbar: { show: false }, 
+                                fontFamily: 'inherit' 
+                            },
                             colors: colors,
                             plotOptions: {
-                                bar: { horizontal: true, barHeight: '75%', dataLabels: { position: 'top' }, borderRadius: 2 }
+                                bar: { horizontal: true, barHeight: '80%', dataLabels: { position: 'top' }, borderRadius: 2 }
                             },
                             dataLabels: {
                                 enabled: true,
@@ -664,7 +678,14 @@
                                 offsetX: 5 
                             },
                             stroke: { show: true, width: 1, colors: ['#fff'] },
-                            xaxis: { categories: satkerNames, max: maxX, labels: { style: { fontWeight: 'bold' } } },
+                            xaxis: { 
+                                categories: satkerNames, 
+                                max: maxX, 
+                                labels: { 
+                                    show: true, // Pastikan angka sumbu X selalu terlihat
+                                    style: { fontWeight: 'bold' } 
+                                } 
+                            },
                             yaxis: { labels: { style: { fontWeight: 'bold', fontSize: '13px' }, maxWidth: 250 } },
                             tooltip: { shared: true, intersect: false, y: { formatter: function(val) { return val + " Kegiatan"; } } },
                             legend: { position: 'top', fontWeight: 'bold' }
@@ -677,19 +698,19 @@
                 } 
                 // =========================================================================
                 // SKENARIO REGULER & TOGGLE KHUSUS (Single Chart)
-                // Mengembalikan seperti sedia kala (X = Bulan, Series = Satker)
                 // =========================================================================
                 else {
-                    container.classList.remove('snap-container', 'custom-scrollbar');
+                    container.classList.remove('custom-scrollbar');
+                    container.style.maxHeight = 'none';
+                    container.style.overflowY = 'visible';
                     
                     let dataSeries = [];
                     let chartType = 'bar';
                     let isStacked = false; 
-                    let isHorizontal = false; // Default Vertikal (Menjulang ke atas)
+                    let isHorizontal = false; 
                     let labels = [];
 
                     if (this.compToggle === 'all') {
-                        // Skenario Akumulasi biasa (karena Per Bulan isMulti sudah di-if di atas)
                         if (!isPerBulan && !isMulti) {
                             chartType = 'donut';
                             dataSeries = compData.aggregated.map(s => s.data[0] || 0);
@@ -702,16 +723,14 @@
                             if (this.tabComp === 'anggaran') colors = ['#198754', '#fd7e14'];
                         }
                     } else {
-                        // Skenario Klik Toggle Khusus (Misal Klik "DIPA" atau "NON DIPA")
                         let optLabel = compData.options.find(o => o.id === this.compToggle)?.label || this.compToggle;
                         
                         if (isPerBulan && isMulti) {
-                            // Dikembalikan seperti aslinya: Sumbu X adalah Bulan, Bar-nya adalah Satuan Kerja
                             dataSeries = compData.detailed[this.compToggle] || [];
                             labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
                             isHorizontal = false; 
                             isStacked = false; 
-                            colors = this.getColors(); // Multi-warna untuk 6 satker
+                            colors = this.getColors();
                         } else {
                             let found = compData.aggregated.find(s => s.name === optLabel);
                             dataSeries = found ? [found] : [];
@@ -726,7 +745,7 @@
                     let chartDiv = document.createElement('div');
                     container.appendChild(chartDiv);
 
-                    let calculatedHeight = 450; // Tinggi default
+                    let calculatedHeight = 450; 
 
                     let opts = { 
                         series: dataSeries, 
@@ -755,7 +774,6 @@
                         opts.legend = { position: 'top', fontWeight: 'bold', offsetY: -10 };
                         opts.tooltip = { shared: true, intersect: false, y: { formatter: function (val) { return val + " Kegiatan"; } } };
                         opts.stroke = { show: true, width: 1, colors: ['#ffffff'] };
-                        // Di mode Vertikal ini, angka di ujung batang di-disable agar tidak menumpuk padat
                         opts.dataLabels = { enabled: false }; 
                     }
 
@@ -913,25 +931,7 @@
 </script>
 
 <style>
-    /* CSS Khusus UX "One Month, One View" dengan gaya Snap Scrolling */
-    .snap-container {
-        max-height: 80vh; 
-        overflow-y: auto;
-        scroll-snap-type: y mandatory;
-        scroll-behavior: smooth;
-        padding-right: 10px;
-    }
-    .month-block {
-        scroll-snap-align: start;
-        min-height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        padding-top: 1.5rem;
-        padding-bottom: 2.5rem;
-    }
-    
-    /* Scrollbar styling agar cantik dipandang */
+    /* Styling untuk custom scrollbar yang elegan */
     .custom-scrollbar::-webkit-scrollbar {
         width: 8px;
     }

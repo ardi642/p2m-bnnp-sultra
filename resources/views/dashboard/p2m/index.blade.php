@@ -573,7 +573,7 @@
                     else if (this.isMultiSatker) { opts.colors = this.getColors(); opts.legend = { position: 'top', fontWeight: 'bold', offsetY: -10 }; } 
                     else { opts.colors = ['#0d6efd']; opts.legend = { show: false }; }
 
-                    opts.xaxis = { categories: this.rawData.trend_labels };
+                    opts.xaxis = { categories: this.rawData.trend_labels, labels: { formatter: (v) => typeof v === 'number' ? Math.round(v) : v } };
                     opts.yaxis = { labels: { formatter: v => Math.round(v), style: { fontWeight: 'bold' } } };
                     opts.stroke = { show: true, width: 2, colors: ['#ffffff'] };
                     opts.tooltip = { shared: true, intersect: false, y: { formatter: (val) => new Intl.NumberFormat('id-ID').format(val) + ' ' + metricLabel } };
@@ -603,70 +603,96 @@
 
                 let colors = this.getColors();
 
+                // ======================================================================
+                // PERUBAHAN: KONSEP 2 (SMALL MULTIPLES / PANEL GRID PER SATKER)
+                // ======================================================================
                 if (isPerBulan && isMulti && this.compToggle === 'all') {
-                    container.classList.add('custom-scrollbar');
-                    container.style.maxHeight = '85vh'; 
-                    container.style.overflowY = 'auto';
+                    container.classList.remove('custom-scrollbar');
+                    container.style.maxHeight = 'none'; 
+                    container.style.overflowY = 'visible';
 
-                    let months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-                    let globalMax = 0;
+                    let months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                    let satkerNames = [];
+                    
+                    // Kumpulkan semua nama Satker yang tersedia
                     compData.options.forEach(opt => {
-                        (compData.detailed[opt.id] || []).forEach(s => { s.data.forEach(val => { if (val > globalMax) globalMax = val; }); });
+                        (compData.detailed[opt.id] || []).forEach(s => { 
+                            if (!satkerNames.includes(s.name)) satkerNames.push(s.name); 
+                        });
                     });
-                    let maxX = globalMax > 0 ? Math.ceil(globalMax * 1.15) : undefined; 
+                    satkerNames.sort();
 
-                    for (let m = 0; m < 12; m++) {
-                        let monthSeries = [];
-                        let satkerNames = [];
-                        
+                    // Buat Global Legend (Keterangan Warna) yang bersih di bagian atas
+                    let legendDiv = document.createElement('div');
+                    legendDiv.className = 'd-flex flex-wrap justify-content-center gap-3 mb-4 pb-3 border-bottom border-light';
+                    compData.options.forEach((opt, idx) => {
+                        let c = colors[idx % colors.length];
+                        legendDiv.innerHTML += `<div class="d-flex align-items-center"><span style="width:14px;height:14px;background-color:${c};border-radius:4px;margin-right:6px;box-shadow: 0 1px 2px rgba(0,0,0,0.1);"></span><span class="small fw-bold text-secondary">${opt.label}</span></div>`;
+                    });
+                    container.appendChild(legendDiv);
+
+                    // Buat Grid Row
+                    let gridRow = document.createElement('div');
+                    gridRow.className = 'row g-3';
+                    container.appendChild(gridRow);
+
+                    // Render Grafik Masing-Masing Satker (Kotak Panel)
+                    satkerNames.forEach(sName => {
+                        let satkerSeries = [];
                         compData.options.forEach(opt => {
-                            (compData.detailed[opt.id] || []).forEach(s => { if (!satkerNames.includes(s.name)) satkerNames.push(s.name); });
+                            let match = (compData.detailed[opt.id] || []).find(s => s.name === sName);
+                            // Hindari rendering nilai 0 agar tooltip lebih bersih
+                            let processedData = (match ? match.data : new Array(12).fill(0)).map(v => v > 0 ? v : null); 
+                            satkerSeries.push({ name: opt.label, data: processedData });
                         });
 
-                        compData.options.forEach(opt => {
-                            let dataForOpt = [];
-                            satkerNames.forEach(sName => {
-                                let match = (compData.detailed[opt.id] || []).find(s => s.name === sName);
-                                dataForOpt.push(match ? match.data[m] : 0);
-                            });
-                            monthSeries.push({ name: opt.label, data: dataForOpt });
-                        });
-
-                        let monthDiv = document.createElement('div');
-                        monthDiv.className = 'w-100 mb-5 pb-3 border-bottom border-2 border-light';
-                        monthDiv.style.height = '75vh'; 
-                        monthDiv.style.display = 'flex';
-                        monthDiv.style.flexDirection = 'column';
+                        // Elemen UI Kotak Panel
+                        let colDiv = document.createElement('div');
+                        colDiv.className = 'col-md-6 col-xl-4';
                         
-                        let titleWrapper = document.createElement('div');
-                        titleWrapper.className = 'text-center flex-shrink-0 mb-3'; 
-                        titleWrapper.innerHTML = `<h5 class="fw-bold text-primary d-inline-block border-bottom border-primary border-opacity-25 pb-2"><i class="bi bi-calendar-event me-2"></i>BULAN ${months[m].toUpperCase()} ${this.globalYear}</h5>`;
-                        monthDiv.appendChild(titleWrapper);
-
+                        let cardDiv = document.createElement('div');
+                        cardDiv.className = 'card border-0 shadow-sm h-100 bg-white rounded-3 border-top border-3 border-primary';
+                        
+                        let cardHeader = document.createElement('div');
+                        cardHeader.className = 'card-header bg-transparent border-0 pt-3 pb-0 text-center';
+                        cardHeader.innerHTML = `<h6 class="mb-0 fw-bold text-dark"><i class="bi bi-building me-2 text-muted"></i>${sName}</h6>`;
+                        
+                        let cardBody = document.createElement('div');
+                        cardBody.className = 'card-body p-2';
+                        
                         let chartDiv = document.createElement('div');
-                        chartDiv.style.flexGrow = '1'; chartDiv.style.minHeight = '0'; chartDiv.style.width = '100%';
-                        
-                        monthDiv.appendChild(chartDiv);
-                        container.appendChild(monthDiv);
+                        chartDiv.style.minHeight = '250px';
 
+                        cardBody.appendChild(chartDiv);
+                        cardDiv.appendChild(cardHeader);
+                        cardDiv.appendChild(cardBody);
+                        colDiv.appendChild(cardDiv);
+                        gridRow.appendChild(colDiv);
+
+                        // Konfigurasi ApexCharts per Panel
                         let opts = {
-                            series: monthSeries,
-                            chart: { type: 'bar', height: '100%', stacked: false, toolbar: { show: false }, fontFamily: 'inherit' },
+                            series: satkerSeries,
+                            chart: { type: 'bar', height: 280, stacked: true, toolbar: { show: false }, fontFamily: 'inherit' },
                             colors: colors,
-                            plotOptions: { bar: { horizontal: true, barHeight: '80%', dataLabels: { position: 'top' }, borderRadius: 2 } },
-                            dataLabels: { enabled: true, textAnchor: 'start', style: { colors: ['#212529'], fontSize: '11px', fontWeight: 'bold' }, formatter: function (val) { return val > 0 ? val : ''; }, offsetX: 5 },
+                            plotOptions: { bar: { horizontal: false, columnWidth: '75%', borderRadius: 2 } },
+                            dataLabels: { enabled: false },
                             stroke: { show: true, width: 1, colors: ['#fff'] },
-                            xaxis: { categories: satkerNames, max: maxX, labels: { formatter: v => Math.round(v), show: true, style: { fontWeight: 'bold' } } },
-                            yaxis: { labels: { style: { fontWeight: 'bold', fontSize: '13px' }, maxWidth: 250 } },
-                            tooltip: { shared: true, intersect: false, y: { formatter: function(val) { return val + " Kegiatan"; } } },
-                            legend: { position: 'top', fontWeight: 'bold' }
+                            xaxis: { categories: months, labels: { style: { fontSize: '10px', fontWeight: 'bold' } } },
+                            yaxis: { labels: { formatter: v => v ? Math.round(v) : '', style: { fontSize: '11px', fontWeight: 'bold' } } },
+                            legend: { show: false }, // Legenda per kotak dimatikan karena sudah ada Global Legend
+                            tooltip: { 
+                                shared: true, intersect: false, 
+                                y: { formatter: v => v ? new Intl.NumberFormat('id-ID').format(v) + " Kegiatan" : '' } 
+                            }
                         };
+                        
                         let chart = new ApexCharts(chartDiv, opts);
                         chart.render();
-                        this.chartInst.comp.push(chart); 
-                    }
+                        this.chartInst.comp.push(chart);
+                    });
                 } 
                 else {
+                    // (Logika rendering selain "Per Bulan + Semua Satker" dibiarkan utuh)
                     container.classList.remove('custom-scrollbar');
                     container.style.maxHeight = 'none';
                     container.style.overflowY = 'visible';
@@ -737,6 +763,7 @@
                 let categories = [];
                 let colors = this.getColors();
                 
+                // Konfigurasi dasar dengan Custom Tooltip cerdas (hilangkan 0 & hitung total)
                 let opts = {
                     chart: {
                         toolbar: { show: false },
@@ -763,41 +790,55 @@
                     dataLabels: { enabled: false },
                     legend: { position: 'top', horizontalAlign: 'left', fontWeight: 'bold' },
                     
-                    // CUSTOM TOOLTIP GLOBAL UNTUK MENGHILANGKAN ANGKA 0 & NULL
+                    // CUSTOM TOOLTIP GLOBAL: Mencegah bug ApexCharts Horizontal & Menjumlahkan nilai
                     tooltip: {
                         shared: true,
                         intersect: false,
                         custom: function({series, seriesIndex, dataPointIndex, w}) {
                             let category = w.globals.labels[dataPointIndex] || '';
+                            let total = 0;
                             let hasData = false;
-                            
+
+                            // Cek jika ini chart didistribusikan (1 seri, banyak kategori, biasa di Level 3 Satker)
+                            let isDistributed = w.config.plotOptions && w.config.plotOptions.bar && w.config.plotOptions.bar.distributed;
+
                             let html = '<div style="font-family: inherit; font-size: 13px; line-height: 1.5;">';
                             html += '<div style="font-weight: 600; padding: 8px 12px; background: #f8f9fa; border-bottom: 1px solid #e9ecef;">' + category + '</div>';
                             html += '<div style="padding: 8px 12px; display: flex; flex-direction: column; gap: 6px;">';
 
                             w.globals.seriesNames.forEach((name, i) => {
-                                if (series[i] && series[i][dataPointIndex] !== undefined) {
-                                    let val = series[i][dataPointIndex];
-                                    
-                                    // HANYA RENDER JIKA VALUE LEBIH DARI 0
-                                    if (val !== null && val > 0) {
-                                        hasData = true;
-                                        let color = w.globals.colors[i];
-                                        let isPos = name.includes('Positif');
-                                        let suffix = isPeserta ? (isPos ? ' Orang Positif' : ' Orang') : ' Kegiatan';
+                                // Ambil raw data dari config agar tidak termanipulasi oleh bug shared tooltip ApexCharts
+                                let rawDataArray = w.config.series[i].data;
+                                let val = rawDataArray ? rawDataArray[dataPointIndex] : null;
 
-                                        html += '<div style="display:flex; align-items:center;">';
-                                        html += '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:' + color + '; margin-right:8px; flex-shrink:0;"></span>';
-                                        html += '<span style="margin-right: 15px; color: #495057;">' + name + '</span>';
-                                        html += '<b style="color: #212529;">' + new Intl.NumberFormat('id-ID').format(val) + suffix + '</b>';
-                                        html += '</div>';
-                                    }
+                                if (val !== undefined && val !== null && val > 0) {
+                                    hasData = true;
+                                    total += val;
+                                    
+                                    let color = isDistributed ? w.globals.colors[dataPointIndex] : w.globals.colors[i];
+                                    let isPos = name.includes('Positif');
+                                    let displayName = name.replace(' (Negatif/Aman)', ''); // Bersihkan teks berlebih
+                                    let suffix = isPeserta ? (isPos ? ' Orang Positif' : ' Orang') : ' Kegiatan';
+
+                                    html += '<div style="display:flex; align-items:center; justify-content: space-between; gap: 20px;">';
+                                    html += '<div style="display:flex; align-items:center;">';
+                                    html += '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:' + color + '; margin-right:8px; flex-shrink:0;"></span>';
+                                    html += '<span style="color: #495057;">' + displayName + '</span>';
+                                    html += '</div>';
+                                    html += '<b style="color: #212529; text-align: right;">' + new Intl.NumberFormat('id-ID').format(val) + suffix + '</b>';
+                                    html += '</div>';
                                 }
                             });
-                            
+
+                            let suffixTotal = isPeserta ? ' Orang' : ' Kegiatan';
+                            html += '<div style="margin-top: 4px; padding-top: 6px; border-top: 1px dashed #e9ecef; display:flex; justify-content: space-between; align-items:center; gap: 20px;">';
+                            html += '<span style="font-weight: 600; color: #212529;">Total Keseluruhan</span>';
+                            html += '<b style="color: #0d6efd; font-size: 14px; text-align: right;">' + new Intl.NumberFormat('id-ID').format(total) + suffixTotal + '</b>';
+                            html += '</div>';
+
                             html += '</div></div>';
 
-                            if (!hasData) return ''; // Jangan render tooltip sama sekali jika semua isinya 0/null
+                            if (!hasData) return ''; // Jangan render tooltip jika tidak ada satupun yg nilainya > 0
                             return '<div style="background: #fff; border: 1px solid #e3e6f0; border-radius: 4px; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);">' + html + '</div>';
                         }
                     }
@@ -819,7 +860,7 @@
                                 sum += isPeserta ? r.peserta : r.frekuensi;
                                 hasData = true;
                             });
-                            return (hasData && sum > 0) ? sum : null; // Gunakan null jika 0
+                            return (hasData && sum > 0) ? sum : null; // Gunakan null agar tooltip mengabaikannya
                         });
                         return { name: s, data: data };
                     });
@@ -850,7 +891,7 @@
                                 sum += isPeserta ? r.peserta : r.frekuensi;
                                 hasData = true;
                             });
-                            return (hasData && sum > 0) ? sum : null; // Gunakan null jika 0
+                            return (hasData && sum > 0) ? sum : null; // Gunakan null agar tdk masuk kalkulasi jika kosong
                         });
                         return { name: s, data: data };
                     });
@@ -881,8 +922,8 @@
                         if (showPositif && !isHeatmap) {
                             series = [];
                             let dynamicColors = [];
+                            let legendNames = []; 
 
-                            // Buat label manual khusus untuk Legend agar cuma 6 kotak yang muncul
                             let customLegendLabels = allSatkers.slice();
                             customLegendLabels.push('Indikasi Positif');
 
@@ -921,12 +962,12 @@
                             opts.colors = dynamicColors;
                             opts.chart.stacked = true;
                             
-                            // IMPLEMENTASI LEGEND KUSTOM
+                            // PAKSA LEGEND HANYA TAMPILKAN NAMA SATKER + 1 KOTAK MERAH
                             opts.legend = {
                                 position: 'top',
                                 horizontalAlign: 'left',
                                 fontWeight: 'bold',
-                                customLegendItems: customLegendLabels, // PAKSA HANYA TAMPILKAN 6 NAMA INI
+                                customLegendItems: customLegendLabels, 
                                 markers: { fillColors: customLegendColors }
                             };
 
@@ -960,7 +1001,13 @@
                             };
                             opts.colors = isPeserta ? ['#0d6efd'] : ['#198754'];
                             opts.legend = { show: false };
-                            opts.chart.height = Math.max(400, (allSatkers.length || 1) * 55); 
+                            opts.chart.height = Math.max(400, (allSatkers.length || 1) * 55);
+                            
+                            // Matikan Custom Tooltip khusus Heatmap
+                            opts.tooltip = {
+                                shared: false,
+                                y: { formatter: v => v ? new Intl.NumberFormat('id-ID').format(v) : '' }
+                            };
                         } else {
                             opts.plotOptions = { 
                                 bar: { horizontal: false, columnWidth: '75%', borderRadius: 2 } 
@@ -996,7 +1043,7 @@
                             
                             opts.series = [{ name: 'Peserta', data: sNegatif }, { name: 'Indikasi Positif', data: sPositif }];
                             opts.colors = ['#0d6efd', '#dc3545'];
-                            opts.chart.stacked = true; // Ditumpuk horizontal
+                            opts.chart.stacked = true; 
                             opts.plotOptions = { bar: { horizontal: true, barHeight: '70%', borderRadius: 4 } };
                             opts.legend = { show: true, position: 'top' };
                         } else {

@@ -370,10 +370,8 @@ class DashboardP2MController extends Controller
         }
 
         // ====================================================================
-        // 2. DATA PROPORSI KINERJA (Dimensi yang dioptimasi untuk Filter Sekunder)
+        // 2. DATA PROPORSI KINERJA
         // ====================================================================
-        
-        // Ambil SEMUA data dalam 1 atau 2 query untuk diolah di memori. Jauh lebih cepat!
         $qAll = DB::table($table)->whereYear($dateCol, $year);
         if ($month !== 'all' && $month !== 'per_bulan') $qAll->whereMonth($dateCol, $month);
         if (!$isMultiSatker && $mySatker) $qAll->where('satuan_kerja_id', $mySatker);
@@ -400,7 +398,6 @@ class DashboardP2MController extends Controller
         if ($month === 'per_bulan') {
             $compLabels = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
             
-            // Inisialisasi array 0
             foreach (['anggaran', 'sasaran', 'kategori', 'sub_kegiatan'] as $catKey) {
                 foreach ($compResult[$catKey]['options'] as $opt) {
                     $compResult[$catKey]['aggregated'][$opt] = array_fill(0, 12, 0);
@@ -512,7 +509,6 @@ class DashboardP2MController extends Controller
             }
         }
 
-        // Format data menjadi struktur Series untuk ApexCharts
         $formattedComp = [];
         foreach (['anggaran', 'sasaran', 'kategori', 'sub_kegiatan'] as $catKey) {
             $formattedComp[$catKey] = [
@@ -555,9 +551,10 @@ class DashboardP2MController extends Controller
         }
 
         // ====================================================================
-        // 3. DATA RINCIAN SPESIFIK & DRILL DOWN (DENGAN NAMA SATKER)
+        // 3. DATA RINCIAN SPESIFIK & DRILL DOWN (PENGELOMPOKKAN BULAN)
         // ====================================================================
         $tableData = [];
+        $isPerBulanDetail = ($month === 'per_bulan');
 
         if ($type === 'peran_serta_masyarakat') {
             $qPsm = DB::table('p2m_peran_serta_masyarakat')
@@ -566,10 +563,16 @@ class DashboardP2MController extends Controller
                     'satuan_kerja.satuan_kerja as nama_satker',
                     'kategori_kegiatan', 
                     'nama_kegiatan', 
+                    DB::raw($isPerBulanDetail ? 'MONTH(tanggal_pelaksanaan) as bulan' : '0 as bulan'),
                     DB::raw('COUNT(p2m_peran_serta_masyarakat.id) as frekuensi'), 
                     DB::raw('SUM(jumlah_peserta) as peserta')
-                )
-                ->groupBy('satuan_kerja.satuan_kerja', 'kategori_kegiatan', 'nama_kegiatan');
+                );
+            
+            if ($isPerBulanDetail) {
+                $qPsm->groupBy('satuan_kerja.satuan_kerja', 'kategori_kegiatan', 'nama_kegiatan', DB::raw('MONTH(tanggal_pelaksanaan)'));
+            } else {
+                $qPsm->groupBy('satuan_kerja.satuan_kerja', 'kategori_kegiatan', 'nama_kegiatan');
+            }
             
             if ($mySatker) $qPsm->where('p2m_peran_serta_masyarakat.satuan_kerja_id', $mySatker);
             $qPsm = $applyCompTime($qPsm)->get();
@@ -582,7 +585,8 @@ class DashboardP2MController extends Controller
                     'nama'      => $r->nama_kegiatan,
                     'frekuensi' => (int)$r->frekuensi,
                     'peserta'   => (int)$r->peserta,
-                    'positif'   => 0
+                    'positif'   => 0,
+                    'bulan'     => (int)$r->bulan
                 ];
             }
 
@@ -590,11 +594,17 @@ class DashboardP2MController extends Controller
                 ->leftJoin('satuan_kerja', 'p2m_tes_urine.satuan_kerja_id', '=', 'satuan_kerja.id')
                 ->select(
                     'satuan_kerja.satuan_kerja as nama_satker',
+                    DB::raw($isPerBulanDetail ? 'MONTH(tanggal_pelaksanaan) as bulan' : '0 as bulan'),
                     DB::raw('COUNT(p2m_tes_urine.id) as frekuensi'),
                     DB::raw('SUM(jumlah_peserta) as peserta'),
                     DB::raw('SUM(jumlah_positif) as positif')
-                )
-                ->groupBy('satuan_kerja.satuan_kerja');
+                );
+                
+            if ($isPerBulanDetail) {
+                $qUrine->groupBy('satuan_kerja.satuan_kerja', DB::raw('MONTH(tanggal_pelaksanaan)'));
+            } else {
+                $qUrine->groupBy('satuan_kerja.satuan_kerja');
+            }
                 
             if ($mySatker) $qUrine->where('p2m_tes_urine.satuan_kerja_id', $mySatker);
             $qUrine = $applyCompTime($qUrine)->get();
@@ -606,7 +616,8 @@ class DashboardP2MController extends Controller
                     'nama'      => 'Deteksi Dini Tes Urine Uji Narkoba',
                     'frekuensi' => (int)$tu->frekuensi,
                     'peserta'   => (int)$tu->peserta,
-                    'positif'   => (int)$tu->positif
+                    'positif'   => (int)$tu->positif,
+                    'bulan'     => (int)$tu->bulan
                 ];
             }
 
@@ -617,10 +628,16 @@ class DashboardP2MController extends Controller
                     'satuan_kerja.satuan_kerja as nama_satker',
                     'sub_kegiatan', 
                     'detail_kegiatan', 
+                    DB::raw($isPerBulanDetail ? 'MONTH(tanggal_pelaksanaan) as bulan' : '0 as bulan'),
                     DB::raw('COUNT(p2m_pemberdayaan.id) as frekuensi'), 
                     DB::raw('SUM(jumlah_peserta) as peserta')
-                )
-                ->groupBy('satuan_kerja.satuan_kerja', 'sub_kegiatan', 'detail_kegiatan');
+                );
+            
+            if ($isPerBulanDetail) {
+                $qPa->groupBy('satuan_kerja.satuan_kerja', 'sub_kegiatan', 'detail_kegiatan', DB::raw('MONTH(tanggal_pelaksanaan)'));
+            } else {
+                $qPa->groupBy('satuan_kerja.satuan_kerja', 'sub_kegiatan', 'detail_kegiatan');
+            }
             
             if ($mySatker) $qPa->where('p2m_pemberdayaan.satuan_kerja_id', $mySatker);
             $qPa = $applyCompTime($qPa)->get();
@@ -634,17 +651,11 @@ class DashboardP2MController extends Controller
                     'nama'      => $mapDet[$r->detail_kegiatan] ?? ucwords(str_replace('_', ' ', $r->detail_kegiatan)),
                     'frekuensi' => (int)$r->frekuensi,
                     'peserta'   => (int)$r->peserta,
-                    'positif'   => 0
+                    'positif'   => 0,
+                    'bulan'     => (int)$r->bulan
                 ];
             }
         }
-
-        usort($tableData, function($a, $b) {
-            if ($a['kategori'] === $b['kategori']) {
-                return $b['peserta'] <=> $a['peserta'];
-            }
-            return strcmp($a['kategori'], $b['kategori']);
-        });
 
         return response()->json([
             'is_multi_satker' => $isMultiSatker,
@@ -656,7 +667,7 @@ class DashboardP2MController extends Controller
             'trend_labels' => $trendLabels,
             'comp_labels'  => $compLabels,
             'trend' => ['kegiatan' => $chartKegiatan, 'peserta' => $chartPeserta],
-            'comp'  => $formattedComp, // Struktur baru yang kaya dimensi
+            'comp'  => $formattedComp, 
             'detail_table' => $tableData
         ]);
     }

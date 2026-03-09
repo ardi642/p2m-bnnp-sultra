@@ -407,7 +407,7 @@
             tabComp: 'anggaran', 
             compToggle: 'all',
             adminTrendType: 'bar', 
-            detailChartType: 'bar', // Menyimpan state toggle Heatmap/Bar di Level 3
+            detailChartType: 'bar', 
             
             drilldownLevel: 1, 
             selectedKategori: '',
@@ -537,7 +537,8 @@
                     series: [{ name: 'Total Kegiatan', data: data.data }], 
                     chart: { type: 'bar', height: 400, toolbar: { show: false }, fontFamily: 'inherit' }, 
                     plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 6, borderRadiusApplication: 'end' } }, 
-                    xaxis: { categories: data.labels }, dataLabels: { enabled: true }, grid: { show: false }, 
+                    xaxis: { categories: data.labels, labels: { formatter: v => Math.round(v) } }, 
+                    dataLabels: { enabled: true }, grid: { show: false }, 
                     title: { text: `Ranking Agregat Program Utama P2M (Tahun ${this.globalYear})`, align: 'left', style: { fontSize: '15px', fontWeight: '500', color: '#495057' } } 
                 };
                 if (this.chartInst.rank) this.chartInst.rank.destroy(); 
@@ -572,8 +573,8 @@
                     else if (this.isMultiSatker) { opts.colors = this.getColors(); opts.legend = { position: 'top', fontWeight: 'bold', offsetY: -10 }; } 
                     else { opts.colors = ['#0d6efd']; opts.legend = { show: false }; }
 
-                    opts.xaxis = { categories: this.rawData.trend_labels, labels: { formatter: (v) => typeof v === 'number' ? Math.round(v) : v } };
-                    opts.yaxis = { labels: { style: { fontWeight: 'bold' } } };
+                    opts.xaxis = { categories: this.rawData.trend_labels };
+                    opts.yaxis = { labels: { formatter: v => Math.round(v), style: { fontWeight: 'bold' } } };
                     opts.stroke = { show: true, width: 2, colors: ['#ffffff'] };
                     opts.tooltip = { shared: true, intersect: false, y: { formatter: (val) => new Intl.NumberFormat('id-ID').format(val) + ' ' + metricLabel } };
                     opts.dataLabels = { enabled: false };
@@ -655,7 +656,7 @@
                             plotOptions: { bar: { horizontal: true, barHeight: '80%', dataLabels: { position: 'top' }, borderRadius: 2 } },
                             dataLabels: { enabled: true, textAnchor: 'start', style: { colors: ['#212529'], fontSize: '11px', fontWeight: 'bold' }, formatter: function (val) { return val > 0 ? val : ''; }, offsetX: 5 },
                             stroke: { show: true, width: 1, colors: ['#fff'] },
-                            xaxis: { categories: satkerNames, max: maxX, labels: { show: true, style: { fontWeight: 'bold' } } },
+                            xaxis: { categories: satkerNames, max: maxX, labels: { formatter: v => Math.round(v), show: true, style: { fontWeight: 'bold' } } },
                             yaxis: { labels: { style: { fontWeight: 'bold', fontSize: '13px' }, maxWidth: 250 } },
                             tooltip: { shared: true, intersect: false, y: { formatter: function(val) { return val + " Kegiatan"; } } },
                             legend: { position: 'top', fontWeight: 'bold' }
@@ -710,7 +711,7 @@
                     } else {
                         opts.plotOptions = { bar: { horizontal: isHorizontal, borderRadius: 2, columnWidth: '70%', barHeight: '70%' } };
                         opts.xaxis = { categories: labels, labels: { style: { fontSize: '12px', fontWeight: 'bold' } } };
-                        opts.yaxis = { labels: { style: { fontSize: '13px', fontWeight: 'bold' } } };
+                        opts.yaxis = { labels: { formatter: v => Math.round(v), style: { fontSize: '13px', fontWeight: 'bold' } } };
                         opts.legend = { position: 'top', fontWeight: 'bold', offsetY: -10 };
                         opts.tooltip = { shared: true, intersect: false, y: { formatter: function (val) { return val + " Kegiatan"; } } };
                         opts.stroke = { show: true, width: 1, colors: ['#ffffff'] };
@@ -760,7 +761,46 @@
                         }
                     },
                     dataLabels: { enabled: false },
-                    legend: { position: 'top', horizontalAlign: 'left', fontWeight: 'bold' }
+                    legend: { position: 'top', horizontalAlign: 'left', fontWeight: 'bold' },
+                    
+                    // CUSTOM TOOLTIP GLOBAL UNTUK MENGHILANGKAN ANGKA 0 & NULL
+                    tooltip: {
+                        shared: true,
+                        intersect: false,
+                        custom: function({series, seriesIndex, dataPointIndex, w}) {
+                            let category = w.globals.labels[dataPointIndex] || '';
+                            let hasData = false;
+                            
+                            let html = '<div style="font-family: inherit; font-size: 13px; line-height: 1.5;">';
+                            html += '<div style="font-weight: 600; padding: 8px 12px; background: #f8f9fa; border-bottom: 1px solid #e9ecef;">' + category + '</div>';
+                            html += '<div style="padding: 8px 12px; display: flex; flex-direction: column; gap: 6px;">';
+
+                            w.globals.seriesNames.forEach((name, i) => {
+                                if (series[i] && series[i][dataPointIndex] !== undefined) {
+                                    let val = series[i][dataPointIndex];
+                                    
+                                    // HANYA RENDER JIKA VALUE LEBIH DARI 0
+                                    if (val !== null && val > 0) {
+                                        hasData = true;
+                                        let color = w.globals.colors[i];
+                                        let isPos = name.includes('Positif');
+                                        let suffix = isPeserta ? (isPos ? ' Orang Positif' : ' Orang') : ' Kegiatan';
+
+                                        html += '<div style="display:flex; align-items:center;">';
+                                        html += '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:' + color + '; margin-right:8px; flex-shrink:0;"></span>';
+                                        html += '<span style="margin-right: 15px; color: #495057;">' + name + '</span>';
+                                        html += '<b style="color: #212529;">' + new Intl.NumberFormat('id-ID').format(val) + suffix + '</b>';
+                                        html += '</div>';
+                                    }
+                                }
+                            });
+                            
+                            html += '</div></div>';
+
+                            if (!hasData) return ''; // Jangan render tooltip sama sekali jika semua isinya 0/null
+                            return '<div style="background: #fff; border: 1px solid #e3e6f0; border-radius: 4px; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);">' + html + '</div>';
+                        }
+                    }
                 };
 
                 let allSatkers = [...new Set(this.tableData.map(r => r.satker))].sort();
@@ -774,23 +814,24 @@
                     series = allSatkers.map(s => {
                         let data = categories.map(cat => {
                             let sum = 0;
+                            let hasData = false;
                             this.tableData.filter(r => r.satker === s && r.kategori === cat).forEach(r => {
                                 sum += isPeserta ? r.peserta : r.frekuensi;
+                                hasData = true;
                             });
-                            return sum;
+                            return (hasData && sum > 0) ? sum : null; // Gunakan null jika 0
                         });
                         return { name: s, data: data };
                     });
 
-                    opts.series = series; // <--- PERBAIKAN DI SINI
+                    opts.series = series;
                     opts.chart.type = 'bar';
                     opts.chart.stacked = true;
                     opts.chart.height = Math.max(300, categories.length * 80);
                     opts.plotOptions = { bar: { horizontal: true, barHeight: '70%', borderRadius: 2, cursor: 'pointer' } };
                     opts.colors = colors;
-                    opts.xaxis = { categories: categories };
+                    opts.xaxis = { categories: categories, labels: { formatter: v => Math.round(v) } };
                     opts.yaxis = { labels: { style: { fontSize: '12px', fontWeight: '600' }, maxWidth: 400 } };
-                    opts.tooltip = { y: { formatter: v => new Intl.NumberFormat('id-ID').format(v||0) } };
                     opts.stroke = { show: true, width: 1, colors: ['#fff'] };
                 } 
                 
@@ -804,23 +845,24 @@
                     series = allSatkers.map(s => {
                         let data = categories.map(keg => {
                             let sum = 0;
+                            let hasData = false;
                             filteredData.filter(r => r.satker === s && r.nama === keg).forEach(r => {
                                 sum += isPeserta ? r.peserta : r.frekuensi;
+                                hasData = true;
                             });
-                            return sum;
+                            return (hasData && sum > 0) ? sum : null; // Gunakan null jika 0
                         });
                         return { name: s, data: data };
                     });
 
-                    opts.series = series; // <--- PERBAIKAN DI SINI
+                    opts.series = series;
                     opts.chart.type = 'bar';
                     opts.chart.stacked = true;
                     opts.chart.height = Math.max(300, categories.length * 80);
                     opts.plotOptions = { bar: { horizontal: true, barHeight: '70%', borderRadius: 2, cursor: isMulti ? 'pointer' : 'default' } };
                     opts.colors = colors;
-                    opts.xaxis = { categories: categories };
+                    opts.xaxis = { categories: categories, labels: { formatter: v => Math.round(v) } };
                     opts.yaxis = { labels: { style: { fontSize: '12px', fontWeight: '600' }, maxWidth: 400 } };
-                    opts.tooltip = { y: { formatter: v => new Intl.NumberFormat('id-ID').format(v||0) } };
                     opts.stroke = { show: true, width: 1, colors: ['#fff'] };
                 } 
                 
@@ -835,16 +877,77 @@
                         let isHeatmap = this.detailChartType === 'heatmap';
                         categories = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
                         
-                        series = allSatkers.map(s => {
-                            let data = new Array(12).fill(0);
-                            filteredData.filter(r => r.satker === s).forEach(r => {
-                                let m = parseInt(r.bulan) - 1;
-                                if(m>=0 && m<12) data[m] += isPeserta ? r.peserta : r.frekuensi;
-                            });
-                            return { name: s, data: data };
-                        });
+                        // OPSI 2: STACKED BAR DENGAN LEGEND BERSIH & BEBAS ANGKA 0
+                        if (showPositif && !isHeatmap) {
+                            series = [];
+                            let dynamicColors = [];
 
-                        opts.series = series; // <--- PERBAIKAN DI SINI
+                            // Buat label manual khusus untuk Legend agar cuma 6 kotak yang muncul
+                            let customLegendLabels = allSatkers.slice();
+                            customLegendLabels.push('Indikasi Positif');
+
+                            let customLegendColors = allSatkers.map((s, i) => colors[i % colors.length]);
+                            customLegendColors.push('#dc3545');
+
+                            allSatkers.forEach((s, i) => {
+                                let dataNegatif = new Array(12).fill(null);
+                                let dataPositif = new Array(12).fill(null);
+                                
+                                filteredData.filter(r => r.satker === s).forEach(r => {
+                                    let m = parseInt(r.bulan) - 1;
+                                    if(m>=0 && m<12) {
+                                        let pos = r.positif || 0;
+                                        let tot = r.peserta || 0;
+                                        let neg = Math.max(0, tot - pos); 
+
+                                        if (pos > 0) {
+                                            if (dataPositif[m] === null) dataPositif[m] = 0;
+                                            dataPositif[m] += pos;
+                                        }
+                                        if (neg > 0) {
+                                            if (dataNegatif[m] === null) dataNegatif[m] = 0;
+                                            dataNegatif[m] += neg;
+                                        }
+                                    }
+                                });
+
+                                series.push({ name: s, group: s, data: dataNegatif });
+                                series.push({ name: s + ' (Positif)', group: s, data: dataPositif });
+                                
+                                dynamicColors.push(colors[i % colors.length]); 
+                                dynamicColors.push('#dc3545'); 
+                            });
+
+                            opts.colors = dynamicColors;
+                            opts.chart.stacked = true;
+                            
+                            // IMPLEMENTASI LEGEND KUSTOM
+                            opts.legend = {
+                                position: 'top',
+                                horizontalAlign: 'left',
+                                fontWeight: 'bold',
+                                customLegendItems: customLegendLabels, // PAKSA HANYA TAMPILKAN 6 NAMA INI
+                                markers: { fillColors: customLegendColors }
+                            };
+
+                        } else {
+                            // Tampilan Standar (Atau Heatmap)
+                            series = allSatkers.map(s => {
+                                let data = new Array(12).fill(null);
+                                filteredData.filter(r => r.satker === s).forEach(r => {
+                                    let m = parseInt(r.bulan) - 1;
+                                    if(m>=0 && m<12) {
+                                        if (data[m] === null) data[m] = 0;
+                                        data[m] += isPeserta ? r.peserta : r.frekuensi;
+                                    }
+                                });
+                                return { name: s, data: data };
+                            });
+                            opts.colors = colors;
+                            opts.chart.stacked = false;
+                        }
+
+                        opts.series = series; 
                         opts.chart.type = isHeatmap ? 'heatmap' : 'bar';
                         opts.xaxis = { categories: categories, labels: { style: { fontWeight: 'bold' } } };
                         
@@ -857,51 +960,66 @@
                             };
                             opts.colors = isPeserta ? ['#0d6efd'] : ['#198754'];
                             opts.legend = { show: false };
-                            opts.chart.height = Math.max(400, series.length * 55); 
+                            opts.chart.height = Math.max(400, (allSatkers.length || 1) * 55); 
                         } else {
                             opts.plotOptions = { 
                                 bar: { horizontal: false, columnWidth: '75%', borderRadius: 2 } 
                             };
                             opts.stroke = { show: true, width: 1, colors: ['transparent'] };
-                            opts.colors = colors;
                             opts.chart.height = 450;
-                            opts.yaxis = { labels: { formatter: v => new Intl.NumberFormat('id-ID').format(v), style: { fontWeight: 'bold' } } };
-                            opts.tooltip = { 
-                                shared: true, intersect: false,
-                                y: { formatter: v => new Intl.NumberFormat('id-ID').format(v||0) + (isPeserta ? ' Orang' : ' Kegiatan') }
-                            };
+                            opts.yaxis = { labels: { formatter: v => Math.round(v), style: { fontWeight: 'bold' } } };
                         }
                     } else {
+                        // Horizontal Bar (Bukan Per Bulan)
                         categories = [...new Set(filteredData.map(r => r.satker))];
                         
-                        let s1 = categories.map(s => {
-                            let sum = 0;
-                            filteredData.filter(r => r.satker === s).forEach(r => { sum += isPeserta ? r.peserta : r.frekuensi; });
-                            return sum;
-                        });
-
                         if (showPositif) {
-                            let s2 = categories.map(s => {
+                            let sNegatif = categories.map(s => {
                                 let sum = 0;
-                                filteredData.filter(r => r.satker === s).forEach(r => { sum += (r.positif||0); });
-                                return sum;
+                                let hasData = false;
+                                filteredData.filter(r => r.satker === s).forEach(r => { 
+                                    let pos = r.positif || 0;
+                                    sum += Math.max(0, r.peserta - pos); 
+                                    hasData = true;
+                                });
+                                return (hasData && sum > 0) ? sum : null;
                             });
-                            opts.series = [{ name: 'Peserta', data: s1 }, { name: 'Indikasi Positif', data: s2 }];
+                            let sPositif = categories.map(s => {
+                                let sum = 0;
+                                let hasData = false;
+                                filteredData.filter(r => r.satker === s).forEach(r => { 
+                                    sum += (r.positif||0); 
+                                    if(sum > 0) hasData = true;
+                                });
+                                return (hasData && sum > 0) ? sum : null;
+                            });
+                            
+                            opts.series = [{ name: 'Peserta', data: sNegatif }, { name: 'Indikasi Positif', data: sPositif }];
                             opts.colors = ['#0d6efd', '#dc3545'];
-                            opts.plotOptions = { bar: { horizontal: true, barHeight: '70%', borderRadius: 4, distributed: false } };
+                            opts.chart.stacked = true; // Ditumpuk horizontal
+                            opts.plotOptions = { bar: { horizontal: true, barHeight: '70%', borderRadius: 4 } };
                             opts.legend = { show: true, position: 'top' };
                         } else {
+                            let s1 = categories.map(s => {
+                                let sum = 0;
+                                let hasData = false;
+                                filteredData.filter(r => r.satker === s).forEach(r => { 
+                                    sum += isPeserta ? r.peserta : r.frekuensi; 
+                                    hasData = true;
+                                });
+                                return (hasData && sum > 0) ? sum : null;
+                            });
                             opts.series = [{ name: isPeserta ? 'Peserta' : 'Kegiatan', data: s1 }];
                             opts.colors = colors;
+                            opts.chart.stacked = false;
                             opts.plotOptions = { bar: { horizontal: true, barHeight: '70%', borderRadius: 4, distributed: true } };
                             opts.legend = { show: false };
                         }
 
                         opts.chart.type = 'bar';
                         opts.chart.height = Math.max(300, categories.length * 80);
-                        opts.xaxis = { categories: categories };
+                        opts.xaxis = { categories: categories, labels: { formatter: v => Math.round(v) } };
                         opts.yaxis = { labels: { style: { fontSize: '12px', fontWeight: '600' }, maxWidth: 400 } };
-                        opts.tooltip = { y: { formatter: v => new Intl.NumberFormat('id-ID').format(v||0) } };
                     }
                 }
 
@@ -920,4 +1038,4 @@
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 </style>
-@endpushs
+@endpush

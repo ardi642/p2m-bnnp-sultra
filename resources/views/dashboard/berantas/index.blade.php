@@ -285,7 +285,7 @@
             <div class="col-12">
                 <div class="card border-0 shadow-sm bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <template x-if="isMultiSatker && (tat.tabComp === 'pekerjaan' || tat.tabComp === 'pendidikan')">
+                        <template x-if="isMultiSatker && (tat.tabComp === 'pekerjaan' || tat.tabComp === 'pendidikan' || tat.tabComp === 'usia')">
                             <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
                                 <i class="bi bi-layout-text-window-reverse text-muted me-2"></i>
                                 <select x-model="tat.compView" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4">
@@ -297,18 +297,19 @@
                         <div class="d-flex bg-light p-1 rounded-pill ms-auto flex-wrap">
                             <button @click="tat.tabComp = 'rekom'" :class="tat.tabComp === 'rekom' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Rekomendasi</button>
                             <button @click="tat.tabComp = 'gender'" :class="tat.tabComp === 'gender' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Gender</button>
+                            <button @click="tat.tabComp = 'usia'" :class="tat.tabComp === 'usia' ? 'btn-danger text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Kelompok Usia</button>
                             <button @click="tat.tabComp = 'pendidikan'" :class="tat.tabComp === 'pendidikan' ? 'btn-dark text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Pendidikan</button>
                             <button @click="tat.tabComp = 'pekerjaan'" :class="tat.tabComp === 'pekerjaan' ? 'btn-warning text-dark shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Pekerjaan</button>
                         </div>
                     </div>
                     <div class="card-body px-4 pb-4 pt-4">
                         {{-- APEXCHART GLOBAL --}}
-                        <div x-show="!isMultiSatker || tat.compView === 'heatmap' || (tat.tabComp !== 'pekerjaan' && tat.tabComp !== 'pendidikan')" style="overflow-x: auto;" class="custom-scrollbar pe-2">
+                        <div x-show="!isMultiSatker || tat.compView === 'heatmap' || (tat.tabComp !== 'pekerjaan' && tat.tabComp !== 'pendidikan' && tat.tabComp !== 'usia')" style="overflow-x: auto;" class="custom-scrollbar pe-2">
                             <div x-ref="chartTatComp" style="min-width: 800px; min-height: 400px;"></div>
                         </div>
 
                         {{-- HTML PANEL GRID --}}
-                        <div x-show="isMultiSatker && tat.compView === 'panel' && (tat.tabComp === 'pekerjaan' || tat.tabComp === 'pendidikan')" class="row g-3">
+                        <div x-show="isMultiSatker && tat.compView === 'panel' && (tat.tabComp === 'pekerjaan' || tat.tabComp === 'pendidikan' || tat.tabComp === 'usia')" class="row g-3">
                             <template x-for="(pData, pIdx) in getPanelData('tat', tat.tabComp)" :key="pIdx">
                                 <div class="col-md-6 col-xl-4">
                                     <div class="card border border-light shadow-sm h-100 rounded-3">
@@ -454,9 +455,10 @@
             },
             
             isMultiSatker: false,
-            chartInst: { lknT: null, lknC: null, tatT: null, tatC: null, bbT: null, bbC: null, rank: null },
             
-            getBarColors() { return ['#0d6efd', '#fd7e14', '#198754', '#6f42c1', '#dc3545', '#0dcaf0', '#20c997', '#ffc107', '#6c757d', '#e83e8c']; },
+            chartInst: { lknT: null, lknC: null, tatT: null, tatC: null, bbT: null, bbC: null, rank: null, lknPanel: [], tatPanel: [] },
+            
+            getBarColors() { return ['#0d6efd', '#fd7e14', '#198754', '#6f42c1', '#dc3545', '#0dcaf0', '#20c997', '#ffc107', '#6c757d', '#e83e8c', '#adb5bd', '#212529']; },
 
             lkn: { month: 'all', narkotika: '', tabTrend: 'kasus', tabComp: 'gender', adminTrendType: 'bar', compView: 'panel', data: null },
             tat: { month: 'all', narkotika: '', tabTrend: 'kasus', tabComp: 'rekom', adminTrendType: 'bar', compView: 'panel', data: null },
@@ -571,10 +573,12 @@
             renderLknComp() {
                 if(!this.$refs.chartLknComp || !this.lkn.data) return;
                 
-                // Mencegah masalah penumpukan grafik (bug duplikasi) 
                 if (this.chartInst.lknC) { this.chartInst.lknC.destroy(); this.chartInst.lknC = null; }
+                if (this.chartInst.lknPanel && this.chartInst.lknPanel.length > 0) {
+                    this.chartInst.lknPanel.forEach(c => c.destroy());
+                    this.chartInst.lknPanel = [];
+                }
 
-                // LOGIKA PANEL GRID HORIZONTAL MINI
                 if (this.isMultiSatker && this.lkn.compView === 'panel' && (this.lkn.tabComp === 'pekerjaan' || this.lkn.tabComp === 'pendidikan')) {
                     this.$nextTick(() => {
                         let pDataArr = this.getPanelData('lkn', this.lkn.tabComp);
@@ -582,7 +586,6 @@
                         pDataArr.forEach((pData, pIdx) => {
                             let el = document.getElementById('chart-lkn-panel-' + pIdx);
                             if (el && pData.items.length > 0) {
-                                // 1. Hancurkan Instance lama di elemen DOM ini secara paksa (agar tidak ada duplikat)
                                 if (el._apex) { el._apex.destroy(); }
                                 el.innerHTML = ''; 
 
@@ -605,14 +608,14 @@
                                 
                                 let chart = new ApexCharts(el, opts);
                                 chart.render();
-                                el._apex = chart; // 2. Simpan wujud grafik di properti elemen HTML langsung (bukan state Alpine)
+                                el._apex = chart; 
+                                this.chartInst.lknPanel.push(chart);
                             }
                         });
                     });
-                    return; // Selesai jika mode panel
+                    return; 
                 }
 
-                // LOGIKA CHART GLOBAL (Kategori Gender / Mode Matriks Heatmap)
                 const dComp = this.lkn.data.comp[this.lkn.tabComp];
                 if (!dComp) return; 
                 
@@ -675,9 +678,12 @@
                 if(!this.$refs.chartTatComp || !this.tat.data) return;
 
                 if (this.chartInst.tatC) { this.chartInst.tatC.destroy(); this.chartInst.tatC = null; }
+                if (this.chartInst.tatPanel && this.chartInst.tatPanel.length > 0) {
+                    this.chartInst.tatPanel.forEach(c => c.destroy());
+                    this.chartInst.tatPanel = [];
+                }
 
-                // LOGIKA PANEL GRID HORIZONTAL MINI
-                if (this.isMultiSatker && this.tat.compView === 'panel' && (this.tat.tabComp === 'pekerjaan' || this.tat.tabComp === 'pendidikan')) {
+                if (this.isMultiSatker && this.tat.compView === 'panel' && (this.tat.tabComp === 'pekerjaan' || this.tat.tabComp === 'pendidikan' || this.tat.tabComp === 'usia')) {
                     this.$nextTick(() => {
                         let pDataArr = this.getPanelData('tat', this.tat.tabComp);
                         
@@ -707,18 +713,18 @@
                                 let chart = new ApexCharts(el, opts);
                                 chart.render();
                                 el._apex = chart;
+                                this.chartInst.tatPanel.push(chart);
                             }
                         });
                     });
                     return; 
                 }
 
-                // LOGIKA CHART GLOBAL
                 const dComp = this.tat.data.comp[this.tat.tabComp];
                 if (!dComp) return;
 
-                const names = {'rekom':'Rekomendasi', 'gender':'Gender', 'pendidikan':'Pendidikan', 'pekerjaan':'Pekerjaan'};
-                const isHeat = this.isMultiSatker && this.tat.compView === 'heatmap' && (this.tat.tabComp === 'pekerjaan' || this.tat.tabComp === 'pendidikan');
+                const names = {'rekom':'Rekomendasi', 'gender':'Gender', 'pendidikan':'Pendidikan', 'pekerjaan':'Pekerjaan', 'usia':'Kelompok Usia'};
+                const isHeat = this.isMultiSatker && this.tat.compView === 'heatmap' && (this.tat.tabComp === 'pekerjaan' || this.tat.tabComp === 'pendidikan' || this.tat.tabComp === 'usia');
                 
                 let opts = {
                     series: dComp.series,

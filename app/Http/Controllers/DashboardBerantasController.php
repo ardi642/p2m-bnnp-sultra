@@ -107,7 +107,6 @@ class DashboardBerantasController extends Controller
         return $series;
     }
 
-    // PERBAIKAN: Fungsi ini dirombak agar menjamin kembalian Panel sebagai Array Sejati
     private function formatCompSeries($data, $isMulti, $satkerMap) {
         $catTotals = [];
         foreach($data as $row) {
@@ -144,12 +143,10 @@ class DashboardBerantasController extends Controller
                 $series[] = ['name' => $cat, 'data' => $arr];
             }
             
-            // Urutkan item dari terbesar ke terkecil per Satker
             foreach($panelData as $sId => &$pData) {
                 usort($pData['items'], function($a, $b) { return $b['count'] <=> $a['count']; });
             }
             
-            // Wajib menggunakan array_values agar frontend menerima Format [0,1,2] bukan Object
             return ['labels' => array_values($satkerMap), 'series' => $series, 'panel' => array_values($panelData)];
         } else {
             $arr = [];
@@ -270,6 +267,19 @@ class DashboardBerantasController extends Controller
         $dataDidik = $this->formatCompSeries((clone $qT)->select('satuan_kerja_id', 'pendidikan as cat', DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', 'pendidikan')->get(), $f['isMulti'], $satkerMap);
         $dataPekerjaan = $this->formatCompSeries((clone $qT)->select('satuan_kerja_id', 'pekerjaan as cat', DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', 'pekerjaan')->get(), $f['isMulti'], $satkerMap);
 
+        // PENAMBAHAN KELOMPOK USIA MENGGUNAKAN CASE WHEN (SQL Aggregation)
+        $usiaCase = "CASE 
+            WHEN usia < 15 THEN '< 15 tahun'
+            WHEN usia BETWEEN 15 AND 19 THEN '15-19 tahun'
+            WHEN usia BETWEEN 20 AND 34 THEN '20-34 tahun'
+            WHEN usia BETWEEN 35 AND 49 THEN '35-49 tahun'
+            WHEN usia BETWEEN 50 AND 64 THEN '50-64 tahun'
+            WHEN usia >= 65 THEN '65+ tahun'
+            ELSE 'Tidak Diketahui'
+        END";
+
+        $dataUsia = $this->formatCompSeries((clone $qT)->select('satuan_kerja_id', DB::raw("$usiaCase as cat"), DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', DB::raw($usiaCase))->get(), $f['isMulti'], $satkerMap);
+
         foreach ($dataRekom['series'] as &$s) { $s['name'] = ucwords($s['name']); }
         foreach ($dataGender['series'] as &$s) { if(strtolower($s['name']) === 'laki-laki') $s['name'] = 'Laki-laki'; if(strtolower($s['name']) === 'perempuan') $s['name'] = 'Perempuan'; }
 
@@ -280,7 +290,8 @@ class DashboardBerantasController extends Controller
                 'rekom' => ['labels' => $dataRekom['labels'], 'series' => $dataRekom['series']],
                 'gender' => ['labels' => $dataGender['labels'], 'series' => $dataGender['series']],
                 'pendidikan' => $dataDidik,
-                'pekerjaan' => $dataPekerjaan
+                'pekerjaan' => $dataPekerjaan,
+                'usia' => $dataUsia // Kategori Baru Dikirim ke Blade
             ]
         ]);
     }

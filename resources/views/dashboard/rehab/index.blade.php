@@ -179,10 +179,10 @@
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div></div> {{-- Spacer kosong --}}
                         <div class="d-flex bg-light p-1 rounded-pill ms-auto flex-wrap">
+                            <button @click="layanan.tabTrend = 'gabungan'" :class="layanan.tabTrend === 'gabungan' ? 'btn-dark text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0"><i class="bi bi-layers-fill me-1"></i>Gabungan</button>
                             <button @click="layanan.tabTrend = 'rj'" :class="layanan.tabTrend === 'rj' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Rawat Jalan</button>
                             <button @click="layanan.tabTrend = 'pasca'" :class="layanan.tabTrend === 'pasca' ? 'btn-warning text-dark shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Pasca Rehab</button>
                             <button @click="layanan.tabTrend = 'skhpn'" :class="layanan.tabTrend === 'skhpn' ? 'btn-success text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">SKHPN</button>
-                            <button @click="layanan.tabTrend = 'gabungan'" :class="layanan.tabTrend === 'gabungan' ? 'btn-dark text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0"><i class="bi bi-layers-fill me-1"></i>Gabungan</button>
                         </div>
                     </div>
                     <div class="card-body px-4 pb-4 pt-0">
@@ -418,7 +418,7 @@
             },
 
             trend: { mode: 'per_bulan', view: 'gabungan', data: null },
-            layanan: { time: 'all', tabTrend: 'rj', adminTrendType: 'bar', data: null },
+            layanan: { time: 'all', tabTrend: 'gabungan', adminTrendType: 'bar', data: null },
             demografi: { time: 'all', tabComp: 'sumber', modeHitung: 'layanan', data: null },
             rank: { time: 'all', limit: 'all', data: null },
 
@@ -586,13 +586,15 @@
                                 
                                 let opts = {
                                     series: conf.activeSeries,
-                                    chart: { height: 250, type: conf.chartType, toolbar: { show: false }, fontFamily: 'inherit' },
+                                    // Tinggi chart dinaikkan sedikit ke 260 untuk memberi ruang bagi legend
+                                    chart: { height: 260, type: conf.chartType, toolbar: { show: false }, fontFamily: 'inherit' },
                                     stroke: { width: conf.strokeWidth, curve: 'smooth' },
                                     xaxis: { categories: d.labels, labels: { style: { fontSize: '10px' } } },
                                     yaxis: { max: yMaxConfig, labels: { style: { fontSize: '10px' }, formatter: val => new Intl.NumberFormat('id-ID').format(val||0) } },
                                     colors: conf.activeColors,
                                     dataLabels: { enabled: false }, // Disembunyikan untuk Grid agar tidak sempit
-                                    legend: { show: false }, // Disembunyikan untuk Grid agar tidak sempit
+                                    // LEGEND DIAKTIFKAN
+                                    legend: { show: true, position: 'top', fontSize: '10px', markers: { width: 10, height: 10 }, itemMargin: { horizontal: 5, vertical: 0 } },
                                     tooltip: { shared: true, intersect: false }
                                 };
                                 
@@ -628,7 +630,8 @@
                             formatter: function(val) { return val === 0 ? "" : new Intl.NumberFormat('id-ID').format(val); },
                             style: { colors: ['#000'], fontSize: '11px', fontWeight: 'bold' }
                         },
-                        legend: { position: 'top', fontWeight: 'bold', offsetY: -5 },
+                        // LEGEND DIAKTIFKAN
+                        legend: { show: true, position: 'top', fontWeight: 'bold', offsetY: -5 },
                         tooltip: { shared: true, intersect: false, y: { formatter: function(val) { return new Intl.NumberFormat('id-ID').format(val||0) + ' Orang/Sesi'; } } }
                     };
 

@@ -43,25 +43,58 @@ class DashboardRehabController extends Controller
     }
 
     private function getRawUsiaGroup() {
+        $ageCalc = "TIMESTAMPDIFF(YEAR, rehab_pasien.tanggal_lahir, rehab_riwayat.tanggal_rehab)";
         return "CASE 
-                    WHEN usia < 15 THEN '< 15 tahun'
-                    WHEN usia BETWEEN 15 AND 19 THEN '15-19 tahun'
-                    WHEN usia BETWEEN 20 AND 34 THEN '20-34 tahun'
-                    WHEN usia BETWEEN 35 AND 49 THEN '35-49 tahun'
-                    WHEN usia BETWEEN 50 AND 64 THEN '50-64 tahun'
+                    WHEN $ageCalc < 15 THEN '< 15 tahun'
+                    WHEN $ageCalc BETWEEN 15 AND 19 THEN '15-19 tahun'
+                    WHEN $ageCalc BETWEEN 20 AND 34 THEN '20-34 tahun'
+                    WHEN $ageCalc BETWEEN 35 AND 49 THEN '35-49 tahun'
+                    WHEN $ageCalc BETWEEN 50 AND 64 THEN '50-64 tahun'
                     ELSE '65+ tahun'
                 END";
     }
 
+    private function parseFilter(Request $request) {
+        $user = Auth::user();
+        $isAdmin = ($user->role === 'admin');
+        $selectedSatker = $request->input('satker_id');
+        
+        return [
+            'year' => $request->input('year', date('Y')),
+            'time' => $request->input('time', 'all'), 
+            'mode_hitung' => $request->input('mode_hitung', 'layanan'), // layanan vs unik
+            'mySatker' => $isAdmin ? $selectedSatker : $user->pegawai?->satuan_kerja_id,
+            'isMulti' => ($isAdmin && empty($selectedSatker))
+        ];
+    }
+
+    private function applyTimeFilter($q, $dateCol, $f, $satkerCol = 'satuan_kerja_id') {
+        $q->whereYear($dateCol, $f['year']);
+        
+        if ($f['time'] !== 'all' && $f['time'] !== 'per_bulan' && $f['time'] !== 'per_triwulan') {
+            if (strpos($f['time'], 'Q') === 0) {
+                // Filter Kuartal / Triwulan Spesifik
+                $quarter = (int) str_replace('Q', '', $f['time']);
+                $q->whereRaw("QUARTER({$dateCol}) = ?", [$quarter]);
+            } else {
+                // Filter Bulan Spesifik
+                $q->whereMonth($dateCol, (int) $f['time']);
+            }
+        }
+        
+        if ($f['mySatker']) {
+            $q->where($satkerCol, $f['mySatker']);
+        }
+        return $q;
+    }
+
     public function getGlobalData(Request $request)
     {
-        $start = $request->input('start_year', date('Y'));
-        $end = $request->input('end_year', date('Y'));
-        
+        $year = $request->input('year', date('Y'));
         $user = Auth::user();
         $satkerId = ($user->role === 'admin') ? $request->input('satker_id') : $user->pegawai?->satuan_kerja_id;
 
-        $qTarget = DB::table('rehab_target')->whereBetween('tahun', [$start, $end]);
+        $qTarget = DB::table('rehab_target')->where('tahun', $year);
         if ($satkerId) $qTarget->where('satuan_kerja_id', $satkerId);
         $target = $qTarget->select(
             DB::raw('SUM(target_rawat_jalan) as rj'),
@@ -69,7 +102,7 @@ class DashboardRehabController extends Controller
             DB::raw('SUM(target_skhpn) as skhpn')
         )->first();
 
-        $qLaporan = DB::table('rehab_laporan')->whereYear('tanggal', '>=', $start)->whereYear('tanggal', '<=', $end);
+        $qLaporan = DB::table('rehab_laporan')->whereYear('tanggal', $year);
         if ($satkerId) $qLaporan->where('satuan_kerja_id', $satkerId);
         $realisasi = $qLaporan->select(
             DB::raw('SUM(realisasi_rawat_jalan) as rj'),
@@ -79,174 +112,178 @@ class DashboardRehabController extends Controller
 
         $qRiwayat = DB::table('rehab_riwayat')
             ->join('rehab_pasien', 'rehab_pasien.id', '=', 'rehab_riwayat.rehab_pasien_id')
-            ->whereYear('tanggal_rehab', '>=', $start)->whereYear('tanggal_rehab', '<=', $end);
+            ->whereYear('tanggal_rehab', $year);
         if ($satkerId) $qRiwayat->where('rehab_pasien.satuan_kerja_id', $satkerId);
 
         $klienTotal = $qRiwayat->count();
         $klienUnik = $qRiwayat->distinct('rehab_pasien_id')->count('rehab_pasien_id');
-        $sumber = (clone $qRiwayat)->select('sumber_pasien', DB::raw('count(*) as total'))->groupBy('sumber_pasien')->pluck('total', 'sumber_pasien');
 
         return response()->json([
-            'rj' => [ 'realisasi' => (int)$realisasi->rj, 'target' => (int)$target->rj ],
-            'pasca' => [ 'realisasi' => (int)$realisasi->pasca, 'target' => (int)$target->pasca ],
-            'skhpn' => [ 'realisasi' => (int)$realisasi->skhpn, 'target' => (int)$target->skhpn ],
-            'klien' => [ 
-                'total' => $klienTotal, 
-                'unik' => $klienUnik, 
-                'voluntary' => $sumber['Voluntary'] ?? 0, 
-                'compulsory' => $sumber['Compulsory'] ?? 0 
-            ]
+            'rj' => [ 'real' => (int)$realisasi->rj, 'target' => (int)$target->rj ],
+            'pasca' => [ 'real' => (int)$realisasi->pasca, 'target' => (int)$target->pasca ],
+            'skhpn' => [ 'real' => (int)$realisasi->skhpn, 'target' => (int)$target->skhpn ],
+            'klien' => [ 'total' => $klienTotal, 'unik' => $klienUnik ]
         ]);
-    }
-
-    private function parseFilter(Request $request) {
-        $user = Auth::user();
-        $isAdmin = ($user->role === 'admin');
-        $selectedSatker = $request->input('satker_id');
-        
-        return [
-            'mode' => $request->input('mode', 'monthly'),
-            'year' => $request->input('year', date('Y')),
-            'm_year' => $request->input('m_year', date('Y')),
-            'm_month' => $request->input('m_month', 'all'),
-            'y_start' => $request->input('y_start', date('Y')),
-            'y_end' => $request->input('y_end', date('Y')),
-            'mySatker' => $isAdmin ? $selectedSatker : $user->pegawai?->satuan_kerja_id,
-            'isMulti' => ($isAdmin && empty($selectedSatker))
-        ];
-    }
-
-    private function applyTime($q, $dateCol, $f, $val = null) {
-        if ($val !== null) { 
-            return ($f['mode'] === 'monthly') 
-                ? $q->whereYear($dateCol, $f['m_year'])->whereMonth($dateCol, $val) 
-                : $q->whereYear($dateCol, $val);
-        } else { 
-            if ($f['mode'] === 'monthly') {
-                $q->whereYear($dateCol, $f['m_year']);
-                if ($f['m_month'] !== 'all') $q->whereMonth($dateCol, (int)$f['m_month']);
-                return $q;
-            }
-            return $q->whereYear($dateCol, '>=', $f['y_start'])->whereYear($dateCol, '<=', $f['y_end']);
-        }
     }
 
     public function getChartLayanan(Request $request) {
         $f = $this->parseFilter($request);
-        $year = $f['year'];
+        $isPerBulan = ($f['time'] === 'per_bulan');
+        $isPerTriwulan = ($f['time'] === 'per_triwulan');
+        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
         
-        $chartRj = []; $chartPasca = []; $chartSkhpn = []; $compLabels = [];
-        $satkers = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->get() : [ (object)['id' => $f['mySatker'], 'satuan_kerja' => 'Satuan Kerja'] ];
-        
-        $totalTar = ['rj' => 0, 'pasca' => 0, 'skhpn' => 0];
-        $totalReal = ['rj' => 0, 'pasca' => 0, 'skhpn' => 0];
-
-        foreach ($satkers as $satker) {
-            $compLabels[] = $satker->satuan_kerja;
-            $dataRj = []; $dataPasca = []; $dataSkhpn = [];
-            
-            for ($m = 1; $m <= 12; $m++) {
-                $qL = DB::table('rehab_laporan')->where('satuan_kerja_id', $satker->id)
-                      ->whereYear('tanggal', $year)->whereMonth('tanggal', $m)
-                      ->select(DB::raw('SUM(realisasi_rawat_jalan) as rj'), DB::raw('SUM(realisasi_pasca_rehab) as pasca'), DB::raw('SUM(realisasi_skhpn) as skhpn'))
-                      ->first();
-                $dataRj[] = (int) $qL->rj;
-                $dataPasca[] = (int) $qL->pasca;
-                $dataSkhpn[] = (int) $qL->skhpn;
-            }
-            $chartRj[] = ['name' => $satker->satuan_kerja, 'data' => $dataRj];
-            $chartPasca[] = ['name' => $satker->satuan_kerja, 'data' => $dataPasca];
-            $chartSkhpn[] = ['name' => $satker->satuan_kerja, 'data' => $dataSkhpn];
-
-            $qT = DB::table('rehab_target')->where('satuan_kerja_id', $satker->id)->where('tahun', $year)->first();
-            $totalTar['rj'] += $qT ? $qT->target_rawat_jalan : 0;
-            $totalTar['pasca'] += $qT ? $qT->target_pasca_rehab : 0;
-            $totalTar['skhpn'] += $qT ? $qT->target_skhpn : 0;
-
-            $qR = DB::table('rehab_laporan')->where('satuan_kerja_id', $satker->id)->whereYear('tanggal', $year)
-                    ->select(DB::raw('SUM(realisasi_rawat_jalan) as rj'), DB::raw('SUM(realisasi_pasca_rehab) as pasca'), DB::raw('SUM(realisasi_skhpn) as skhpn'))->first();
-            $totalReal['rj'] += (int) $qR->rj;
-            $totalReal['pasca'] += (int) $qR->pasca;
-            $totalReal['skhpn'] += (int) $qR->skhpn;
+        $trendLabels = [];
+        if ($isPerBulan) {
+            $trendLabels = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+        } else if ($isPerTriwulan) {
+            $trendLabels = ['Triwulan I', 'Triwulan II', 'Triwulan III', 'Triwulan IV'];
+        } else {
+            $trendLabels = $f['isMulti'] ? array_values($satkerMap) : ['Total Akumulasi'];
         }
 
-        $pctRj = $totalTar['rj'] > 0 ? round(($totalReal['rj'] / $totalTar['rj']) * 100, 1) : ($totalReal['rj'] > 0 ? 100 : 0);
-        $pctPasca = $totalTar['pasca'] > 0 ? round(($totalReal['pasca'] / $totalTar['pasca']) * 100, 1) : ($totalReal['pasca'] > 0 ? 100 : 0);
-        $pctSkhpn = $totalTar['skhpn'] > 0 ? round(($totalReal['skhpn'] / $totalTar['skhpn']) * 100, 1) : ($totalReal['skhpn'] > 0 ? 100 : 0);
+        $qL = $this->applyTimeFilter(DB::table('rehab_laporan'), 'tanggal', $f, 'satuan_kerja_id');
+        $qL->select('satuan_kerja_id', 
+            DB::raw('SUM(realisasi_rawat_jalan) as rj'), 
+            DB::raw('SUM(realisasi_pasca_rehab) as pasca'), 
+            DB::raw('SUM(realisasi_skhpn) as skhpn')
+        );
+
+        if ($isPerBulan) { 
+            $qL->addSelect(DB::raw('MONTH(tanggal) as periode'))->groupBy('satuan_kerja_id', DB::raw('MONTH(tanggal)')); 
+        } else if ($isPerTriwulan) {
+            $qL->addSelect(DB::raw('QUARTER(tanggal) as periode'))->groupBy('satuan_kerja_id', DB::raw('QUARTER(tanggal)')); 
+        } else { 
+            $qL->groupBy('satuan_kerja_id'); 
+        }
+        
+        $data = $qL->get();
+        
+        // Murni angka Realisasi saja (Garis Target sudah ditiadakan)
+        $chartRj = $this->formatLayananSeries($data, 'rj', $f['isMulti'], $isPerBulan, $isPerTriwulan, $satkerMap);
+        $chartPasca = $this->formatLayananSeries($data, 'pasca', $f['isMulti'], $isPerBulan, $isPerTriwulan, $satkerMap);
+        $chartSkhpn = $this->formatLayananSeries($data, 'skhpn', $f['isMulti'], $isPerBulan, $isPerTriwulan, $satkerMap);
 
         return response()->json([
             'is_multi' => $f['isMulti'], 
-            'trend_labels' => ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'],
-            'trend' => ['rj' => $chartRj, 'pasca' => $chartPasca, 'skhpn' => $chartSkhpn],
-            'progress' => [
-                'rj' => ['real' => $totalReal['rj'], 'target' => $totalTar['rj'], 'pct' => $pctRj],
-                'pasca' => ['real' => $totalReal['pasca'], 'target' => $totalTar['pasca'], 'pct' => $pctPasca],
-                'skhpn' => ['real' => $totalReal['skhpn'], 'target' => $totalTar['skhpn'], 'pct' => $pctSkhpn]
-            ]
+            'trend_labels' => $trendLabels,
+            'trend' => ['rj' => $chartRj, 'pasca' => $chartPasca, 'skhpn' => $chartSkhpn]
         ]);
+    }
+
+    private function formatLayananSeries($data, $column, $isMulti, $isPerBulan, $isPerTriwulan, $satkerMap) {
+        $series = [];
+        $len = $isPerBulan ? 12 : ($isPerTriwulan ? 4 : 1);
+
+        if (($isPerBulan || $isPerTriwulan) && $isMulti) {
+            foreach ($satkerMap as $sId => $sName) {
+                $arr = array_fill(0, $len, 0);
+                foreach ($data as $row) {
+                    if ($row->satuan_kerja_id == $sId) $arr[$row->periode - 1] = (int) $row->{$column};
+                }
+                $series[] = ['name' => $sName, 'data' => $arr];
+            }
+        } elseif (($isPerBulan || $isPerTriwulan) && !$isMulti) {
+            $arr = array_fill(0, $len, 0);
+            foreach ($data as $row) { $arr[$row->periode - 1] = (int) $row->{$column}; }
+            $series[] = ['name' => 'Realisasi', 'data' => $arr];
+        } elseif (!($isPerBulan || $isPerTriwulan) && $isMulti) {
+            $arr = [];
+            foreach ($satkerMap as $sId => $sName) {
+                $val = 0;
+                foreach ($data as $row) { if ($row->satuan_kerja_id == $sId) $val = (int) $row->{$column}; }
+                $arr[] = $val;
+            }
+            $series[] = ['name' => 'Realisasi', 'data' => $arr];
+        } else {
+            $val = 0;
+            foreach ($data as $row) { $val = (int) $row->{$column}; }
+            $series[] = ['name' => 'Realisasi', 'data' => [$val]];
+        }
+        return $series;
+    }
+
+    // Engine Data Proporsi Cerdas (Karena selalu Snapshot, tidak perlu Time Multiples lagi)
+    private function buildCompData($query, $f, $satkerMap, $selectStr, $groupStr) {
+        $qAcc = clone $query;
+        $qAcc->select('rehab_pasien.satuan_kerja_id', DB::raw("$selectStr as cat"));
+        $resAcc = $qAcc->addSelect(DB::raw('COUNT(*) as total'))->groupBy('rehab_pasien.satuan_kerja_id', DB::raw($groupStr))->get();
+        
+        $data = $this->formatCompSeries($resAcc, $f['isMulti'], $satkerMap);
+        $data['type'] = 'accumulated'; // Selalu accumulated Horizontal Bar
+        return $data;
+    }
+
+    private function formatCompSeries($data, $isMulti, $satkerMap) {
+        $catTotals = [];
+        foreach($data as $row) {
+            $c = $row->cat ?: 'Tidak Diketahui';
+            if (!isset($catTotals[$c])) $catTotals[$c] = 0;
+            $catTotals[$c] += $row->total;
+        }
+        arsort($catTotals);
+        $categories = array_keys($catTotals); // Mendapatkan kategori dinamis
+
+        $series = [];
+        if ($isMulti) {
+            $panelData = [];
+            foreach($satkerMap as $sId => $sName) { $panelData[$sId] = ['satker' => $sName, 'items' => []]; }
+            foreach ($categories as $cat) {
+                $arr = [];
+                foreach ($satkerMap as $sId => $sName) {
+                    $val = 0;
+                    foreach ($data as $row) {
+                        $rCat = $row->cat ?: 'Tidak Diketahui';
+                        if ($row->satuan_kerja_id == $sId && $rCat === $cat) $val = (int) $row->total;
+                    }
+                    $arr[] = $val;
+                    if ($val > 0) $panelData[$sId]['items'][] = ['name' => $cat, 'count' => $val];
+                }
+                $series[] = ['name' => $cat, 'data' => $arr];
+            }
+            foreach($panelData as $sId => &$pData) { usort($pData['items'], function($a, $b) { return $b['count'] <=> $a['count']; }); }
+            return ['labels' => array_values($satkerMap), 'series' => $series, 'panel' => array_values($panelData)];
+        } else {
+            $arr = [];
+            foreach ($categories as $cat) { $arr[] = $catTotals[$cat]; }
+            return ['labels' => $categories, 'series' => [['name' => 'Total', 'data' => $arr]], 'panel' => []];
+        }
     }
 
     public function getChartDemografi(Request $request) {
         $f = $this->parseFilter($request);
-        $time = ($f['mode'] === 'monthly') 
-            ? ['labels' => ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'], 'points' => range(1, 12)]
-            : ['labels' => range($f['y_start'], $f['y_end']), 'points' => range($f['y_start'], $f['y_end'])];
+        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
         
-        $chartKedatangan = []; $compLabels = [];
-        $compSumber = []; $compGender = []; $compUsia = []; $compDik = []; $compPek = [];
+        // LOGIKA PENYARINGAN: LAYANAN vs PASIEN UNIK
+        if ($f['mode_hitung'] === 'unik') {
+            $sub = DB::table('rehab_riwayat')->select('rehab_pasien_id', DB::raw('MAX(id) as max_id'));
+            $sub = $this->applyTimeFilter($sub, 'tanggal_rehab', $f, 'rehab_riwayat.id'); 
+            $sub->groupBy('rehab_pasien_id');
 
-        $satkers = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->get() : [ (object)['id' => $f['mySatker'], 'satuan_kerja' => 'Satuan Kerja'] ];
-        
-        foreach ($satkers as $satker) {
-            $compLabels[] = $satker->satuan_kerja;
-            $dataKedatangan = [];
-            
-            foreach ($time['points'] as $tVal) {
-                $qK = DB::table('rehab_riwayat')->join('rehab_pasien', 'rehab_pasien.id', '=', 'rehab_riwayat.rehab_pasien_id')->where('satuan_kerja_id', $satker->id);
-                $qK = $this->applyTime($qK, 'tanggal_rehab', $f, $tVal);
-                $dataKedatangan[] = $qK->count();
-            }
-            $chartKedatangan[] = ['name' => $satker->satuan_kerja, 'data' => $dataKedatangan];
-
-            $qComp = DB::table('rehab_riwayat')->join('rehab_pasien', 'rehab_pasien.id', '=', 'rehab_riwayat.rehab_pasien_id')->where('satuan_kerja_id', $satker->id);
-            $qComp = $this->applyTime($qComp, 'tanggal_rehab', $f);
-
-            $resSumber = (clone $qComp)->select('sumber_pasien', DB::raw('count(*) as total'))->groupBy('sumber_pasien')->pluck('total', 'sumber_pasien');
-            $compSumber['Voluntary'][] = $resSumber['Voluntary'] ?? 0;
-            $compSumber['Compulsory'][] = $resSumber['Compulsory'] ?? 0;
-
-            $resGen = (clone $qComp)->select('jenis_kelamin', DB::raw('count(*) as total'))->groupBy('jenis_kelamin')->pluck('total', 'jenis_kelamin');
-            $compGender['Laki-laki'][] = $resGen['Laki-laki'] ?? 0;
-            $compGender['Perempuan'][] = $resGen['Perempuan'] ?? 0;
-
-            $resUsia = (clone $qComp)->select(DB::raw($this->getRawUsiaGroup().' as grup'), DB::raw('count(*) as total'))->groupBy('grup')->pluck('total', 'grup');
-            foreach ($resUsia as $grup => $tot) { if($grup) $compUsia[$grup][$satker->id] = $tot; }
-
-            $resDik = (clone $qComp)->select('pendidikan', DB::raw('count(*) as total'))->groupBy('pendidikan')->pluck('total', 'pendidikan');
-            foreach ($resDik as $dik => $tot) { if($dik) $compDik[$dik][$satker->id] = $tot; }
-
-            $resPek = (clone $qComp)->select('pekerjaan', DB::raw('count(*) as total'))->groupBy('pekerjaan')->pluck('total', 'pekerjaan');
-            foreach ($resPek as $pek => $tot) { if($pek) $compPek[$pek][$satker->id] = $tot; }
+            $qComp = DB::table('rehab_riwayat')
+                ->joinSub($sub, 'latest', function($join) {
+                    $join->on('rehab_riwayat.id', '=', 'latest.max_id');
+                })
+                ->join('rehab_pasien', 'rehab_pasien.id', '=', 'rehab_riwayat.rehab_pasien_id');
+        } else {
+            $qComp = DB::table('rehab_riwayat')->join('rehab_pasien', 'rehab_pasien.id', '=', 'rehab_riwayat.rehab_pasien_id');
+            $qComp = $this->applyTimeFilter($qComp, 'tanggal_rehab', $f, 'rehab_pasien.satuan_kerja_id');
         }
 
-        $formatSeries = function($compArray) use ($satkers) {
-            $series = [];
-            foreach ($compArray as $name => $satkerData) {
-                $arr = []; foreach ($satkers as $s) { $arr[] = $satkerData[$s->id] ?? 0; }
-                $series[] = ['name' => $name, 'data' => $arr];
-            }
-            return $series;
-        };
+        if ($f['mySatker']) {
+            $qComp->where('rehab_pasien.satuan_kerja_id', $f['mySatker']);
+        }
+        
+        $dataSumber = $this->buildCompData($qComp, $f, $satkerMap, 'sumber_pasien', 'sumber_pasien');
+        $dataGender = $this->buildCompData($qComp, $f, $satkerMap, 'jenis_kelamin', 'jenis_kelamin');
+        $dataDidik = $this->buildCompData($qComp, $f, $satkerMap, 'pendidikan', 'pendidikan');
+        $dataPekerjaan = $this->buildCompData($qComp, $f, $satkerMap, 'pekerjaan', 'pekerjaan');
+        $usiaCase = $this->getRawUsiaGroup();
+        $dataUsia = $this->buildCompData($qComp, $f, $satkerMap, $usiaCase, $usiaCase);
 
         return response()->json([
-            'is_multi' => $f['isMulti'], 'trend_labels' => $time['labels'], 'comp_labels' => $compLabels,
-            'trend' => ['kedatangan' => $chartKedatangan],
+            'is_multi' => $f['isMulti'], 
             'comp' => [
-                'sumber' => [['name' => 'Voluntary', 'data' => $compSumber['Voluntary'] ?? []], ['name' => 'Compulsory', 'data' => $compSumber['Compulsory'] ?? []]],
-                'gender' => [['name' => 'Laki-laki', 'data' => $compGender['Laki-laki'] ?? []], ['name' => 'Perempuan', 'data' => $compGender['Perempuan'] ?? []]],
-                'usia' => $formatSeries($compUsia),
-                'pendidikan' => $formatSeries($compDik),
-                'pekerjaan' => $formatSeries($compPek)
+                'sumber' => $dataSumber, 'gender' => $dataGender, 'usia' => $dataUsia, 'pendidikan' => $dataDidik, 'pekerjaan' => $dataPekerjaan
             ]
         ]);
     }
@@ -255,12 +292,25 @@ class DashboardRehabController extends Controller
         $f = $this->parseFilter($request);
         $limit  = $request->input('limit', 'all');
 
-        $q = DB::table('rehab_riwayat_narkotika')
-            ->join('rehab_riwayat', 'rehab_riwayat_id', '=', 'rehab_riwayat.id')
-            ->join('rehab_pasien', 'rehab_pasien.id', '=', 'rehab_riwayat.rehab_pasien_id')
-            ->join('berantas_narkotika', 'narkotika_id', '=', 'berantas_narkotika.id');
+        if ($f['mode_hitung'] === 'unik') {
+            $sub = DB::table('rehab_riwayat')->select('rehab_pasien_id', DB::raw('MAX(id) as max_id'));
+            $sub = $this->applyTimeFilter($sub, 'tanggal_rehab', $f, 'rehab_riwayat.id'); 
+            $sub->groupBy('rehab_pasien_id');
 
-        $q = $this->applyTime($q, 'tanggal_rehab', $f);
+            $q = DB::table('rehab_riwayat_narkotika')
+                ->join('rehab_riwayat', 'rehab_riwayat_id', '=', 'rehab_riwayat.id')
+                ->joinSub($sub, 'latest', function($join) {
+                    $join->on('rehab_riwayat.id', '=', 'latest.max_id');
+                })
+                ->join('rehab_pasien', 'rehab_pasien.id', '=', 'rehab_riwayat.rehab_pasien_id')
+                ->join('berantas_narkotika', 'narkotika_id', '=', 'berantas_narkotika.id');
+        } else {
+            $q = DB::table('rehab_riwayat_narkotika')
+                ->join('rehab_riwayat', 'rehab_riwayat_id', '=', 'rehab_riwayat.id')
+                ->join('rehab_pasien', 'rehab_pasien.id', '=', 'rehab_riwayat.rehab_pasien_id')
+                ->join('berantas_narkotika', 'narkotika_id', '=', 'berantas_narkotika.id');
+            $q = $this->applyTimeFilter($q, 'tanggal_rehab', $f, 'rehab_pasien.satuan_kerja_id');
+        }
 
         if ($f['mySatker']) {
             $q->where('rehab_pasien.satuan_kerja_id', $f['mySatker']);

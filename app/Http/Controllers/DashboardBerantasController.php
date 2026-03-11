@@ -85,17 +85,13 @@ class DashboardBerantasController extends Controller
             }
         } elseif ($isPerBulan && !$isMulti) {
             $arr = array_fill(0, 12, 0);
-            foreach ($data as $row) {
-                $arr[$row->bulan - 1] = (float) $row->total;
-            }
+            foreach ($data as $row) { $arr[$row->bulan - 1] = (float) $row->total; }
             $series[] = ['name' => 'Total', 'data' => $arr];
         } elseif (!$isPerBulan && $isMulti) {
             $arr = [];
             foreach ($satkerMap as $sId => $sName) {
                 $val = 0;
-                foreach ($data as $row) {
-                    if ($row->satuan_kerja_id == $sId) $val = (float) $row->total;
-                }
+                foreach ($data as $row) { if ($row->satuan_kerja_id == $sId) $val = (float) $row->total; }
                 $arr[] = $val;
             }
             $series[] = ['name' => 'Total', 'data' => $arr];
@@ -118,45 +114,87 @@ class DashboardBerantasController extends Controller
         $categories = array_keys($catTotals);
 
         $series = [];
-        
         if ($isMulti) {
             $panelData = [];
-            foreach($satkerMap as $sId => $sName) { 
-                $panelData[$sId] = ['satker' => $sName, 'items' => []]; 
-            }
-            
+            foreach($satkerMap as $sId => $sName) { $panelData[$sId] = ['satker' => $sName, 'items' => []]; }
             foreach ($categories as $cat) {
                 $arr = [];
                 foreach ($satkerMap as $sId => $sName) {
                     $val = 0;
                     foreach ($data as $row) {
                         $rCat = $row->cat ?: 'Tidak Diketahui';
-                        if ($row->satuan_kerja_id == $sId && $rCat === $cat) {
-                            $val = (int) $row->total;
-                        }
+                        if ($row->satuan_kerja_id == $sId && $rCat === $cat) $val = (int) $row->total;
                     }
                     $arr[] = $val;
-                    if ($val > 0) {
-                        $panelData[$sId]['items'][] = ['name' => $cat, 'count' => $val];
-                    }
+                    if ($val > 0) $panelData[$sId]['items'][] = ['name' => $cat, 'count' => $val];
                 }
                 $series[] = ['name' => $cat, 'data' => $arr];
             }
-            
-            foreach($panelData as $sId => &$pData) {
-                usort($pData['items'], function($a, $b) { return $b['count'] <=> $a['count']; });
-            }
-            
+            foreach($panelData as $sId => &$pData) { usort($pData['items'], function($a, $b) { return $b['count'] <=> $a['count']; }); }
             return ['labels' => array_values($satkerMap), 'series' => $series, 'panel' => array_values($panelData)];
         } else {
             $arr = [];
-            foreach ($categories as $cat) {
-                $arr[] = $catTotals[$cat];
-            }
+            foreach ($categories as $cat) { $arr[] = $catTotals[$cat]; }
             return ['labels' => $categories, 'series' => [['name' => 'Total', 'data' => $arr]], 'panel' => []];
         }
     }
 
+    private function formatMonthlyMultiples($data, $satkerMap, $expectedCats) {
+        $panel = [];
+        foreach ($satkerMap as $sId => $sName) {
+            $series = [];
+            foreach ($expectedCats as $cat) {
+                $arr = array_fill(0, 12, 0);
+                foreach ($data as $row) {
+                    $rCat = $row->cat ?: 'Tidak Diketahui';
+                    if (strtolower($rCat) === strtolower($cat) && $row->satuan_kerja_id == $sId) {
+                        $arr[$row->bulan - 1] = (int) $row->total;
+                    }
+                }
+                $displayName = ucwords(strtolower($cat));
+                if (strtolower($cat) == 'laki-laki') $displayName = 'Laki-laki';
+                if (strtolower($cat) == 'hasil tangkap') $displayName = 'Hasil Tangkap';
+                $series[] = ['name' => $displayName, 'data' => $arr];
+            }
+            $panel[] = ['satker' => $sName, 'series' => $series];
+        }
+        return $panel;
+    }
+
+    // Engine Data Proporsi Cerdas 
+    private function buildCompData($query, $dateCol, $f, $satkerMap, $selectStr, $groupStr, $expectedCats, $forceAccumulate = false) {
+        $isPerBulan = ($f['month'] === 'per_bulan');
+        
+        $qAcc = clone $query;
+        $qAcc->select('satuan_kerja_id', DB::raw("$selectStr as cat"));
+        if (!$isPerBulan && $f['month'] !== 'all') {
+            $qAcc->whereMonth($dateCol, $f['month']);
+        }
+        $resAcc = $qAcc->addSelect(DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', DB::raw($groupStr))->get();
+        $data = $this->formatCompSeries($resAcc, $f['isMulti'], $satkerMap);
+        
+        // Membentuk Persebaran 12 Bulan (Hanya untuk Gender/Rekomendasi/Sumber BB)
+        if ($isPerBulan && !$forceAccumulate) {
+            $qMo = clone $query;
+            $qMo->select('satuan_kerja_id', DB::raw("$selectStr as cat"), DB::raw("MONTH($dateCol) as bulan"), DB::raw('COUNT(*) as total'))
+                ->groupBy('satuan_kerja_id', DB::raw($groupStr), DB::raw("MONTH($dateCol)"));
+            $resMo = $qMo->get();
+            $panelData = $this->formatMonthlyMultiples($resMo, $satkerMap, $expectedCats);
+
+            // JIKA HANYA 1 SATKER, TIMPA SERIESNYA JADI 12 BULAN (Agar jadi Full Width Chart)
+            if (!$f['isMulti']) {
+                $data['series'] = $panelData[0]['series'];
+                $data['labels'] = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+            } else {
+                $data['panel'] = $panelData;
+            }
+            $data['type'] = 'monthly';
+        } else {
+            $data['type'] = 'accumulated';
+        }
+        
+        return $data;
+    }
 
     public function getGlobalData(Request $request)
     {
@@ -226,19 +264,18 @@ class DashboardBerantasController extends Controller
         if ($isPerBulan) { $qB->addSelect(DB::raw('MONTH(tanggal_kejadian) as bulan'))->groupBy('satuan_kerja_id', DB::raw('MONTH(tanggal_kejadian)')); } else { $qB->groupBy('satuan_kerja_id'); }
         $dataBerat = $this->formatTrendSeries($qB->get(), $f['isMulti'], $isPerBulan, $satkerMap);
 
-        $qComp = $this->applyBaseFilters(DB::table('berantas_ungkap_tersangka')->join('berantas_ungkap_kasus', 'berantas_ungkap_kasus_id', '=', 'berantas_ungkap_kasus.id'), 'tanggal_kejadian', $f);
+        $qComp = DB::table('berantas_ungkap_tersangka')->join('berantas_ungkap_kasus', 'berantas_ungkap_kasus_id', '=', 'berantas_ungkap_kasus.id')->whereYear('tanggal_kejadian', $f['year']);
+        if ($f['mySatker']) $qComp->where('satuan_kerja_id', $f['mySatker']);
         if ($f['narkotika_id']) { $qComp->whereExists(function($q) use ($f) { $q->select(DB::raw(1))->from('berantas_ungkap_barang_bukti')->whereColumn('berantas_ungkap_kasus_id', 'berantas_ungkap_kasus.id')->where('narkotika_id', $f['narkotika_id']); }); }
         
-        $dataGender = $this->formatCompSeries((clone $qComp)->select('satuan_kerja_id', 'jenis_kelamin as cat', DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', 'jenis_kelamin')->get(), $f['isMulti'], $satkerMap);
-        $dataPekerjaan = $this->formatCompSeries((clone $qComp)->select('satuan_kerja_id', 'pekerjaan as cat', DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', 'pekerjaan')->get(), $f['isMulti'], $satkerMap);
-
-        foreach ($dataGender['series'] as &$s) { if(strtolower($s['name']) === 'laki-laki') $s['name'] = 'Laki-laki'; if(strtolower($s['name']) === 'perempuan') $s['name'] = 'Perempuan'; }
+        $dataGender = $this->buildCompData($qComp, 'tanggal_kejadian', $f, $satkerMap, 'jenis_kelamin', 'jenis_kelamin', ['Laki-laki', 'Perempuan'], false);
+        $dataPekerjaan = $this->buildCompData($qComp, 'tanggal_kejadian', $f, $satkerMap, 'pekerjaan', 'pekerjaan', [], true);
 
         return response()->json([
             'is_multi' => $f['isMulti'], 'trend_labels' => $trendLabels,
             'trend' => ['kasus' => $dataKasus, 'tersangka' => $dataTsk, 'berat' => $dataBerat],
             'comp' => [
-                'gender' => ['labels' => $dataGender['labels'], 'series' => $dataGender['series']],
+                'gender' => $dataGender,
                 'pekerjaan' => $dataPekerjaan
             ]
         ]);
@@ -262,36 +299,30 @@ class DashboardBerantasController extends Controller
         if ($isPerBulan) { $qT->addSelect(DB::raw('MONTH(tanggal_pelaksanaan) as bulan'))->groupBy('satuan_kerja_id', DB::raw('MONTH(tanggal_pelaksanaan)')); } else { $qT->groupBy('satuan_kerja_id'); }
         $dataTsk = $this->formatTrendSeries($qT->get(), $f['isMulti'], $isPerBulan, $satkerMap);
 
-        $dataRekom = $this->formatCompSeries((clone $qK)->select('satuan_kerja_id', 'tindak_lanjut_rekomendasi as cat', DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', 'tindak_lanjut_rekomendasi')->get(), $f['isMulti'], $satkerMap);
-        $dataGender = $this->formatCompSeries((clone $qT)->select('satuan_kerja_id', 'jenis_kelamin as cat', DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', 'jenis_kelamin')->get(), $f['isMulti'], $satkerMap);
-        $dataDidik = $this->formatCompSeries((clone $qT)->select('satuan_kerja_id', 'pendidikan as cat', DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', 'pendidikan')->get(), $f['isMulti'], $satkerMap);
-        $dataPekerjaan = $this->formatCompSeries((clone $qT)->select('satuan_kerja_id', 'pekerjaan as cat', DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', 'pekerjaan')->get(), $f['isMulti'], $satkerMap);
+        $qCompK = DB::table('berantas_tat')->whereYear('tanggal_pelaksanaan', $f['year']);
+        $qCompT = DB::table('berantas_tat_tersangka')->join('berantas_tat', 'berantas_tat_id', '=', 'berantas_tat.id')->whereYear('tanggal_pelaksanaan', $f['year']);
+        if ($f['mySatker']) { $qCompK->where('satuan_kerja_id', $f['mySatker']); $qCompT->where('satuan_kerja_id', $f['mySatker']); }
+        if ($f['narkotika_id']) { 
+            $qCompK->whereExists(function($q) use ($f) { $q->select(DB::raw(1))->from('berantas_tat_barang_bukti')->whereColumn('berantas_tat_id', 'berantas_tat.id')->where('narkotika_id', $f['narkotika_id']); }); 
+            $qCompT->whereExists(function($q) use ($f) { $q->select(DB::raw(1))->from('berantas_tat_barang_bukti')->whereColumn('berantas_tat_id', 'berantas_tat.id')->where('narkotika_id', $f['narkotika_id']); }); 
+        }
 
-        // PENAMBAHAN KELOMPOK USIA MENGGUNAKAN CASE WHEN (SQL Aggregation)
+        $dataRekom = $this->buildCompData($qCompK, 'tanggal_pelaksanaan', $f, $satkerMap, 'tindak_lanjut_rekomendasi', 'tindak_lanjut_rekomendasi', ['dilaksanakan', 'tidak dilaksanakan'], false);
+        $dataGender = $this->buildCompData($qCompT, 'tanggal_pelaksanaan', $f, $satkerMap, 'jenis_kelamin', 'jenis_kelamin', ['Laki-laki', 'Perempuan'], false);
+        $dataDidik = $this->buildCompData($qCompT, 'tanggal_pelaksanaan', $f, $satkerMap, 'pendidikan', 'pendidikan', [], true);
+        $dataPekerjaan = $this->buildCompData($qCompT, 'tanggal_pelaksanaan', $f, $satkerMap, 'pekerjaan', 'pekerjaan', [], true);
+
         $usiaCase = "CASE 
-            WHEN usia < 15 THEN '< 15 tahun'
-            WHEN usia BETWEEN 15 AND 19 THEN '15-19 tahun'
-            WHEN usia BETWEEN 20 AND 34 THEN '20-34 tahun'
-            WHEN usia BETWEEN 35 AND 49 THEN '35-49 tahun'
-            WHEN usia BETWEEN 50 AND 64 THEN '50-64 tahun'
-            WHEN usia >= 65 THEN '65+ tahun'
-            ELSE 'Tidak Diketahui'
+            WHEN usia < 15 THEN '< 15 tahun' WHEN usia BETWEEN 15 AND 19 THEN '15-19 tahun' WHEN usia BETWEEN 20 AND 34 THEN '20-34 tahun'
+            WHEN usia BETWEEN 35 AND 49 THEN '35-49 tahun' WHEN usia BETWEEN 50 AND 64 THEN '50-64 tahun' WHEN usia >= 65 THEN '65+ tahun' ELSE 'Tidak Diketahui'
         END";
-
-        $dataUsia = $this->formatCompSeries((clone $qT)->select('satuan_kerja_id', DB::raw("$usiaCase as cat"), DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', DB::raw($usiaCase))->get(), $f['isMulti'], $satkerMap);
-
-        foreach ($dataRekom['series'] as &$s) { $s['name'] = ucwords($s['name']); }
-        foreach ($dataGender['series'] as &$s) { if(strtolower($s['name']) === 'laki-laki') $s['name'] = 'Laki-laki'; if(strtolower($s['name']) === 'perempuan') $s['name'] = 'Perempuan'; }
+        $dataUsia = $this->buildCompData($qCompT, 'tanggal_pelaksanaan', $f, $satkerMap, $usiaCase, $usiaCase, [], true);
 
         return response()->json([
             'is_multi' => $f['isMulti'], 'trend_labels' => $trendLabels,
             'trend' => ['kasus' => $dataKasus, 'tersangka' => $dataTsk],
             'comp' => [
-                'rekom' => ['labels' => $dataRekom['labels'], 'series' => $dataRekom['series']],
-                'gender' => ['labels' => $dataGender['labels'], 'series' => $dataGender['series']],
-                'pendidikan' => $dataDidik,
-                'pekerjaan' => $dataPekerjaan,
-                'usia' => $dataUsia // Kategori Baru Dikirim ke Blade
+                'rekom' => $dataRekom, 'gender' => $dataGender, 'usia' => $dataUsia, 'pendidikan' => $dataDidik, 'pekerjaan' => $dataPekerjaan
             ]
         ]);
     }
@@ -313,13 +344,17 @@ class DashboardBerantasController extends Controller
         if ($isPerBulan) { $qItem->addSelect(DB::raw('MONTH(tanggal_perolehan) as bulan'))->groupBy('satuan_kerja_id', DB::raw('MONTH(tanggal_perolehan)')); } else { $qItem->groupBy('satuan_kerja_id'); }
         $dataItem = $this->formatTrendSeries($qItem->get(), $f['isMulti'], $isPerBulan, $satkerMap);
 
-        $dataSumber = $this->formatCompSeries((clone $qB)->select('satuan_kerja_id', 'sumber_perolehan as cat', DB::raw('COUNT(*) as total'))->groupBy('satuan_kerja_id', 'sumber_perolehan')->get(), $f['isMulti'], $satkerMap);
+        $qComp = DB::table('berantas_register_barang_bukti_items')->join('berantas_register_barang_bukti', 'register_barang_bukti_id', '=', 'berantas_register_barang_bukti.id')->where('kategori', 'Narkotika')->whereYear('tanggal_perolehan', $f['year']);
+        if ($f['mySatker']) $qComp->where('satuan_kerja_id', $f['mySatker']);
+        if ($f['narkotika_id']) $qComp->where('narkotika_id', $f['narkotika_id']);
+
+        $dataSumber = $this->buildCompData($qComp, 'tanggal_perolehan', $f, $satkerMap, 'sumber_perolehan', 'sumber_perolehan', ['Hasil Tangkap', 'Temuan'], false);
 
         return response()->json([
             'is_multi' => $f['isMulti'], 'trend_labels' => $trendLabels,
             'trend' => ['berat' => $dataBerat, 'item' => $dataItem],
             'comp' => [
-                'sumber' => ['labels' => $dataSumber['labels'], 'series' => $dataSumber['series']]
+                'sumber' => $dataSumber
             ]
         ]);
     }

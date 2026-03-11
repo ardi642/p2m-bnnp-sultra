@@ -4,7 +4,9 @@
 <main class="admin-main bg-light" x-data="dashboardBerantas()" x-init="init()" style="min-height: 100vh;">
     <div class="container-fluid p-4">
 
+        {{-- ========================================================= --}}
         {{-- HEADER & IDENTITAS --}}
+        {{-- ========================================================= --}}
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-4 gap-3">
             <div>
                 <h1 class="h3 mb-2 fw-bold text-dark">Dashboard Kinerja Pemberantasan</h1>
@@ -28,7 +30,9 @@
             @include('dashboard.partials.nav')
         </div>
 
+        {{-- ========================================================= --}}
         {{-- FILTER GLOBAL (TAHUN KINERJA & SATUAN BERAT) --}}
+        {{-- ========================================================= --}}
         <div class="d-flex flex-wrap justify-content-end gap-3 mb-3">
             <div class="d-flex align-items-center bg-white p-2 rounded-3 shadow-sm border border-light gap-2">
                 <span class="fw-bold text-muted small ms-2"><i class="bi bi-calendar-event me-2 text-primary"></i>Tahun Kinerja:</span>
@@ -47,7 +51,9 @@
             </div>
         </div>
 
+        {{-- ========================================================= --}}
         {{-- 3 KARTU UTAMA --}}
+        {{-- ========================================================= --}}
         <div class="row g-3 mb-5">
             {{-- LKN --}}
             <div class="col-md-4">
@@ -191,11 +197,11 @@
             <div class="col-12">
                 <div class="card border-0 shadow-sm bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <template x-if="isMultiSatker && (lkn.tabComp === 'pekerjaan' || lkn.tabComp === 'pendidikan')">
+                        <template x-if="isMultiSatker && ['pekerjaan', 'pendidikan'].includes(lkn.tabComp)">
                             <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
                                 <i class="bi bi-layout-text-window-reverse text-muted me-2"></i>
                                 <select x-model="lkn.compView" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4">
-                                    <option value="panel">Mode Panel Grid (Horizontal Bar)</option>
+                                    <option value="panel">Mode Panel Grid</option>
                                     <option value="heatmap">Mode Matriks (Heatmap)</option>
                                 </select>
                             </div>
@@ -206,20 +212,39 @@
                         </div>
                     </div>
                     <div class="card-body px-4 pb-4 pt-4">
+
                         {{-- APEXCHART GLOBAL --}}
-                        <div x-show="!isMultiSatker || lkn.compView === 'heatmap' || lkn.tabComp === 'gender'" style="overflow-x: auto;" class="custom-scrollbar pe-2">
+                        <div x-show="showGlobalChart('lkn')" style="overflow-x: auto;" class="custom-scrollbar pe-2">
                             <div x-ref="chartLknComp" style="min-width: 800px; min-height: 400px;"></div>
                         </div>
 
-                        {{-- PANEL GRID + APEXCHART MINI HORIZONTAL --}}
-                        <div x-show="isMultiSatker && lkn.compView === 'panel' && (lkn.tabComp === 'pekerjaan' || lkn.tabComp === 'pendidikan')" class="row g-3">
-                            <template x-for="(pData, pIdx) in getPanelData('lkn', lkn.tabComp)" :key="pIdx">
+                        {{-- HORIZONTAL BAR MINI (Panel Grid Multi Satker) --}}
+                        <div x-show="showMiniBarPanel('lkn')" class="row g-3">
+                            <template x-for="(pData, pIdx) in getPanelData('lkn', lkn.tabComp)" :key="'mb'+pIdx">
                                 <div class="col-md-6 col-xl-4">
                                     <div class="card border border-light shadow-sm h-100 rounded-3">
                                         <div class="card-header bg-white py-3 border-bottom"><h6 class="mb-0 fw-bold text-dark"><i class="bi bi-building me-2 text-primary"></i><span x-text="pData.satker"></span></h6></div>
                                         <div class="card-body p-2 overflow-auto custom-scrollbar" style="max-height: 350px;">
                                             <div :id="'chart-lkn-panel-' + pIdx"></div>
-                                            <div x-show="pData.items.length === 0" class="text-center text-muted small py-4"><i class="bi bi-inbox d-block fs-3 mb-2 text-light"></i>Nihil Data</div>
+                                            <div x-show="pData.items && pData.items.length === 0" class="text-center text-muted small py-4"><i class="bi bi-inbox d-block fs-3 mb-2 text-light"></i>Nihil Data</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        {{-- PANEL GRID 12 BULAN (Multi Satker Khusus Gender) --}}
+                        <div x-show="showMonthlyPanel('lkn')" class="row g-3">
+                            <div class="col-12 d-flex justify-content-center gap-4 mb-2">
+                                <span class="small fw-bold"><i class="bi bi-circle-fill text-primary me-1"></i>Laki-laki</span>
+                                <span class="small fw-bold"><i class="bi bi-circle-fill me-1" style="color:#e83e8c;"></i>Perempuan</span>
+                            </div>
+                            <template x-for="(pData, pIdx) in getPanelData('lkn', lkn.tabComp)" :key="'m'+pIdx">
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="card border border-light shadow-sm h-100 rounded-3">
+                                        <div class="card-header bg-white py-3 border-bottom"><h6 class="mb-0 fw-bold text-dark"><i class="bi bi-building me-2 text-primary"></i><span x-text="pData.satker"></span></h6></div>
+                                        <div class="card-body p-2">
+                                            <div :id="'chart-lkn-monthly-' + pIdx"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -285,11 +310,11 @@
             <div class="col-12">
                 <div class="card border-0 shadow-sm bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <template x-if="isMultiSatker && (tat.tabComp === 'pekerjaan' || tat.tabComp === 'pendidikan' || tat.tabComp === 'usia')">
+                        <template x-if="isMultiSatker && ['pekerjaan', 'pendidikan', 'usia'].includes(tat.tabComp)">
                             <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1">
                                 <i class="bi bi-layout-text-window-reverse text-muted me-2"></i>
                                 <select x-model="tat.compView" class="form-select form-select-sm border-0 bg-transparent text-dark fw-bold shadow-none cursor-pointer pe-4">
-                                    <option value="panel">Mode Panel Grid (Horizontal Bar)</option>
+                                    <option value="panel">Mode Panel Grid</option>
                                     <option value="heatmap">Mode Matriks (Heatmap)</option>
                                 </select>
                             </div>
@@ -303,20 +328,49 @@
                         </div>
                     </div>
                     <div class="card-body px-4 pb-4 pt-4">
+
                         {{-- APEXCHART GLOBAL --}}
-                        <div x-show="!isMultiSatker || tat.compView === 'heatmap' || (tat.tabComp !== 'pekerjaan' && tat.tabComp !== 'pendidikan' && tat.tabComp !== 'usia')" style="overflow-x: auto;" class="custom-scrollbar pe-2">
+                        <div x-show="showGlobalChart('tat')" style="overflow-x: auto;" class="custom-scrollbar pe-2">
                             <div x-ref="chartTatComp" style="min-width: 800px; min-height: 400px;"></div>
                         </div>
 
-                        {{-- HTML PANEL GRID --}}
-                        <div x-show="isMultiSatker && tat.compView === 'panel' && (tat.tabComp === 'pekerjaan' || tat.tabComp === 'pendidikan' || tat.tabComp === 'usia')" class="row g-3">
-                            <template x-for="(pData, pIdx) in getPanelData('tat', tat.tabComp)" :key="pIdx">
+                        {{-- HORIZONTAL BAR MINI (Multi Satker Pekerjaan/Usia/Pendidikan) --}}
+                        <div x-show="showMiniBarPanel('tat')" class="row g-3">
+                            <template x-for="(pData, pIdx) in getPanelData('tat', tat.tabComp)" :key="'mb'+pIdx">
                                 <div class="col-md-6 col-xl-4">
                                     <div class="card border border-light shadow-sm h-100 rounded-3">
                                         <div class="card-header bg-white py-3 border-bottom"><h6 class="mb-0 fw-bold text-dark"><i class="bi bi-building me-2 text-info"></i><span x-text="pData.satker"></span></h6></div>
                                         <div class="card-body p-2 overflow-auto custom-scrollbar" style="max-height: 350px;">
                                             <div :id="'chart-tat-panel-' + pIdx"></div>
-                                            <div x-show="pData.items.length === 0" class="text-center text-muted small py-4"><i class="bi bi-inbox d-block fs-3 mb-2 text-light"></i>Nihil Data</div>
+                                            <div x-show="pData.items && pData.items.length === 0" class="text-center text-muted small py-4"><i class="bi bi-inbox d-block fs-3 mb-2 text-light"></i>Nihil Data</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        {{-- PANEL GRID 12 BULAN (Multi Satker Khusus Rekomendasi & Gender) --}}
+                        <div x-show="showMonthlyPanel('tat')" class="row g-3">
+                            <div class="col-12 d-flex justify-content-center gap-4 mb-2">
+                                <template x-if="tat.tabComp === 'gender'">
+                                    <div class="d-flex gap-4">
+                                        <span class="small fw-bold"><i class="bi bi-circle-fill text-primary me-1"></i>Laki-laki</span>
+                                        <span class="small fw-bold"><i class="bi bi-circle-fill me-1" style="color:#e83e8c;"></i>Perempuan</span>
+                                    </div>
+                                </template>
+                                <template x-if="tat.tabComp === 'rekom'">
+                                    <div class="d-flex gap-4">
+                                        <span class="small fw-bold"><i class="bi bi-circle-fill text-success me-1"></i>Dilaksanakan</span>
+                                        <span class="small fw-bold"><i class="bi bi-circle-fill text-danger me-1"></i>Tidak Dilaksanakan</span>
+                                    </div>
+                                </template>
+                            </div>
+                            <template x-for="(pData, pIdx) in getPanelData('tat', tat.tabComp)" :key="'m'+pIdx">
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="card border border-light shadow-sm h-100 rounded-3">
+                                        <div class="card-header bg-white py-3 border-bottom"><h6 class="mb-0 fw-bold text-dark"><i class="bi bi-building me-2 text-info"></i><span x-text="pData.satker"></span></h6></div>
+                                        <div class="card-body p-2">
+                                            <div :id="'chart-tat-monthly-' + pIdx"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -356,6 +410,7 @@
         </div>
 
         <div class="row g-4 mb-5">
+            {{-- Tren BB --}}
             <div class="col-12">
                 <div class="card border-0 shadow-sm bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -369,7 +424,9 @@
                             </div>
                         </template>
                         <div class="d-flex bg-light p-1 rounded-pill ms-auto">
-                            <button @click="bb.tabTrend = 'berat'" :class="bb.tabTrend === 'berat' ? 'btn-danger text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0" x-text="'Total Berat ('+weightLabel+')'"></button>
+                            <button @click="bb.tabTrend = 'berat'" :class="bb.tabTrend === 'berat' ? 'btn-danger text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">
+                                Total Berat (<span x-text="weightLabel"></span>)
+                            </button>
                             <button @click="bb.tabTrend = 'item'" :class="bb.tabTrend === 'item' ? 'btn-primary text-white shadow-sm' : 'btn-light text-secondary bg-transparent'" class="btn btn-sm rounded-pill fw-bold px-4 border-0">Total Item</button>
                         </div>
                     </div>
@@ -377,6 +434,7 @@
                 </div>
             </div>
             
+            {{-- Proporsi BB --}}
             <div class="col-12">
                 <div class="card border-0 shadow-sm bg-white rounded-4">
                     <div class="card-header bg-transparent border-0 pt-4 pb-2 d-flex flex-wrap justify-content-center align-items-center gap-2">
@@ -384,7 +442,29 @@
                             <button class="btn btn-sm btn-success text-white rounded-pill fw-bold px-5 shadow-sm border-0">Sumber Perolehan Barang Bukti</button>
                         </div>
                     </div>
-                    <div class="card-body px-4 pb-4 pt-4"><div style="overflow-x: auto;" class="custom-scrollbar pe-2"><div x-ref="chartBbComp" style="min-width: 800px; min-height: 400px;"></div></div></div>
+                    <div class="card-body px-4 pb-4 pt-4">
+                        
+                        {{-- APEXCHART GLOBAL --}}
+                        <div x-show="showGlobalChart('bb')" style="overflow-x: auto;" class="custom-scrollbar pe-2"><div x-ref="chartBbComp" style="min-width: 800px; min-height: 400px;"></div></div>
+                        
+                        {{-- PANEL GRID 12 BULAN (Multi Satker Khusus Sumber) --}}
+                        <div x-show="showMonthlyPanel('bb')" class="row g-3">
+                            <div class="col-12 d-flex justify-content-center gap-4 mb-2">
+                                <span class="small fw-bold"><i class="bi bi-circle-fill text-danger me-1"></i>Hasil Tangkap</span>
+                                <span class="small fw-bold"><i class="bi bi-circle-fill text-warning me-1"></i>Temuan</span>
+                            </div>
+                            <template x-for="(pData, pIdx) in getPanelData('bb', bb.tabComp)" :key="'m'+pIdx">
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="card border border-light shadow-sm h-100 rounded-3">
+                                        <div class="card-header bg-white py-3 border-bottom"><h6 class="mb-0 fw-bold text-dark"><i class="bi bi-building me-2 text-danger"></i><span x-text="pData.satker"></span></h6></div>
+                                        <div class="card-body p-2">
+                                            <div :id="'chart-bb-monthly-' + pIdx"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -448,29 +528,43 @@
             globalYear: '{{ max($years) }}', 
             weightUnit: 'g', 
             
-            cards: { 
-                lkn: { kasus: 0, tersangka: 0, gram: 0, item: 0 },
-                tat: { kasus: 0, tersangka: 0, gram: 0, item: 0 },
-                reg: { total_gram: 0, total_item: 0, tangkap_gram: 0, tangkap_item: 0, temuan_gram: 0, temuan_item: 0 }
-            },
-            
+            cards: { lkn: { kasus: 0, tersangka: 0, gram: 0, item: 0 }, tat: { kasus: 0, tersangka: 0, gram: 0, item: 0 }, reg: { total_gram: 0, total_item: 0, tangkap_gram: 0, tangkap_item: 0, temuan_gram: 0, temuan_item: 0 } },
             isMultiSatker: false,
             
-            chartInst: { lknT: null, lknC: null, tatT: null, tatC: null, bbT: null, bbC: null, rank: null, lknPanel: [], tatPanel: [] },
+            chartInst: { lknT: null, lknC: null, tatT: null, tatC: null, bbT: null, bbC: null, rank: null, lknPanel: [], tatPanel: [], bbPanel: [] },
             
             getBarColors() { return ['#0d6efd', '#fd7e14', '#198754', '#6f42c1', '#dc3545', '#0dcaf0', '#20c997', '#ffc107', '#6c757d', '#e83e8c', '#adb5bd', '#212529']; },
+
+            resolveColors(series, isHeat) {
+                if (isHeat) return ['#dc3545'];
+                let colorMap = {
+                    'Laki-laki': '#0d6efd', 'Perempuan': '#e83e8c',
+                    'Dilaksanakan': '#198754', 'Tidak Dilaksanakan': '#dc3545',
+                    'Hasil Tangkap': '#dc3545', 'Temuan': '#ffc107'
+                };
+                let mapped = series.map(s => colorMap[s.name]);
+                if (mapped.includes(undefined)) return this.getBarColors();
+                return mapped;
+            },
+
+            formatShortNumber(num) {
+                let n = parseFloat(num);
+                if (isNaN(n)) return num; 
+                if (n >= 1000000000) return (n / 1000000000).toFixed(1) + ' Milyar';
+                if (n >= 1000000) return (n / 1000000).toFixed(1) + ' Juta';
+                if (n >= 1000) return (n / 1000).toFixed(1) + ' Ribu';
+                return new Intl.NumberFormat('id-ID').format(n);
+            },
 
             lkn: { month: 'all', narkotika: '', tabTrend: 'kasus', tabComp: 'gender', adminTrendType: 'bar', compView: 'panel', data: null },
             tat: { month: 'all', narkotika: '', tabTrend: 'kasus', tabComp: 'rekom', adminTrendType: 'bar', compView: 'panel', data: null },
             bb: { month: 'all', narkotika: '', tabTrend: 'berat', tabComp: 'sumber', adminTrendType: 'bar', compView: 'panel', data: null },
-            rank: { month: 'all', limit: '10', source: 'lkn', metric: 'berat', data: null },
+            rank: { month: 'all', limit: 'all', source: 'lkn', metric: 'berat', data: null },
 
             init() {
                 this.fetchAll();
-                
                 this.$watch('globalSatkerId', () => this.fetchAll());
                 this.$watch('globalYear', () => this.fetchAll());
-                
                 this.$watch('weightUnit', () => { this.renderAllCharts(); });
                 
                 ['month', 'narkotika', 'adminTrendType', 'compView'].forEach(p => this.$watch('lkn.'+p, () => this.fetchLkn()));
@@ -488,31 +582,66 @@
                 ['month', 'limit', 'source', 'metric'].forEach(p => this.$watch('rank.'+p, () => this.fetchRank()));
             },
 
+            // --- VISIBILITY ROUTER ---
+            isMonthlyPanel(module) {
+                if (this[module].month !== 'per_bulan') return false;
+                if (this[module].data && this[module].data.comp[this[module].tabComp] && this[module].data.comp[this[module].tabComp].type === 'monthly') return true;
+                return false;
+            },
+            showGlobalChart(module) {
+                let st = this[module];
+                if (!this.isMultiSatker) return true; 
+                if (st.compView === 'heatmap') return true;
+                return !this.isMonthlyPanel(module) && !this.showMiniBarPanel(module);
+            },
+            showMiniBarPanel(module) {
+                let st = this[module];
+                if (!this.isMultiSatker) return false; 
+                if (st.compView !== 'panel') return false;
+                let isHighCard = ['pekerjaan', 'pendidikan', 'usia'].includes(st.tabComp);
+                return isHighCard;
+            },
+            showMonthlyPanel(module) {
+                let st = this[module];
+                if (!this.isMultiSatker) return false; 
+                if (st.compView !== 'panel') return false;
+                return this.isMonthlyPanel(module);
+            },
+
             getPanelData(module, tab) {
                 try {
                     if (this[module] && this[module].data && this[module].data.comp && this[module].data.comp[tab]) {
                         let panel = this[module].data.comp[tab].panel;
                         return Array.isArray(panel) ? panel : [];
                     }
-                } catch (e) { console.error(e); }
-                return [];
+                } catch (e) {} return [];
             },
 
-            fetchAll() { 
-                this.fetchGlobal(); 
-                this.fetchLkn(); 
-                this.fetchTat(); 
-                this.fetchBb(); 
-                this.fetchRank(); 
-            },
+            fetchAll() { this.fetchGlobal(); this.fetchLkn(); this.fetchTat(); this.fetchBb(); this.fetchRank(); },
 
             formatAngka(num) { return new Intl.NumberFormat('id-ID').format(num || 0); },
             get weightLabel() { return this.weightUnit === 'kg' ? 'Kg' : (this.weightUnit === 'ton' ? 'Ton' : 'Gram'); },
             getWeightVal(gram) { let g = parseFloat(gram) || 0; return this.weightUnit === 'kg' ? g/1000 : (this.weightUnit === 'ton' ? g/1000000 : g); },
             formatWeight(gram) { return new Intl.NumberFormat('id-ID', {maximumFractionDigits: 2}).format(this.getWeightVal(gram)) + ' ' + this.weightLabel; },
 
-            getTitle(st, metric) {
-                let time = st.month === 'all' ? `Total Akumulasi Tahun ${this.globalYear}` : (st.month === 'per_bulan' ? `Tren Bulanan Tahun ${this.globalYear}` : `Bulan ${st.month} Tahun ${this.globalYear}`);
+            getTitle(moduleStr, metric) {
+                let st = this[moduleStr];
+                let isCompChart = metric.includes('Proporsi');
+                let isHighCardinality = ['pekerjaan', 'pendidikan', 'usia'].includes(st.tabComp);
+                
+                let time = '';
+                if (st.month === 'all') {
+                    time = `Total Akumulasi Tahun ${this.globalYear}`;
+                } else if (st.month === 'per_bulan') {
+                    if (isCompChart && isHighCardinality) {
+                        time = `Total Akumulasi Tahun ${this.globalYear}`; 
+                    } else {
+                        time = `Tren Bulanan Tahun ${this.globalYear}`;
+                    }
+                } else {
+                    let months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+                    time = `Bulan ${months[st.month - 1]} Tahun ${this.globalYear}`;
+                }
                 return `${metric} - ${time}`;
             },
 
@@ -536,32 +665,37 @@
                 if(!this.$refs.chartLknTrend || !this.lkn.data) return;
                 let dsRaw = this.lkn.tabTrend === 'kasus' ? this.lkn.data.trend.kasus : (this.lkn.tabTrend === 'tersangka' ? this.lkn.data.trend.tersangka : this.lkn.data.trend.berat);
                 let ds = JSON.parse(JSON.stringify(dsRaw)); 
-                if (this.lkn.tabTrend === 'berat') { ds.forEach(s => s.data = s.data.map(v => this.getWeightVal(v))); }
+                let isBerat = this.lkn.tabTrend === 'berat';
+                if (isBerat) { ds.forEach(s => s.data = s.data.map(v => this.getWeightVal(v))); }
 
                 const isHeat = this.isMultiSatker && this.lkn.adminTrendType === 'heatmap' && this.lkn.month === 'per_bulan';
                 const tTitle = this.lkn.tabTrend === 'kasus' ? 'Jumlah Kasus LKN' : (this.lkn.tabTrend === 'tersangka' ? 'Jumlah Tersangka' : `Total Berat Sitaan`);
                 const self = this; 
                 
+                let tooltipConfig = isHeat 
+                    ? { shared: false, intersect: true, y: { formatter: function(val) { return new Intl.NumberFormat('id-ID', {maximumFractionDigits:2}).format(val||0) + (isBerat ? ' '+self.weightLabel : ' Kasus/Orang'); } } } 
+                    : { shared: true, intersect: false, y: { formatter: function(val) { return new Intl.NumberFormat('id-ID', {maximumFractionDigits:2}).format(val||0) + (isBerat ? ' '+self.weightLabel : ' Kasus/Orang'); } } };
+
                 let opts = {
                     series: ds,
                     chart: { type: isHeat ? 'heatmap' : 'bar', height: isHeat ? 450 : 400, toolbar: { show: true }, fontFamily: 'inherit' },
                     xaxis: { categories: this.lkn.data.trend_labels },
-                    title: { text: this.getTitle(this.lkn, tTitle), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
+                    yaxis: { labels: { formatter: function(val) { return isBerat ? self.formatShortNumber(val) : new Intl.NumberFormat('id-ID').format(val); } } },
+                    title: { text: this.getTitle('lkn', tTitle), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
                     grid: { show: true, borderColor: '#f1f3f5' },
-                    plotOptions: {
-                        bar: { borderRadius: 3, columnWidth: this.isMultiSatker ? '85%' : '40%' },
-                        heatmap: { shadeIntensity: 0.6, radius: 2, useFillColorAsStroke: false }
+                    plotOptions: { bar: { borderRadius: 3, columnWidth: this.isMultiSatker ? '85%' : '40%' }, heatmap: { shadeIntensity: 0.6, radius: 2, useFillColorAsStroke: false } },
+                    colors: isHeat ? ['#0d6efd'] : (this.isMultiSatker ? this.getBarColors() : (isBerat ? ['#dc3545'] : ['#0d6efd'])),
+                    dataLabels: { 
+                        enabled: isHeat ? true : (this.lkn.month === 'all' || !this.isMultiSatker), 
+                        formatter: function(val) { 
+                            let v = val||0; 
+                            if (isHeat) return v === 0 ? "0" : (isBerat ? self.formatShortNumber(v) : new Intl.NumberFormat('id-ID').format(v));
+                            if (v === 0) return "";
+                            return isBerat ? self.formatShortNumber(v) : new Intl.NumberFormat('id-ID').format(v);
+                        }, 
+                        style: { colors: ['#000'], fontSize: '12px', fontWeight: 'bold' }
                     },
-                    colors: isHeat ? ['#0d6efd'] : (this.isMultiSatker ? this.getBarColors() : (this.lkn.tabTrend === 'berat' ? ['#dc3545'] : ['#0d6efd'])),
-                    dataLabels: {
-                        enabled: isHeat ? true : !this.isMultiSatker,
-                        formatter: function(val) { let v = val||0; return v > 0 ? new Intl.NumberFormat('id-ID', {maximumFractionDigits:1}).format(v) : ""; },
-                        style: { colors: ['#212529'], fontSize: '12px' }
-                    },
-                    tooltip: { 
-                        shared: true, intersect: false,
-                        y: { formatter: function(val) { return new Intl.NumberFormat('id-ID', {maximumFractionDigits:2}).format(val||0) + (self.lkn.tabTrend === 'berat' ? ' '+self.weightLabel : ' Kasus/Orang'); } }
-                    },
+                    tooltip: tooltipConfig,
                     legend: { show: !isHeat, position: 'top', fontWeight: 'bold', offsetY: -10 }
                 };
 
@@ -572,23 +706,61 @@
             
             renderLknComp() {
                 if(!this.$refs.chartLknComp || !this.lkn.data) return;
-                
-                if (this.chartInst.lknC) { this.chartInst.lknC.destroy(); this.chartInst.lknC = null; }
-                if (this.chartInst.lknPanel && this.chartInst.lknPanel.length > 0) {
-                    this.chartInst.lknPanel.forEach(c => c.destroy());
-                    this.chartInst.lknPanel = [];
-                }
+                if (!this.lkn.data.comp || !this.lkn.data.comp[this.lkn.tabComp]) return;
 
-                if (this.isMultiSatker && this.lkn.compView === 'panel' && (this.lkn.tabComp === 'pekerjaan' || this.lkn.tabComp === 'pendidikan')) {
+                if (this.chartInst.lknC) { this.chartInst.lknC.destroy(); this.chartInst.lknC = null; }
+                if (this.chartInst.lknPanel && this.chartInst.lknPanel.length > 0) { this.chartInst.lknPanel.forEach(c => c.destroy()); this.chartInst.lknPanel = []; }
+
+                // 1. RENDER MONTHLY SMALL MULTIPLES
+                if (this.showMonthlyPanel('lkn')) {
                     this.$nextTick(() => {
                         let pDataArr = this.getPanelData('lkn', this.lkn.tabComp);
+                        let colors = this.lkn.tabComp === 'gender' ? ['#0d6efd', '#e83e8c'] : ['#0d6efd'];
                         
+                        let maxVal = 0;
+                        pDataArr.forEach(pData => { for(let i=0; i<12; i++) { let sum = 0; pData.series.forEach(s => { sum += (s.data[i] || 0); }); if(sum > maxVal) maxVal = sum; } });
+                        let yMax = maxVal > 0 ? Math.ceil(maxVal * 1.1) : undefined;
+
+                        pDataArr.forEach((pData, pIdx) => {
+                            let el = document.getElementById('chart-lkn-monthly-' + pIdx);
+                            if (el) {
+                                if (el.__apex_inst) el.__apex_inst.destroy(); el.innerHTML = ''; 
+                                let opts = {
+                                    series: pData.series,
+                                    chart: { type: 'bar', height: 200, stacked: true, toolbar: { show: false }, parentHeightOffset: 0, fontFamily: 'inherit' },
+                                    colors: colors,
+                                    xaxis: { categories: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'], labels: { style: { fontSize: '9px', fontWeight: 'bold'} } },
+                                    yaxis: { max: yMax, labels: { formatter: v => v ? v : '', style: { fontSize: '10px' } } },
+                                    dataLabels: { 
+                                        enabled: true, 
+                                        formatter: function(val) { return val === 0 ? "" : val; },
+                                        style: { colors: ['#000'], fontSize: '9px', fontWeight: 'bold' }
+                                    },
+                                    legend: { show: false },
+                                    grid: { show: true, padding: { top: 0, right: 0, bottom: 0, left: 10 } },
+                                    tooltip: { shared: true, intersect: false, y: { formatter: v => v + ' Orang' } }
+                                };
+                                let chart = new ApexCharts(el, opts);
+                                el.__apex_inst = chart;
+                                chart.render(); this.chartInst.lknPanel.push(chart);
+                            }
+                        });
+                    });
+                    return;
+                }
+
+                // 2. RENDER HORIZONTAL BAR MINI
+                if (this.showMiniBarPanel('lkn')) {
+                    this.$nextTick(() => {
+                        let pDataArr = this.getPanelData('lkn', this.lkn.tabComp);
+                        let maxVal = 0;
+                        pDataArr.forEach(pData => { if (pData.items && pData.items.length > 0) { let m = Math.max(...pData.items.map(i => i.count)); if(m > maxVal) maxVal = m; } });
+                        let xMax = maxVal > 0 ? Math.ceil(maxVal * 1.1) : undefined;
+
                         pDataArr.forEach((pData, pIdx) => {
                             let el = document.getElementById('chart-lkn-panel-' + pIdx);
-                            if (el && pData.items.length > 0) {
-                                if (el._apex) { el._apex.destroy(); }
-                                el.innerHTML = ''; 
-
+                            if (el && pData.items && pData.items.length > 0) {
+                                if (el.__apex_inst) el.__apex_inst.destroy(); el.innerHTML = ''; 
                                 let categories = pData.items.map(i => i.name);
                                 let values = pData.items.map(i => i.count);
                                 let dHeight = Math.max(150, categories.length * 40);
@@ -596,50 +768,64 @@
                                 let opts = {
                                     series: [{ name: 'Total Kasus', data: values }],
                                     chart: { type: 'bar', height: dHeight, toolbar: { show: false }, parentHeightOffset: 0, fontFamily: 'inherit' },
-                                    plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 3, barHeight: '70%' } },
+                                    plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 3, barHeight: '75%', dataLabels: { hideOverflowingLabels: false } } },
                                     colors: this.getBarColors(),
-                                    dataLabels: { enabled: true, textAnchor: 'start', style: { colors: ['#fff'], fontSize: '11px', fontWeight: 'bold' }, offsetX: 0 },
-                                    xaxis: { categories: categories, labels: { show: false }, axisBorder: { show: false }, axisTicks: { show: false } },
+                                    dataLabels: { 
+                                        enabled: true, 
+                                        formatter: function(val) { return val === 0 ? "" : new Intl.NumberFormat('id-ID').format(val); },
+                                        style: { colors: ['#000'], fontSize: '11px', fontWeight: 'bold' } 
+                                    },
+                                    xaxis: { max: xMax, categories: categories, labels: { show: false }, axisBorder: { show: false }, axisTicks: { show: false } },
                                     yaxis: { labels: { style: { fontWeight: '600', fontSize: '11px', colors: '#495057' }, maxWidth: 140 } },
                                     grid: { show: false, padding: { top: 0, right: 0, bottom: 0, left: 10 } },
                                     legend: { show: false },
                                     tooltip: { y: { formatter: v => v + ' Kasus' } }
                                 };
-                                
                                 let chart = new ApexCharts(el, opts);
-                                chart.render();
-                                el._apex = chart; 
-                                this.chartInst.lknPanel.push(chart);
+                                el.__apex_inst = chart;
+                                chart.render(); this.chartInst.lknPanel.push(chart);
                             }
                         });
                     });
                     return; 
                 }
 
+                // 3. RENDER CHART GLOBAL
                 const dComp = this.lkn.data.comp[this.lkn.tabComp];
                 if (!dComp) return; 
                 
                 const tTitle = this.lkn.tabComp === 'gender' ? 'Proporsi Gender Tersangka' : 'Proporsi Pekerjaan Tersangka';
                 const isHeat = this.isMultiSatker && this.lkn.compView === 'heatmap' && this.lkn.tabComp !== 'gender';
-                
+                const isHighCard = ['pekerjaan', 'pendidikan', 'usia'].includes(this.lkn.tabComp);
+                const dynHeight = isHeat ? 600 : (isHighCard && dComp.labels ? Math.max(450, dComp.labels.length * 35) : 450);
+
+                let tooltipConfig = isHeat 
+                    ? { shared: false, intersect: true, y: { formatter: function(val) { return val + " Kasus"; } } } 
+                    : { 
+                        shared: true, intersect: false, 
+                        y: { formatter: function(val, opt) { 
+                            let v = val || 0; 
+                            if (isHighCard) return new Intl.NumberFormat('id-ID').format(v) + " Kasus";
+                            let t = 0; opt.w.config.series.forEach(s => t += (s.data[opt.dataPointIndex] || 0)); 
+                            let pct = t === 0 ? 0 : Math.round((v/t)*100); 
+                            return new Intl.NumberFormat('id-ID').format(v) + " Kasus (" + pct + "%)"; 
+                        } } 
+                    };
+
                 let opts = {
                     series: dComp.series,
-                    chart: { type: isHeat ? 'heatmap' : 'bar', height: isHeat ? 600 : 450, stacked: !isHeat, toolbar: { show: false }, fontFamily: 'inherit' },
-                    plotOptions: { bar: { borderRadius: 2, columnWidth: '50%' }, heatmap: { shadeIntensity: 0.6, radius: 2, useFillColorAsStroke: false } },
-                    xaxis: { categories: dComp.labels, labels: { style: { fontWeight: 'bold' } } },
-                    colors: isHeat ? ['#dc3545'] : this.getBarColors(),
-                    title: { text: this.getTitle(this.lkn, tTitle), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
-                    dataLabels: {
-                        enabled: true,
-                        formatter: function(val, opt) {
-                            if(isHeat) return val > 0 ? val : '';
-                            let t = 0; opt.w.config.series.forEach(s => t += s.data[opt.dataPointIndex]);
-                            return t === 0 ? "" : val + " (" + Math.round((val/t)*100) + "%)";
-                        },
-                        style: { colors: ['#212529'], fontSize: '12px' }
+                    chart: { type: isHeat ? 'heatmap' : 'bar', height: dynHeight, stacked: !isHeat, toolbar: { show: false }, fontFamily: 'inherit' },
+                    plotOptions: { bar: { horizontal: isHighCard, borderRadius: 2, columnWidth: '50%', barHeight: '70%', dataLabels: { hideOverflowingLabels: false } }, heatmap: { shadeIntensity: 0.6, radius: 2, useFillColorAsStroke: false } },
+                    xaxis: { categories: dComp.labels, tickAmount: isHighCard ? 3 : undefined, labels: { style: { fontWeight: 'bold' }, formatter: function(val) { return typeof val === 'number' ? Math.round(val) : val; } } },
+                    colors: this.resolveColors(dComp.series, isHeat),
+                    title: { text: this.getTitle('lkn', tTitle), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
+                    dataLabels: { 
+                        enabled: true, 
+                        formatter: function(val) { let v = val || 0; if (isHeat && v === 0) return "0"; if (v === 0) return ""; return new Intl.NumberFormat('id-ID').format(v); },
+                        style: { colors: ['#000'], fontSize: '11px', fontWeight: 'bold' }
                     },
                     stroke: { show: true, width: 1, colors: ['#fff'] },
-                    tooltip: { shared: !isHeat, intersect: isHeat },
+                    tooltip: tooltipConfig,
                     legend: { show: !isHeat, position: 'top', fontWeight: 'bold', offsetY: -10 }
                 };
 
@@ -656,16 +842,30 @@
                 const isHeat = this.isMultiSatker && this.tat.adminTrendType === 'heatmap' && this.tat.month === 'per_bulan';
                 const tTitle = this.tat.tabTrend === 'kasus' ? 'Jumlah Kasus TAT' : 'Jumlah Tersangka TAT';
                 
+                let tooltipConfig = isHeat 
+                    ? { shared: false, intersect: true, y: { formatter: function(val) { return val + " Kasus"; } } } 
+                    : { shared: true, intersect: false, y: { formatter: function(val) { return val + " Kasus"; } } };
+
                 let opts = {
                     series: ds,
                     chart: { type: isHeat ? 'heatmap' : 'bar', height: isHeat ? 450 : 400, toolbar: { show: true }, fontFamily: 'inherit' },
                     xaxis: { categories: this.tat.data.trend_labels },
-                    title: { text: this.getTitle(this.tat, tTitle), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
+                    yaxis: { labels: { formatter: function(val) { return new Intl.NumberFormat('id-ID').format(val); } } },
+                    title: { text: this.getTitle('tat', tTitle), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
                     grid: { show: true, borderColor: '#f1f3f5' },
                     plotOptions: { bar: { borderRadius: 3, columnWidth: this.isMultiSatker ? '85%' : '40%' }, heatmap: { shadeIntensity: 0.6, radius: 2, useFillColorAsStroke: false } },
                     colors: isHeat ? ['#0dcaf0'] : (this.isMultiSatker ? this.getBarColors() : ['#0dcaf0']),
-                    dataLabels: { enabled: isHeat ? true : !this.isMultiSatker, formatter: function(val) { let v = val||0; return v > 0 ? new Intl.NumberFormat('id-ID').format(v) : ""; }, style: { colors: ['#212529'], fontSize: '12px' } },
-                    tooltip: { shared: true, intersect: false },
+                    dataLabels: { 
+                        enabled: isHeat ? true : (this.tat.month === 'all' || !this.isMultiSatker), 
+                        formatter: function(val) { 
+                            let v = val||0; 
+                            if (isHeat) return v === 0 ? "0" : new Intl.NumberFormat('id-ID').format(v);
+                            if (v === 0) return "";
+                            return new Intl.NumberFormat('id-ID').format(v);
+                        }, 
+                        style: { colors: ['#000'], fontSize: '12px', fontWeight: 'bold' }
+                    },
+                    tooltip: tooltipConfig,
                     legend: { show: !isHeat, position: 'top', fontWeight: 'bold', offsetY: -10 }
                 };
 
@@ -676,23 +876,62 @@
             
             renderTatComp() {
                 if(!this.$refs.chartTatComp || !this.tat.data) return;
+                if (!this.tat.data.comp || !this.tat.data.comp[this.tat.tabComp]) return;
 
                 if (this.chartInst.tatC) { this.chartInst.tatC.destroy(); this.chartInst.tatC = null; }
-                if (this.chartInst.tatPanel && this.chartInst.tatPanel.length > 0) {
-                    this.chartInst.tatPanel.forEach(c => c.destroy());
-                    this.chartInst.tatPanel = [];
-                }
+                if (this.chartInst.tatPanel.length > 0) { this.chartInst.tatPanel.forEach(c => c.destroy()); this.chartInst.tatPanel = []; }
 
-                if (this.isMultiSatker && this.tat.compView === 'panel' && (this.tat.tabComp === 'pekerjaan' || this.tat.tabComp === 'pendidikan' || this.tat.tabComp === 'usia')) {
+                // 1. RENDER MONTHLY SMALL MULTIPLES
+                if (this.showMonthlyPanel('tat')) {
                     this.$nextTick(() => {
                         let pDataArr = this.getPanelData('tat', this.tat.tabComp);
+                        let colors = this.tat.tabComp === 'rekom' ? ['#198754', '#dc3545'] : ['#0d6efd', '#e83e8c'];
                         
+                        let maxVal = 0;
+                        pDataArr.forEach(pData => { for(let i=0; i<12; i++) { let sum = 0; pData.series.forEach(s => { sum += (s.data[i] || 0); }); if(sum > maxVal) maxVal = sum; } });
+                        let yMax = maxVal > 0 ? Math.ceil(maxVal * 1.1) : undefined;
+
+                        pDataArr.forEach((pData, pIdx) => {
+                            let el = document.getElementById('chart-tat-monthly-' + pIdx);
+                            if (el) {
+                                if (el.__apex_inst) el.__apex_inst.destroy(); el.innerHTML = ''; 
+                                let opts = {
+                                    series: pData.series,
+                                    chart: { type: 'bar', height: 200, stacked: true, toolbar: { show: false }, parentHeightOffset: 0, fontFamily: 'inherit' },
+                                    colors: colors,
+                                    xaxis: { categories: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'], labels: { style: { fontSize: '9px', fontWeight: 'bold'} } },
+                                    yaxis: { max: yMax, labels: { formatter: v => v ? v : '', style: { fontSize: '10px' } } },
+                                    dataLabels: { 
+                                        enabled: true, 
+                                        formatter: function(val) { return val === 0 ? "" : val; },
+                                        style: { colors: ['#000'], fontSize: '9px', fontWeight: 'bold' }
+                                    },
+                                    legend: { show: false },
+                                    grid: { show: true, padding: { top: 0, right: 0, bottom: 0, left: 10 } },
+                                    tooltip: { shared: true, intersect: false, y: { formatter: v => v + ' Kasus' } }
+                                };
+                                let chart = new ApexCharts(el, opts);
+                                el.__apex_inst = chart;
+                                chart.render(); this.chartInst.tatPanel.push(chart);
+                            }
+                        });
+                    });
+                    return;
+                }
+
+                // 2. RENDER HORIZONTAL BAR MINI
+                if (this.showMiniBarPanel('tat')) {
+                    this.$nextTick(() => {
+                        let pDataArr = this.getPanelData('tat', this.tat.tabComp);
+
+                        let maxVal = 0;
+                        pDataArr.forEach(pData => { if (pData.items && pData.items.length > 0) { let m = Math.max(...pData.items.map(i => i.count)); if(m > maxVal) maxVal = m; } });
+                        let xMax = maxVal > 0 ? Math.ceil(maxVal * 1.1) : undefined;
+
                         pDataArr.forEach((pData, pIdx) => {
                             let el = document.getElementById('chart-tat-panel-' + pIdx);
-                            if (el && pData.items.length > 0) {
-                                if (el._apex) { el._apex.destroy(); }
-                                el.innerHTML = '';
-                                
+                            if (el && pData.items && pData.items.length > 0) {
+                                if (el.__apex_inst) el.__apex_inst.destroy(); el.innerHTML = '';
                                 let categories = pData.items.map(i => i.name);
                                 let values = pData.items.map(i => i.count);
                                 let dHeight = Math.max(150, categories.length * 40);
@@ -700,50 +939,64 @@
                                 let opts = {
                                     series: [{ name: 'Total Kasus', data: values }],
                                     chart: { type: 'bar', height: dHeight, toolbar: { show: false }, parentHeightOffset: 0, fontFamily: 'inherit' },
-                                    plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 3, barHeight: '70%' } },
+                                    plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 3, barHeight: '75%', dataLabels: { hideOverflowingLabels: false } } },
                                     colors: this.getBarColors(),
-                                    dataLabels: { enabled: true, textAnchor: 'start', style: { colors: ['#fff'], fontSize: '11px', fontWeight: 'bold' }, offsetX: 0 },
-                                    xaxis: { categories: categories, labels: { show: false }, axisBorder: { show: false }, axisTicks: { show: false } },
+                                    dataLabels: { 
+                                        enabled: true, 
+                                        formatter: function(val) { return val === 0 ? "" : new Intl.NumberFormat('id-ID').format(val); },
+                                        style: { colors: ['#000'], fontSize: '11px', fontWeight: 'bold' } 
+                                    },
+                                    xaxis: { max: xMax, categories: categories, labels: { show: false }, axisBorder: { show: false }, axisTicks: { show: false } },
                                     yaxis: { labels: { style: { fontWeight: '600', fontSize: '11px', colors: '#495057' }, maxWidth: 140 } },
                                     grid: { show: false, padding: { top: 0, right: 0, bottom: 0, left: 10 } },
                                     legend: { show: false },
                                     tooltip: { y: { formatter: v => v + ' Kasus' } }
                                 };
-                                
                                 let chart = new ApexCharts(el, opts);
-                                chart.render();
-                                el._apex = chart;
-                                this.chartInst.tatPanel.push(chart);
+                                el.__apex_inst = chart;
+                                chart.render(); this.chartInst.tatPanel.push(chart);
                             }
                         });
                     });
                     return; 
                 }
 
+                // 3. RENDER CHART GLOBAL
                 const dComp = this.tat.data.comp[this.tat.tabComp];
                 if (!dComp) return;
 
                 const names = {'rekom':'Rekomendasi', 'gender':'Gender', 'pendidikan':'Pendidikan', 'pekerjaan':'Pekerjaan', 'usia':'Kelompok Usia'};
                 const isHeat = this.isMultiSatker && this.tat.compView === 'heatmap' && (this.tat.tabComp === 'pekerjaan' || this.tat.tabComp === 'pendidikan' || this.tat.tabComp === 'usia');
-                
+                const isHighCard = ['pekerjaan', 'pendidikan', 'usia'].includes(this.tat.tabComp);
+                const dynHeight = isHeat ? 600 : (isHighCard && dComp.labels ? Math.max(450, dComp.labels.length * 35) : 450);
+
+                let tooltipConfig = isHeat 
+                    ? { shared: false, intersect: true, y: { formatter: function(val) { return val + " Kasus"; } } } 
+                    : { 
+                        shared: true, intersect: false, 
+                        y: { formatter: function(val, opt) { 
+                            let v = val || 0; 
+                            if (isHighCard) return new Intl.NumberFormat('id-ID').format(v) + " Kasus";
+                            let t = 0; opt.w.config.series.forEach(s => t += (s.data[opt.dataPointIndex] || 0)); 
+                            let pct = t === 0 ? 0 : Math.round((v/t)*100); 
+                            return new Intl.NumberFormat('id-ID').format(v) + " Kasus (" + pct + "%)"; 
+                        } } 
+                    };
+
                 let opts = {
                     series: dComp.series,
-                    chart: { type: isHeat ? 'heatmap' : 'bar', height: isHeat ? 600 : 450, stacked: !isHeat, toolbar: { show: false }, fontFamily: 'inherit' },
-                    plotOptions: { bar: { borderRadius: 2, columnWidth: '50%' }, heatmap: { shadeIntensity: 0.6, radius: 2, useFillColorAsStroke: false } },
-                    xaxis: { categories: dComp.labels, labels: { style: { fontWeight: 'bold' } } },
-                    colors: isHeat ? ['#198754'] : this.getBarColors(),
-                    title: { text: this.getTitle(this.tat, 'Proporsi ' + names[this.tat.tabComp]), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
-                    dataLabels: {
-                        enabled: true,
-                        formatter: function(val, opt) {
-                            if(isHeat) return val > 0 ? val : '';
-                            let t = 0; opt.w.config.series.forEach(s => t += s.data[opt.dataPointIndex]);
-                            return t === 0 ? "" : val + " (" + Math.round((val/t)*100) + "%)";
-                        },
-                        style: { colors: ['#212529'], fontSize: '12px' }
+                    chart: { type: isHeat ? 'heatmap' : 'bar', height: dynHeight, stacked: !isHeat, toolbar: { show: false }, fontFamily: 'inherit' },
+                    plotOptions: { bar: { horizontal: isHighCard, borderRadius: 2, columnWidth: '50%', barHeight: '70%', dataLabels: { hideOverflowingLabels: false } }, heatmap: { shadeIntensity: 0.6, radius: 2, useFillColorAsStroke: false } },
+                    xaxis: { categories: dComp.labels, tickAmount: isHighCard ? 3 : undefined, labels: { style: { fontWeight: 'bold' }, formatter: function(val) { return typeof val === 'number' ? Math.round(val) : val; } } },
+                    colors: this.resolveColors(dComp.series, isHeat),
+                    title: { text: this.getTitle('tat', 'Proporsi ' + names[this.tat.tabComp]), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
+                    dataLabels: { 
+                        enabled: true, 
+                        formatter: function(val) { let v = val || 0; if (isHeat && v === 0) return "0"; if (v === 0) return ""; return new Intl.NumberFormat('id-ID').format(v); },
+                        style: { colors: ['#000'], fontSize: '11px', fontWeight: 'bold' }
                     },
                     stroke: { show: true, width: 1, colors: ['#fff'] },
-                    tooltip: { shared: !isHeat, intersect: isHeat },
+                    tooltip: tooltipConfig,
                     legend: { show: !isHeat, position: 'top', fontWeight: 'bold', offsetY: -10 }
                 };
 
@@ -759,29 +1012,37 @@
                 
                 let dsRaw = this.bb.tabTrend === 'berat' ? this.bb.data.trend.berat : this.bb.data.trend.item;
                 let ds = JSON.parse(JSON.stringify(dsRaw)); 
-                if (this.bb.tabTrend === 'berat') { ds.forEach(s => s.data = s.data.map(v => this.getWeightVal(v))); }
+                let isBerat = this.bb.tabTrend === 'berat';
+                if (isBerat) { ds.forEach(s => s.data = s.data.map(v => this.getWeightVal(v))); }
 
                 const isHeat = this.isMultiSatker && this.bb.adminTrendType === 'heatmap' && this.bb.month === 'per_bulan';
                 const tTitle = this.bb.tabTrend === 'berat' ? 'Total Berat BB' : 'Total Item BB';
                 const self = this;
                 
+                let tooltipConfig = isHeat 
+                    ? { shared: false, intersect: true, y: { formatter: function(val) { return new Intl.NumberFormat('id-ID', {maximumFractionDigits:2}).format(val||0) + (isBerat ? ' '+self.weightLabel : ' Item'); } } } 
+                    : { shared: true, intersect: false, y: { formatter: function(val) { return new Intl.NumberFormat('id-ID', {maximumFractionDigits:2}).format(val||0) + (isBerat ? ' '+self.weightLabel : ' Item'); } } };
+
                 let opts = {
                     series: ds,
                     chart: { type: isHeat ? 'heatmap' : 'bar', height: isHeat ? 450 : 400, toolbar: { show: true }, fontFamily: 'inherit' },
                     xaxis: { categories: this.bb.data.trend_labels },
-                    title: { text: this.getTitle(this.bb, tTitle), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
+                    yaxis: { labels: { formatter: function(val) { return isBerat ? self.formatShortNumber(val) : new Intl.NumberFormat('id-ID').format(val); } } },
+                    title: { text: this.getTitle('bb', tTitle), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
                     grid: { show: true, borderColor: '#f1f3f5' },
                     plotOptions: { bar: { borderRadius: 3, columnWidth: this.isMultiSatker ? '85%' : '40%' }, heatmap: { shadeIntensity: 0.6, radius: 2, useFillColorAsStroke: false } },
                     colors: isHeat ? ['#dc3545'] : (this.isMultiSatker ? this.getBarColors() : (this.bb.tabTrend === 'berat' ? ['#dc3545'] : ['#198754'])),
-                    dataLabels: {
-                        enabled: isHeat ? true : !this.isMultiSatker,
-                        formatter: function(val) { let v = val||0; return v > 0 ? new Intl.NumberFormat('id-ID', {maximumFractionDigits:1}).format(v) : ""; },
-                        style: { colors: ['#212529'], fontSize: '12px' }
+                    dataLabels: { 
+                        enabled: isHeat ? true : (this.bb.month === 'all' || !this.isMultiSatker), 
+                        formatter: function(val) { 
+                            let v = val||0; 
+                            if (isHeat) return v === 0 ? "0" : (isBerat ? self.formatShortNumber(v) : new Intl.NumberFormat('id-ID').format(v));
+                            if (v === 0) return "";
+                            return isBerat ? self.formatShortNumber(v) : new Intl.NumberFormat('id-ID').format(v);
+                        }, 
+                        style: { colors: ['#000'], fontSize: '12px', fontWeight: 'bold' }
                     },
-                    tooltip: { 
-                        shared: true, intersect: false,
-                        y: { formatter: function(val) { return new Intl.NumberFormat('id-ID', {maximumFractionDigits:2}).format(val||0) + (self.bb.tabTrend === 'berat' ? ' '+self.weightLabel : ' Item'); } }
-                    },
+                    tooltip: tooltipConfig,
                     legend: { show: !isHeat, position: 'top', fontWeight: 'bold', offsetY: -10 }
                 };
 
@@ -792,29 +1053,72 @@
             
             renderBbComp() {
                 if(!this.$refs.chartBbComp || !this.bb.data) return;
+                if (!this.bb.data.comp || !this.bb.data.comp.sumber) return;
+
+                if (this.chartInst.bbC) { this.chartInst.bbC.destroy(); this.chartInst.bbC = null; }
+                if (this.chartInst.bbPanel && this.chartInst.bbPanel.length > 0) { this.chartInst.bbPanel.forEach(c => c.destroy()); this.chartInst.bbPanel = []; }
+
+                // 1. RENDER MONTHLY SMALL MULTIPLES
+                if (this.showMonthlyPanel('bb')) {
+                    this.$nextTick(() => {
+                        let pDataArr = this.getPanelData('bb', this.bb.tabComp);
+                        let colors = ['#dc3545', '#ffc107']; // Tangkap, Temuan
+                        
+                        let maxVal = 0;
+                        pDataArr.forEach(pData => { for(let i=0; i<12; i++) { let sum = 0; pData.series.forEach(s => { sum += (s.data[i] || 0); }); if(sum > maxVal) maxVal = sum; } });
+                        let yMax = maxVal > 0 ? Math.ceil(maxVal * 1.1) : undefined;
+
+                        pDataArr.forEach((pData, pIdx) => {
+                            let el = document.getElementById('chart-bb-monthly-' + pIdx);
+                            if (el) {
+                                if (el.__apex_inst) el.__apex_inst.destroy(); el.innerHTML = ''; 
+                                let opts = {
+                                    series: pData.series,
+                                    chart: { type: 'bar', height: 200, stacked: true, toolbar: { show: false }, parentHeightOffset: 0, fontFamily: 'inherit' },
+                                    colors: colors,
+                                    xaxis: { categories: ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'], labels: { style: { fontSize: '9px', fontWeight: 'bold'} } },
+                                    yaxis: { max: yMax, labels: { formatter: v => v ? v : '', style: { fontSize: '10px' } } },
+                                    dataLabels: { 
+                                        enabled: true, 
+                                        formatter: function(val) { return val === 0 ? "" : val; },
+                                        style: { colors: ['#000'], fontSize: '9px', fontWeight: 'bold' }
+                                    },
+                                    legend: { show: false },
+                                    grid: { show: true, padding: { top: 0, right: 0, bottom: 0, left: 10 } },
+                                    tooltip: { shared: true, intersect: false, y: { formatter: v => v + ' Kasus' } }
+                                };
+                                let chart = new ApexCharts(el, opts);
+                                el.__apex_inst = chart;
+                                chart.render(); this.chartInst.bbPanel.push(chart);
+                            }
+                        });
+                    });
+                    return;
+                }
+
+                // 2. RENDER CHART GLOBAL
                 const dComp = this.bb.data.comp.sumber;
-                
+
                 let opts = {
                     series: dComp.series,
                     chart: { type: 'bar', height: 450, stacked: true, toolbar: { show: false }, fontFamily: 'inherit' },
                     plotOptions: { bar: { borderRadius: 2, columnWidth: '50%' } },
                     xaxis: { categories: dComp.labels, labels: { style: { fontWeight: 'bold' } } },
-                    colors: ['#dc3545', '#ffc107'],
-                    title: { text: this.getTitle(this.bb, 'Proporsi Sumber Perolehan'), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
-                    dataLabels: {
-                        enabled: true,
-                        formatter: function(val, opt) {
-                            let t = 0; opt.w.config.series.forEach(s => t += s.data[opt.dataPointIndex]);
-                            return t === 0 ? "" : val + " (" + Math.round((val/t)*100) + "%)";
-                        },
-                        style: { colors: ['#212529'], fontSize: '12px' }
+                    colors: this.resolveColors(dComp.series, false),
+                    title: { text: this.getTitle('bb', 'Proporsi Sumber Perolehan'), align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
+                    dataLabels: { 
+                        enabled: true, 
+                        formatter: function(val) { let v = val || 0; return v === 0 ? "" : new Intl.NumberFormat('id-ID').format(v); },
+                        style: { colors: ['#000'], fontSize: '12px', fontWeight: 'bold' }
                     },
                     stroke: { show: true, width: 1, colors: ['#fff'] },
-                    tooltip: { shared: true, intersect: false },
+                    tooltip: { 
+                        shared: true, intersect: false, 
+                        y: { formatter: function(val, opt) { let v = val || 0; let t = 0; opt.w.config.series.forEach(s => t += (s.data[opt.dataPointIndex] || 0)); let pct = t === 0 ? 0 : Math.round((v/t)*100); return new Intl.NumberFormat('id-ID').format(v) + " Kasus (" + pct + "%)"; } } 
+                    },
                     legend: { position: 'top', fontWeight: 'bold', offsetY: -10 }
                 };
 
-                if(this.chartInst.bbC) this.chartInst.bbC.destroy();
                 this.chartInst.bbC = new ApexCharts(this.$refs.chartBbComp, opts);
                 this.chartInst.bbC.render();
             },
@@ -828,37 +1132,37 @@
                 const tTitle = `Top Narkotika ${this.rank.metric === 'berat' ? `(Berdasarkan Berat - ${this.weightLabel})` : '(Berdasarkan Frekuensi Kasus)'} - Sumber: ${this.rank.source.toUpperCase()}`;
                 const dynHeight = Math.max(400, (d.labels.length * 45) + 100);
                 const self = this;
+                const isBerat = this.rank.metric === 'berat';
 
                 let dataPoints = d.data;
-                if (this.rank.metric === 'berat') {
+                if (isBerat) {
                     dataPoints = dataPoints.map(v => this.getWeightVal(v));
                 }
 
                 let opts = { 
-                    series: [{ name: this.rank.metric === 'berat' ? 'Berat' : 'Frekuensi', data: dataPoints }], 
+                    series: [{ name: isBerat ? 'Berat' : 'Frekuensi', data: dataPoints }], 
                     chart: { type: 'bar', height: dynHeight, toolbar: { show: false }, fontFamily: 'inherit' }, 
-                    plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4, barHeight: '75%' } }, 
-                    xaxis: { categories: d.labels, labels: { formatter: function(val) { return new Intl.NumberFormat('id-ID').format(val||0); } } }, 
+                    plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4, barHeight: '75%', dataLabels: { hideOverflowingLabels: false } } }, 
+                    xaxis: { 
+                        categories: d.labels, 
+                        tickAmount: 3, 
+                        labels: { formatter: function(val) { return self.formatShortNumber(val); } } 
+                    }, 
                     colors: this.getBarColors(),
                     dataLabels: { 
                         enabled: true, 
                         formatter: function(val) { 
                             let v = val || 0; 
-                            if (self.rank.metric === 'berat') {
-                                return new Intl.NumberFormat('id-ID', {maximumFractionDigits:2}).format(v) + ' ' + self.weightLabel;
-                            }
+                            if (v === 0) return "";
+                            if (isBerat) { return self.formatShortNumber(v) + ' ' + self.weightLabel; }
                             return new Intl.NumberFormat('id-ID').format(v) + 'x'; 
-                        },
-                        style: { colors: ['#212529'], fontSize: '13px' } 
+                        }, 
+                        style: { fontSize: '13px', fontWeight: 'bold', colors: ['#000'] }
                     },
                     grid: { show: true, xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } }, borderColor: '#f1f3f5' }, 
-                    title: { text: this.getTitle(this.rank, tTitle), align: 'left', margin: 20, style: { fontSize: '16px', fontWeight: '500' } },
+                    title: { text: this.getTitle('rank', tTitle), align: 'left', margin: 20, style: { fontSize: '16px', fontWeight: '500' } },
                     legend: { show: false },
-                    tooltip: { 
-                        y: { formatter: function(val) { 
-                            return new Intl.NumberFormat('id-ID', {maximumFractionDigits:2}).format(val||0) + (self.rank.metric === 'berat' ? ' ' + self.weightLabel : ' Kasus/Item'); 
-                        }} 
-                    }
+                    tooltip: { y: { formatter: function(val) { return new Intl.NumberFormat('id-ID', {maximumFractionDigits:2}).format(val||0) + (isBerat ? ' ' + self.weightLabel : ' Kasus/Item'); }} }
                 };
                 
                 if (this.chartInst.rank) this.chartInst.rank.destroy(); 

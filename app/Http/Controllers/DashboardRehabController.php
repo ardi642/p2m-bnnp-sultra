@@ -62,7 +62,7 @@ class DashboardRehabController extends Controller
         return [
             'year' => $request->input('year', date('Y')),
             'time' => $request->input('time', 'all'), 
-            'mode_hitung' => $request->input('mode_hitung', 'layanan'), // layanan vs unik
+            'mode_hitung' => $request->input('mode_hitung', 'layanan'),
             'mySatker' => $isAdmin ? $selectedSatker : $user->pegawai?->satuan_kerja_id,
             'isMulti' => ($isAdmin && empty($selectedSatker))
         ];
@@ -126,6 +126,86 @@ class DashboardRehabController extends Controller
         ]);
     }
 
+    // TREN KUNJUNGAN VS PASIEN BARU (MIXED CHART)
+    public function getChartTrendKunjungan(Request $request) {
+        $f = $this->parseFilter($request);
+        $year = $f['year'];
+        $mode = $request->input('trend_mode', 'per_bulan'); 
+        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
+
+        // 1. Query Total Kunjungan
+        $kunjunganQ = DB::table('rehab_riwayat')
+            ->join('rehab_pasien', 'rehab_pasien.id', '=', 'rehab_riwayat.rehab_pasien_id')
+            ->whereYear('tanggal_rehab', $year);
+        
+        if ($f['mySatker']) {
+            $kunjunganQ->where('rehab_pasien.satuan_kerja_id', $f['mySatker']);
+        }
+
+        $kPeriodeCol = ($mode === 'per_triwulan') ? 'QUARTER(tanggal_rehab)' : 'MONTH(tanggal_rehab)';
+        $kunjunganQ->selectRaw("rehab_pasien.satuan_kerja_id, {$kPeriodeCol} as periode, COUNT(rehab_riwayat.id) as total")
+                   ->groupBy('rehab_pasien.satuan_kerja_id', DB::raw($kPeriodeCol));
+        
+        $resKunjungan = $kunjunganQ->get();
+
+        // 2. Query Pasien Baru
+        $sub = DB::table('rehab_riwayat')
+            ->select('rehab_pasien_id', DB::raw('MIN(tanggal_rehab) as min_tanggal'))
+            ->groupBy('rehab_pasien_id');
+
+        $baruQ = DB::table('rehab_pasien')
+            ->joinSub($sub, 'first_rehab', function ($join) {
+                $join->on('rehab_pasien.id', '=', 'first_rehab.rehab_pasien_id');
+            })
+            ->whereYear('first_rehab.min_tanggal', $year);
+
+        if ($f['mySatker']) {
+            $baruQ->where('rehab_pasien.satuan_kerja_id', $f['mySatker']);
+        }
+
+        $bPeriodeCol = ($mode === 'per_triwulan') ? 'QUARTER(first_rehab.min_tanggal)' : 'MONTH(first_rehab.min_tanggal)';
+        $baruQ->selectRaw("rehab_pasien.satuan_kerja_id, {$bPeriodeCol} as periode, COUNT(rehab_pasien.id) as total")
+              ->groupBy('rehab_pasien.satuan_kerja_id', DB::raw($bPeriodeCol));
+        
+        $resBaru = $baruQ->get();
+
+        // 3. Format Output
+        $len = ($mode === 'per_triwulan') ? 4 : 12;
+        $labels = ($mode === 'per_triwulan') 
+            ? ['Triwulan I', 'Triwulan II', 'Triwulan III', 'Triwulan IV'] 
+            : ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+        
+        $dataKunjunganGlobal = array_fill(0, $len, 0);
+        $dataBaruGlobal = array_fill(0, $len, 0);
+        $panel = [];
+
+        if ($f['isMulti']) {
+            foreach ($satkerMap as $sId => $sName) {
+                $arrK = array_fill(0, $len, 0);
+                $arrB = array_fill(0, $len, 0);
+                foreach ($resKunjungan as $row) { if ($row->satuan_kerja_id == $sId) $arrK[$row->periode - 1] = (int) $row->total; }
+                foreach ($resBaru as $row) { if ($row->satuan_kerja_id == $sId) $arrB[$row->periode - 1] = (int) $row->total; }
+                
+                $panel[] = [
+                    'satker' => $sName,
+                    'kunjungan' => $arrK,
+                    'baru' => $arrB
+                ];
+            }
+        } else {
+            foreach ($resKunjungan as $row) { $dataKunjunganGlobal[$row->periode - 1] = (int) $row->total; }
+            foreach ($resBaru as $row) { $dataBaruGlobal[$row->periode - 1] = (int) $row->total; }
+        }
+
+        return response()->json([
+            'is_multi' => $f['isMulti'],
+            'labels' => $labels,
+            'kunjungan' => $dataKunjunganGlobal,
+            'baru' => $dataBaruGlobal,
+            'panel' => $panel
+        ]);
+    }
+
     public function getChartLayanan(Request $request) {
         $f = $this->parseFilter($request);
         $isPerBulan = ($f['time'] === 'per_bulan');
@@ -158,7 +238,6 @@ class DashboardRehabController extends Controller
         
         $data = $qL->get();
         
-        // Murni angka Realisasi saja (Garis Target sudah ditiadakan)
         $chartRj = $this->formatLayananSeries($data, 'rj', $f['isMulti'], $isPerBulan, $isPerTriwulan, $satkerMap);
         $chartPasca = $this->formatLayananSeries($data, 'pasca', $f['isMulti'], $isPerBulan, $isPerTriwulan, $satkerMap);
         $chartSkhpn = $this->formatLayananSeries($data, 'skhpn', $f['isMulti'], $isPerBulan, $isPerTriwulan, $satkerMap);
@@ -202,14 +281,13 @@ class DashboardRehabController extends Controller
         return $series;
     }
 
-    // Engine Data Proporsi Cerdas (Karena selalu Snapshot, tidak perlu Time Multiples lagi)
     private function buildCompData($query, $f, $satkerMap, $selectStr, $groupStr) {
         $qAcc = clone $query;
         $qAcc->select('rehab_pasien.satuan_kerja_id', DB::raw("$selectStr as cat"));
         $resAcc = $qAcc->addSelect(DB::raw('COUNT(*) as total'))->groupBy('rehab_pasien.satuan_kerja_id', DB::raw($groupStr))->get();
         
         $data = $this->formatCompSeries($resAcc, $f['isMulti'], $satkerMap);
-        $data['type'] = 'accumulated'; // Selalu accumulated Horizontal Bar
+        $data['type'] = 'accumulated'; 
         return $data;
     }
 
@@ -221,7 +299,7 @@ class DashboardRehabController extends Controller
             $catTotals[$c] += $row->total;
         }
         arsort($catTotals);
-        $categories = array_keys($catTotals); // Mendapatkan kategori dinamis
+        $categories = array_keys($catTotals);
 
         $series = [];
         if ($isMulti) {
@@ -253,7 +331,6 @@ class DashboardRehabController extends Controller
         $f = $this->parseFilter($request);
         $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
         
-        // LOGIKA PENYARINGAN: LAYANAN vs PASIEN UNIK
         if ($f['mode_hitung'] === 'unik') {
             $sub = DB::table('rehab_riwayat')->select('rehab_pasien_id', DB::raw('MAX(id) as max_id'));
             $sub = $this->applyTimeFilter($sub, 'tanggal_rehab', $f, 'rehab_riwayat.id'); 

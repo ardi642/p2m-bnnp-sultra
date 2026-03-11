@@ -94,6 +94,7 @@ Route::middleware('auth')->group(function() {
         Route::get('/', [DashboardRehabController::class, 'index'])->name('index');
         Route::get('/api/global', [DashboardRehabController::class, 'getGlobalData'])->name('api.global');
         Route::get('/api/layanan', [DashboardRehabController::class, 'getChartLayanan'])->name('api.layanan');
+        Route::get('/api/trend', [DashboardRehabController::class, 'getChartTrendKunjungan'])->name('api.trend');
         Route::get('/api/demografi', [DashboardRehabController::class, 'getChartDemografi'])->name('api.demografi');
         Route::get('/api/ranking', [DashboardRehabController::class, 'getRankingNarkotika'])->name('api.ranking');
     });

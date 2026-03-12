@@ -16,7 +16,7 @@ return new class extends Migration
             
             $table->enum('anggaran_pelaksanaan', ['DIPA', 'NON DIPA']);
             $table->string('nama_instansi'); // Pengganti nama_kegiatan
-            $table->enum('sasaran_kegiatan', ['instansi pemerintah', 'lingkungan pendidikan', 'pekerja swasta', 'lingkungan masyarakat']);
+            $table->enum('sasaran_kegiatan', ['lingkungan pemerintah', 'lingkungan pendidikan', 'lingkungan swasta', 'lingkungan masyarakat']);
             $table->date('tanggal_pelaksanaan');
             $table->text('tempat_kegiatan'); // Alamat
             

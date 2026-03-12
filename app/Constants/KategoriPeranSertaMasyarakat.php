@@ -7,7 +7,7 @@ class KategoriPeranSertaMasyarakat
     public const KATEGORI = [
         'pembinaan_teknis'          => 'Pembinaan Teknis',
         'pemetaan_kelompok_sasaran' => 'Pemetaan Kelompok Sasaran',
-        'pengembangan_kapasitas'    => 'Pengembangan Kapasitas & Pembinaan',
+        'pengembangan_kapasitas'    => 'Pengembangan Kapasitas & Pembinaan Masyarakat',
         'monitoring_evaluasi'       => 'Monitoring dan Evaluasi'
     ];
 

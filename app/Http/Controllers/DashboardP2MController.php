@@ -13,7 +13,6 @@ class DashboardP2MController extends Controller
 {
     public function index()
     {
-        /** @var \App\Models\User $user */
         $user = Auth::user();
         
         $minYear = (int) date('Y');
@@ -46,27 +45,19 @@ class DashboardP2MController extends Controller
         }
 
         $years = range($currentYear, $minYear);
-        $showTabs = in_array(
-            $user->role, 
-            ['admin', 'admin_satker', 'operator_satker']
-        );
-        $satkers = ($user->role === 'admin') 
-            ? SatuanKerja::orderBy('satuan_kerja', 'asc')->get() 
-            : [];
+        $showTabs = in_array($user->role, ['admin', 'admin_satker', 'operator_satker']);
+        $satkers = ($user->role === 'admin') ? SatuanKerja::orderBy('satuan_kerja', 'asc')->get() : [];
 
-        return view('dashboard.p2m.index', compact(
-            'years', 'showTabs', 'satkers'
-        ));
+        return view('dashboard.p2m.index', compact('years', 'showTabs', 'satkers'));
     }
 
     public function getGlobalData(Request $request) 
     {
         $year     = $request->input('year', date('Y'));
         $user     = Auth::user();
-        $satkerId = ($user->role === 'admin') 
-            ? $request->input('satker_id') 
-            : $user->pegawai?->satuan_kerja_id;
+        $satkerId = ($user->role === 'admin') ? $request->input('satker_id') : $user->pegawai?->satuan_kerja_id;
 
+        // Fungsi Helper Cepat
         $count = function($table, $dateCol) use ($year, $satkerId) {
             $q = DB::table($table)->whereYear($dateCol, $year);
             if ($satkerId) $q->where('satuan_kerja_id', $satkerId);
@@ -79,165 +70,145 @@ class DashboardP2MController extends Controller
             return $q->sum($colSum);
         };
 
-        $listOrang = [
-            'Informasi Edukasi'   => $sum('p2m_informasi_edukasi', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'Asistensi Relawan'   => $sum('p2m_asistensi_relawan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'Pelatihan'           => $sum('p2m_pelatihan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'Ketahanan Keluarga'  => $sum('p2m_keluarga', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'IKAN'                => $sum('p2m_ikan', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-            'Remaja Teman Sebaya' => $sum('p2m_rts', 'jumlah_peserta', 'tanggal_pelaksanaan'),
-        ];
-        $totalOrang = array_sum($listOrang); 
+        // ==========================================
+        // 1. DATA RANKING AGREGAT & TOTAL KEGIATAN
+        // ==========================================
+        $giatPsm = $count('p2m_peran_serta_masyarakat', 'tanggal_pelaksanaan') + $count('p2m_tes_urine', 'tanggal_pelaksanaan');
+        $giatMedia = $count('p2m_elektronik', 'tanggal_pelaksanaan') + 
+                     $count('p2m_non_elektronik', 'tanggal_mulai_pelaksanaan') + 
+                     $count('p2m_online', 'tanggal_mulai_pelaksanaan');
 
-        $listMedia = [
-            'Elektronik' => [
-                'freq' => $count('p2m_elektronik', 'tanggal_pelaksanaan'), 
-                'durasi' => $sum('p2m_elektronik', 'durasi_pelaksanaan', 'tanggal_pelaksanaan')
+        $listKegiatan = [
+            'Informasi & Edukasi'     => $count('p2m_informasi_edukasi', 'tanggal_pelaksanaan'),
+            'Peran Serta Masyarakat'  => $giatPsm,
+            'Pemberdayaan Alternatif' => $count('p2m_pemberdayaan', 'tanggal_pelaksanaan'),
+            'Publikasi Media'         => $giatMedia,
+            'Pelatihan Soft Skill'    => $count('p2m_pelatihan', 'tanggal_pelaksanaan'),
+            'Asistensi Relawan'       => $count('p2m_asistensi_relawan', 'tanggal_pelaksanaan'),
+            'Ketahanan Keluarga'      => $count('p2m_keluarga', 'tanggal_pelaksanaan'),
+            'Remaja Teman Sebaya'     => $count('p2m_rts', 'tanggal_pelaksanaan'),
+            'Program IKAN'            => $count('p2m_ikan', 'tanggal_pelaksanaan'),
+            'Desa/Kelurahan Bersinar' => $count('p2m_desa_kelurahan_bersinar', 'tanggal_pencanangan'),
+        ];
+        
+        arsort($listKegiatan);
+        $totalKegiatan = array_sum($listKegiatan);
+
+        // ==========================================
+        // 2. DATA KARTU JANGKAUAN ORANG (ARRAY BUKU)
+        // ==========================================
+        
+        // A. Edukasi & Pelatihan
+        $edukasiArray = [
+            ['label' => 'Informasi & Edukasi',  'val' => (int)$sum('p2m_informasi_edukasi', 'jumlah_peserta', 'tanggal_pelaksanaan')],
+            ['label' => 'Pelatihan Soft Skill', 'val' => (int)$sum('p2m_pelatihan', 'jumlah_peserta', 'tanggal_pelaksanaan')],
+            ['label' => 'Asistensi Relawan',    'val' => (int)$sum('p2m_asistensi_relawan', 'jumlah_peserta', 'tanggal_pelaksanaan')],
+            ['label' => 'Ketahanan Keluarga',   'val' => (int)$sum('p2m_keluarga', 'jumlah_peserta', 'tanggal_pelaksanaan')],
+            ['label' => 'Remaja Teman Sebaya',  'val' => (int)$sum('p2m_rts', 'jumlah_peserta', 'tanggal_pelaksanaan')],
+            ['label' => 'Program IKAN',         'val' => (int)$sum('p2m_ikan', 'jumlah_peserta', 'tanggal_pelaksanaan')],
+        ];
+
+        // B. Peran Serta Masyarakat (Menggunakan query presisi agar label tidak hilang)
+        $psmArray = [];
+        $mapPsm = KategoriPeranSertaMasyarakat::KATEGORI;
+        
+        foreach ($mapPsm as $dbKey => $labelView) {
+            $pesertaPsm = (int) DB::table('p2m_peran_serta_masyarakat')
+                ->whereYear('tanggal_pelaksanaan', $year)
+                ->when($satkerId, function($q) use ($satkerId) { return $q->where('satuan_kerja_id', $satkerId); })
+                ->where('kategori_kegiatan', $dbKey)
+                ->sum('jumlah_peserta');
+
+            $is_tu = ($dbKey === 'pengembangan_kapasitas');
+            $tu_peserta = 0;
+            $tu_positif = 0;
+
+            if ($is_tu) {
+                $tu_peserta = (int)$sum('p2m_tes_urine', 'jumlah_peserta', 'tanggal_pelaksanaan');
+                $tu_positif = (int)$sum('p2m_tes_urine', 'jumlah_positif', 'tanggal_pelaksanaan');
+                $pesertaPsm += $tu_peserta; // Digabung totalnya
+            }
+
+            $psmArray[] = [
+                'label'      => $labelView,
+                'val'        => $pesertaPsm,
+                'is_tu'      => $is_tu,
+                'tu_peserta' => $tu_peserta,
+                'tu_positif' => $tu_positif
+            ];
+        }
+
+        // C. Pemberdayaan Alternatif (Menggunakan query presisi)
+        $paArray = [];
+        $mapPa = KategoriPemberdayaan::SUB_KEGIATAN;
+        
+        foreach ($mapPa as $dbKey => $labelView) {
+            $pesertaPa = (int) DB::table('p2m_pemberdayaan')
+                ->whereYear('tanggal_pelaksanaan', $year)
+                ->when($satkerId, function($q) use ($satkerId) { return $q->where('satuan_kerja_id', $satkerId); })
+                ->where('sub_kegiatan', $dbKey)
+                ->sum('jumlah_peserta');
+                
+            $paArray[] = [
+                'label' => $labelView,
+                'val'   => $pesertaPa
+            ];
+        }
+
+        $totalOrang = array_sum(array_column($edukasiArray, 'val')) + 
+                      array_sum(array_column($psmArray, 'val')) + 
+                      array_sum(array_column($paArray, 'val'));
+
+        // ==========================================
+        // 3. DATA KARTU MEDIA
+        // ==========================================
+        $mediaArray = [
+            [
+                'label'  => 'Media Online', 
+                'freq'   => (int)$count('p2m_online', 'tanggal_mulai_pelaksanaan'), 
+                'durasi' => (int)$sum('p2m_online', 'durasi_pelaksanaan', 'tanggal_mulai_pelaksanaan')
             ],
-            'Non-Elektronik' => [
-                'freq' => $count('p2m_non_elektronik', 'tanggal_mulai_pelaksanaan'), 
-                'durasi' => $sum('p2m_non_elektronik', 'durasi_pelaksanaan', 'tanggal_mulai_pelaksanaan')
+            [
+                'label'  => 'Media Elektronik', 
+                'freq'   => (int)$count('p2m_elektronik', 'tanggal_pelaksanaan'), 
+                'durasi' => (int)$sum('p2m_elektronik', 'durasi_pelaksanaan', 'tanggal_pelaksanaan')
             ],
-            'Online' => [
-                'freq' => $count('p2m_online', 'tanggal_mulai_pelaksanaan'), 
-                'durasi' => $sum('p2m_online', 'durasi_pelaksanaan', 'tanggal_mulai_pelaksanaan')
+            [
+                'label'  => 'Media Non-Elektronik', 
+                'freq'   => (int)$count('p2m_non_elektronik', 'tanggal_mulai_pelaksanaan'), 
+                'durasi' => (int)$sum('p2m_non_elektronik', 'durasi_pelaksanaan', 'tanggal_mulai_pelaksanaan')
             ],
         ];
         
-        $totalMediaFreq = 0; 
-        $totalMediaDurasi = 0; 
-        foreach($listMedia as $m) { 
-            $totalMediaFreq += $m['freq']; 
-            $totalMediaDurasi += $m['durasi']; 
-        }
+        $totalMediaFreq = array_sum(array_column($mediaArray, 'freq'));
+        $totalMediaDurasi = array_sum(array_column($mediaArray, 'durasi'));
 
-        $listWilayah = [
-            'Desa/Kel. Bersinar' => $count('p2m_desa_kelurahan_bersinar', 'tanggal_pencanangan')
-        ];
-        $totalWilayah = array_sum($listWilayah);
-
-        $psmCard = [];
-        $rawPsm = DB::table('p2m_peran_serta_masyarakat')
-            ->whereYear('tanggal_pelaksanaan', $year)
-            ->when($satkerId, function($q) use ($satkerId) { 
-                return $q->where('satuan_kerja_id', $satkerId); 
-            })
-            ->select(
-                'kategori_kegiatan', 
-                'nama_kegiatan', 
-                DB::raw('COUNT(id) as total_kegiatan'),
-                DB::raw('SUM(jumlah_peserta) as total_peserta')
-            )
-            ->groupBy('kategori_kegiatan', 'nama_kegiatan')
-            ->get();
-
-        $katPsmMap = KategoriPeranSertaMasyarakat::KATEGORI;
-
-        foreach($rawPsm as $r) {
-            $katLabel = $katPsmMap[$r->kategori_kegiatan] ?? ucwords(str_replace('_', ' ', $r->kategori_kegiatan));
-            if(!isset($psmCard[$katLabel])) {
-                $psmCard[$katLabel] = ['kegiatan' => 0, 'peserta' => 0, 'detail' => []];
-            }
-
-            $psmCard[$katLabel]['kegiatan'] += $r->total_kegiatan;
-            $psmCard[$katLabel]['peserta'] += $r->total_peserta;
-            $psmCard[$katLabel]['detail'][] = [
-                'nama' => $r->nama_kegiatan, 
-                'kegiatan' => (int)$r->total_kegiatan,
-                'peserta' => (int)$r->total_peserta, 
-                'is_tes_urine' => false
-            ];
-        }
-
-        $tuCount   = $count('p2m_tes_urine', 'tanggal_pelaksanaan');
-        $tuPeserta = $sum('p2m_tes_urine', 'jumlah_peserta', 'tanggal_pelaksanaan');
-        $tuPositif = $sum('p2m_tes_urine', 'jumlah_positif', 'tanggal_pelaksanaan');
-        
-        if ($tuCount > 0) {
-            $katLabel = $katPsmMap['pengembangan_kapasitas'] ?? 'Pengembangan Kapasitas & Pembinaan';
-            if(!isset($psmCard[$katLabel])) {
-                $psmCard[$katLabel] = ['kegiatan' => 0, 'peserta' => 0, 'detail' => []];
-            }
-
-            $psmCard[$katLabel]['kegiatan'] += $tuCount;
-            $psmCard[$katLabel]['peserta'] += $tuPeserta;
-            $psmCard[$katLabel]['detail'][] = [
-                'nama' => 'Deteksi Dini Tes Urine Uji Narkoba',
-                'kegiatan' => $tuCount,
-                'peserta' => $tuPeserta, 
-                'positif' => $tuPositif, 
-                'is_tes_urine' => true
-            ];
-        }
-
-        $paCard = [];
-        $rawPa = DB::table('p2m_pemberdayaan')
-            ->whereYear('tanggal_pelaksanaan', $year)
-            ->when($satkerId, function($q) use ($satkerId) { 
-                return $q->where('satuan_kerja_id', $satkerId); 
-            })
-            ->select(
-                'sub_kegiatan', 
-                'detail_kegiatan', 
-                DB::raw('COUNT(id) as total_kegiatan'),
-                DB::raw('SUM(jumlah_peserta) as total_peserta')
-            )
-            ->groupBy('sub_kegiatan', 'detail_kegiatan')
-            ->get();
-
-        $subPaMap = KategoriPemberdayaan::SUB_KEGIATAN;
-        $detPaMap = KategoriPemberdayaan::getAllDetailLabels();
-
-        foreach($rawPa as $r) {
-            $subLabel = $subPaMap[$r->sub_kegiatan] ?? ucwords(str_replace('_', ' ', $r->sub_kegiatan));
-            $detLabel = $detPaMap[$r->detail_kegiatan] ?? ucwords(str_replace('_', ' ', $r->detail_kegiatan));
-
-            if(!isset($paCard[$subLabel])) {
-                $paCard[$subLabel] = ['kegiatan' => 0, 'peserta' => 0, 'detail' => []];
-            }
-
-            $paCard[$subLabel]['kegiatan'] += $r->total_kegiatan;
-            $paCard[$subLabel]['peserta'] += $r->total_peserta;
-            $paCard[$subLabel]['detail'][] = [
-                'nama' => $detLabel, 
-                'kegiatan' => (int)$r->total_kegiatan,
-                'peserta' => (int)$r->total_peserta
-            ];
-        }
-
-        foreach($psmCard as $k => $v) { 
-            usort($psmCard[$k]['detail'], function($a, $b) { return $b['peserta'] <=> $a['peserta']; }); 
-        }
-        foreach($paCard as $k => $v)  { 
-            usort($paCard[$k]['detail'], function($a, $b) { return $b['peserta'] <=> $a['peserta']; }); 
-        }
-
-        $allActivities = [
-            'Informasi & Edukasi'      => $count('p2m_informasi_edukasi', 'tanggal_pelaksanaan'),
-            'Media Elektronik'         => $listMedia['Elektronik']['freq'],
-            'Media Non-Elektronik'     => $listMedia['Non-Elektronik']['freq'],
-            'Media Online'             => $listMedia['Online']['freq'],
-            'Desa Bersinar'            => $listWilayah['Desa/Kel. Bersinar'],
-            'Asistensi Relawan'        => $count('p2m_asistensi_relawan', 'tanggal_pelaksanaan'),
-            'Pelatihan Soft Skill'     => $count('p2m_pelatihan', 'tanggal_pelaksanaan'),
-            'Ketahanan Keluarga'       => $count('p2m_keluarga', 'tanggal_pelaksanaan'),
-            'IKAN'                     => $count('p2m_ikan', 'tanggal_pelaksanaan'),
-            'Remaja Teman Sebaya'      => $count('p2m_rts', 'tanggal_pelaksanaan'),
-            'Peran Serta Masyarakat'   => $count('p2m_peran_serta_masyarakat', 'tanggal_pelaksanaan') + $tuCount,
-            'Pemberdayaan Alternatif'  => $count('p2m_pemberdayaan', 'tanggal_pelaksanaan'),
-        ];
-        arsort($allActivities);
+        // ==========================================
+        // 4. DATA KARTU KAWASAN
+        // ==========================================
+        $totalKawasan = $count('p2m_desa_kelurahan_bersinar', 'tanggal_pencanangan');
 
         return response()->json([
-            'orang'    => ['total' => $totalOrang, 'list' => $listOrang],
-            'media'    => ['total_freq' => $totalMediaFreq, 'total_durasi' => $totalMediaDurasi, 'list' => $listMedia],
-            'wilayah'  => ['total' => $totalWilayah, 'list' => $listWilayah],
-            'kegiatan' => ['total' => array_sum($allActivities)],
-            'psm_card' => $psmCard,
-            'pa_card'  => $paCard,
+            'kegiatan' => [
+                'total' => $totalKegiatan
+            ],
+            'orang' => [
+                'total'   => $totalOrang, 
+                'edukasi' => $edukasiArray,
+                'psm'     => $psmArray,
+                'pa'      => $paArray
+            ],
+            'media' => [
+                'total_freq'   => $totalMediaFreq, 
+                'total_durasi' => $totalMediaDurasi, 
+                'list'         => $mediaArray
+            ],
+            'wilayah' => [
+                'total' => $totalKawasan
+            ],
             'ranking_chart' => [
-                'labels' => array_keys($allActivities), 
-                'data' => array_values($allActivities)
+                'labels' => array_keys($listKegiatan), 
+                'data'   => array_values($listKegiatan)
             ]
         ]);
     }
@@ -273,9 +244,7 @@ class DashboardP2MController extends Controller
             return $q;
         };
 
-        // ====================================================================
         // 1. DATA TREN GRAFIK UTAMA
-        // ====================================================================
         $chartKegiatan = []; 
         $chartPeserta = [];
         $trendLabels = [];
@@ -287,7 +256,9 @@ class DashboardP2MController extends Controller
             if ($isMultiSatker) {
                 $satkers = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
                 foreach ($satkers as $satker) {
-                    $dataGiat = []; $dataPeserta = []; 
+                    $dataGiat = []; 
+                    $dataPeserta = []; 
+                    
                     foreach ($timePoints as $timeVal) {
                         $q = DB::table($table)->where('satuan_kerja_id', $satker->id)->whereYear($dateCol, $year)->whereMonth($dateCol, $timeVal);
                         $dataGiat[] = $q->count();
@@ -303,7 +274,9 @@ class DashboardP2MController extends Controller
                     $chartPeserta[]  = ['name' => $satker->satuan_kerja, 'data' => $dataPeserta];
                 }
             } else {
-                $dataGiat = []; $dataPeserta = []; 
+                $dataGiat = []; 
+                $dataPeserta = []; 
+                
                 foreach ($timePoints as $timeVal) {
                     $q = DB::table($table)->whereYear($dateCol, $year)->whereMonth($dateCol, $timeVal);
                     if ($mySatker) $q->where('satuan_kerja_id', $mySatker);
@@ -328,7 +301,9 @@ class DashboardP2MController extends Controller
                 $satkers = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
                 $trendLabels = $satkers->pluck('satuan_kerja')->toArray();
                 
-                $dataGiat = []; $dataPeserta = [];
+                $dataGiat = []; 
+                $dataPeserta = [];
+                
                 foreach ($satkers as $satker) {
                     $q = DB::table($table)->where('satuan_kerja_id', $satker->id)->whereYear($dateCol, $year);
                     if ($month !== 'all') $q->whereMonth($dateCol, $month);
@@ -349,6 +324,7 @@ class DashboardP2MController extends Controller
                 $chartPeserta[]  = ['name' => 'Jumlah ' . $config['unit_label'], 'data' => $dataPeserta];
             } else {
                 $trendLabels = [$labelTime];
+                
                 $q = DB::table($table)->whereYear($dateCol, $year);
                 if ($mySatker) $q->where('satuan_kerja_id', $mySatker);
                 if ($month !== 'all') $q->whereMonth($dateCol, $month);
@@ -369,9 +345,7 @@ class DashboardP2MController extends Controller
             }
         }
 
-        // ====================================================================
         // 2. DATA PROPORSI KINERJA
-        // ====================================================================
         $qAll = DB::table($table)->whereYear($dateCol, $year);
         if ($month !== 'all' && $month !== 'per_bulan') $qAll->whereMonth($dateCol, $month);
         if (!$isMultiSatker && $mySatker) $qAll->where('satuan_kerja_id', $mySatker);
@@ -502,6 +476,7 @@ class DashboardP2MController extends Controller
                     if (!$sName || !isset($labelIndexes[$sName])) continue;
                     $sIndex = $labelIndexes[$sName];
                     $val = 'pengembangan_kapasitas';
+                    
                     if (isset($compResult['kategori']['aggregated'][$val])) {
                         $compResult['kategori']['aggregated'][$val][$sIndex]++;
                     }
@@ -550,9 +525,7 @@ class DashboardP2MController extends Controller
             }
         }
 
-        // ====================================================================
-        // 3. DATA RINCIAN SPESIFIK & DRILL DOWN (PENGELOMPOKKAN BULAN)
-        // ====================================================================
+        // 3. DATA RINCIAN SPESIFIK & DRILL DOWN
         $tableData = [];
         $isPerBulanDetail = ($month === 'per_bulan');
 
@@ -644,6 +617,7 @@ class DashboardP2MController extends Controller
 
             $mapSub = KategoriPemberdayaan::SUB_KEGIATAN;
             $mapDet = KategoriPemberdayaan::getAllDetailLabels();
+            
             foreach ($qPa as $r) {
                 $tableData[] = [
                     'satker'    => $r->nama_satker ?? 'Tidak Diketahui',
@@ -672,7 +646,8 @@ class DashboardP2MController extends Controller
         ]);
     }
 
-    private function getTableConfig($type) {
+    private function getTableConfig($type) 
+    {
         $defaultSasaran = ['lingkungan pendidikan', 'lingkungan pemerintah', 'lingkungan masyarakat', 'lingkungan swasta'];
         
         $map = [

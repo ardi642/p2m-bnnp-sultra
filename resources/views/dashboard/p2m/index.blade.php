@@ -14,7 +14,9 @@
                             <i class="bi bi-building-fill text-muted me-2"></i>
                             <select x-model="globalSatkerId" class="form-select border-0 bg-transparent text-dark fw-bold shadow-none p-0 pe-4 cursor-pointer" style="font-size: 1.1rem; outline: none; min-width: 300px;">
                                 <option value="">Seluruh Satuan Kerja</option>
-                                @foreach($satkers as $s) <option value="{{ $s->id }}">{{ $s->satuan_kerja }}</option> @endforeach
+                                @foreach($satkers as $s) 
+                                    <option value="{{ $s->id }}">{{ $s->satuan_kerja }}</option> 
+                                @endforeach
                             </select>
                         </div>
                     @else
@@ -33,171 +35,157 @@
             <div class="d-flex align-items-center bg-white p-2 rounded-3 shadow-sm border border-light gap-2">
                 <span class="fw-bold text-muted small ms-2"><i class="bi bi-calendar-event me-2 text-primary"></i>Tahun Kinerja:</span>
                 <select x-model="globalYear" class="form-select form-select-sm border-0 bg-light fw-bold text-dark w-auto shadow-none pe-4 me-1 cursor-pointer">
-                    @foreach($years as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
+                    @foreach($years as $y) 
+                        <option value="{{ $y }}">{{ $y }}</option> 
+                    @endforeach
                 </select>
             </div>
         </div>
 
-        {{-- KARTU UTAMA --}}
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm h-100 bg-white border-start border-4 border-primary rounded-3">
-                    <div class="card-body d-flex flex-column justify-content-center align-items-center text-center p-4">
-                        <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle mb-3">
-                            <i class="bi bi-layers-fill fs-2"></i>
-                        </div>
-                        <h6 class="text-uppercase text-muted fw-bold mb-2">Total Kegiatan P2M</h6>
-                        <h1 class="display-4 fw-bold text-dark mb-0" x-text="formatAngka(cards.kegiatan.total)">0</h1>
-                    </div>
-                </div>
-            </div>
+        {{-- ========================================================== --}}
+        {{-- 3 KARTU UTAMA (COMPACT & ELEGANT DESIGN) --}}
+        {{-- ========================================================== --}}
+        <div class="row g-4 mb-4">
             
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm h-100 bg-white border-start border-4 border-success rounded-3 overflow-hidden">
-                    <div class="card-header bg-white border-0 pt-4 pb-2 d-flex align-items-center gap-3">
-                        <div class="bg-success bg-opacity-10 text-success p-2 rounded-3"><i class="bi bi-people-fill fs-4"></i></div>
+            {{-- KARTU 1: JANGKAUAN ORANG --}}
+            <div class="col-xl-4">
+                <div class="card border-0 shadow-sm h-100 bg-white rounded-4 overflow-hidden d-flex flex-column" style="border-top: 4px solid #0d6efd !important;">
+                    <div class="card-header bg-white border-0 pt-3 pb-2 d-flex align-items-center gap-3">
+                        <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-3 shadow-sm"><i class="bi bi-people-fill fs-4"></i></div>
                         <div>
-                            <h6 class="text-muted fw-bold mb-0">Masyarakat Terlayani (Program Dasar)</h6>
-                            <h3 class="fw-bold text-dark mb-0"><span x-text="formatAngka(cards.orang.total)">0</span> <span class="fs-6 text-muted fw-normal">Orang</span></h3>
+                            <h6 class="text-muted fw-bold mb-1 text-uppercase" style="letter-spacing: 0.5px; font-size: 0.7rem;">Jangkauan Masyarakat</h6>
+                            <h3 class="fw-bold text-dark mb-0 lh-1"><span x-text="formatAngka(cards.orang.total)">0</span> <span class="fs-6 text-muted fw-normal">Orang</span></h3>
                         </div>
                     </div>
-                    <div class="card-body pt-0 overflow-auto" style="max-height: 220px;">
-                        <template x-for="(item, label) in cards.orang.list">
-                            <div x-show="(item || 0) > 0" class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                                <span class="small fw-bold text-secondary" x-text="label"></span>
-                                <span class="fw-bold text-success" x-text="formatAngka(item) + ' Orang'"></span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm h-100 bg-white border-start border-4 border-warning rounded-3 overflow-hidden">
-                    <div class="card-header bg-white border-0 pt-4 pb-2 d-flex align-items-center gap-3">
-                        <div class="bg-warning bg-opacity-10 text-warning p-2 rounded-3"><i class="bi bi-megaphone-fill fs-4 text-dark"></i></div>
-                        <div>
-                            <h6 class="text-muted fw-bold mb-0">Total Publikasi Media</h6>
-                            <h3 class="fw-bold text-dark mb-0"><span x-text="formatAngka(cards.media.total_freq)">0</span> <span class="fs-6 text-muted fw-normal">Publikasi</span></h3>
-                        </div>
-                    </div>
-                    <div class="card-body pt-0 d-flex flex-column justify-content-center">
+                    <div class="card-body p-3 pt-1 overflow-auto custom-scrollbar flex-grow-1" style="max-height: 200px;">
+                        
+                        {{-- Edukasi & Pelatihan --}}
                         <div class="mb-3">
-                            <span class="badge bg-light text-dark border px-3 py-2">
-                                Total Durasi Tayang: <span class="fw-bold text-primary" x-text="formatAngka(cards.media.total_durasi) + ' Hari'"></span>
-                            </span>
-                        </div>
-                        <template x-for="(item, label) in cards.media.list">
-                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
-                                <span class="small fw-bold text-secondary" x-text="label"></span>
-                                <div class="text-end fw-bold text-dark">
-                                    <span x-text="item.freq + ' Kali Publikasi'"></span> 
-                                    <small class="text-muted fw-normal ms-1" x-text="'(' + item.durasi + ' Hari)'"></small>
+                            <div class="small fw-bold text-primary border-bottom pb-1 mb-2">Edukasi dan Pelatihan</div>
+                            <template x-for="(item, idx) in cards.orang.edukasi" :key="'edu-'+idx">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-secondary" style="font-size: 0.8rem; width: 75%; line-height: 1.2;" x-text="item.label"></span>
+                                    <span class="fw-bold text-dark text-end" style="font-size: 0.8rem; width: 25%;" x-text="formatAngka(item.val)"></span>
                                 </div>
-                            </div>
-                        </template>
+                            </template>
+                        </div>
+
+                        {{-- Peran Serta Masyarakat & Tes Urine --}}
+                        <div class="mb-3">
+                            <div class="small fw-bold text-primary border-bottom pb-1 mb-2">Peran Serta Masyarakat</div>
+                            <template x-for="(item, idx) in cards.orang.psm" :key="'psm-'+idx">
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-secondary" style="font-size: 0.8rem; width: 75%; line-height: 1.2;" x-text="item.label"></span>
+                                        <span class="fw-bold text-dark text-end" style="font-size: 0.8rem; width: 25%;" x-text="formatAngka(item.val)"></span>
+                                    </div>
+                                    
+                                    {{-- Penanda Khusus Tes Urine (Selalu Tampil Jika is_tu true) --}}
+                                    <template x-if="item.is_tu">
+                                        <div class="mt-1 ps-2 ms-1 border-start border-3 border-danger rounded-end bg-danger bg-opacity-10 p-2">
+                                            <span class="d-block text-danger fw-bold mb-1" style="font-size: 0.75rem;">
+                                                <i class="bi bi-droplet-half me-1"></i>Kegiatan Tes Urine: <span x-text="formatAngka(item.tu_peserta)"></span> Peserta
+                                            </span>
+                                            <span class="badge bg-danger text-white shadow-sm w-100 text-start py-1" style="font-size: 0.7rem; white-space: normal;">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i> <span x-text="formatAngka(item.tu_positif)"></span> Terindikasi Positif Narkotika
+                                            </span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+
+                        {{-- Pemberdayaan Alternatif --}}
+                        <div class="mb-1">
+                            <div class="small fw-bold text-primary border-bottom pb-1 mb-2">Pemberdayaan Alternatif</div>
+                            <template x-for="(item, idx) in cards.orang.pa" :key="'pa-'+idx">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-secondary" style="font-size: 0.8rem; width: 75%; line-height: 1.2;" x-text="item.label"></span>
+                                    <span class="fw-bold text-dark text-end" style="font-size: 0.8rem; width: 25%;" x-text="formatAngka(item.val)"></span>
+                                </div>
+                            </template>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm h-100 bg-white border-start border-4 border-info rounded-3 overflow-hidden">
-                    <div class="card-header bg-white border-0 pt-4 pb-2 d-flex align-items-center gap-3">
-                        <div class="bg-info bg-opacity-10 text-info p-2 rounded-3"><i class="bi bi-geo-alt-fill fs-4 text-dark"></i></div>
+            {{-- KARTU 2: MEDIA --}}
+            <div class="col-xl-4">
+                <div class="card border-0 shadow-sm h-100 bg-white rounded-4 overflow-hidden d-flex flex-column" style="border-top: 4px solid #ffc107 !important;">
+                    <div class="card-header bg-white border-0 pt-3 pb-2 d-flex align-items-center gap-3">
+                        <div class="bg-warning bg-opacity-10 text-warning p-2 rounded-3 shadow-sm"><i class="bi bi-megaphone-fill fs-4 text-dark"></i></div>
                         <div>
-                            <h6 class="text-muted fw-bold mb-0">Kawasan Binaan</h6>
-                            <h3 class="fw-bold text-dark mb-0"><span x-text="formatAngka(cards.wilayah.total)">0</span> <span class="fs-6 text-muted fw-normal">Kawasan</span></h3>
+                            <h6 class="text-muted fw-bold mb-1 text-uppercase" style="letter-spacing: 0.5px; font-size: 0.7rem;">Publikasi Media</h6>
+                            <h3 class="fw-bold text-dark mb-0 lh-1"><span x-text="formatAngka(cards.media.total_freq)">0</span> <span class="fs-6 text-muted fw-normal">Tayangan</span></h3>
                         </div>
                     </div>
-                    <div class="card-body pt-0 d-flex flex-column justify-content-center">
-                        <template x-for="(val, label) in cards.wilayah.list">
-                            <div class="d-flex justify-content-between align-items-center border-bottom py-3">
-                                <span class="small fw-bold text-secondary" x-text="label"></span>
-                                <span class="h5 fw-bold text-info mb-0" x-text="formatAngka(val)"></span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- KARTU RINCIAN (MENAMPILKAN KEGIATAN & PESERTA) --}}
-        <div class="row g-3 mb-5">
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm h-100 bg-white border-top border-4 border-primary rounded-3">
-                    <div class="card-header bg-white border-0 pt-4 pb-3 d-flex align-items-center gap-3">
-                        <div class="bg-primary text-white p-2 rounded-3 shadow-sm"><i class="bi bi-diagram-3-fill fs-5"></i></div>
-                        <h5 class="fw-bold text-dark mb-0">Peran Serta Masyarakat</h5>
-                    </div>
-                    <div class="card-body pt-0 overflow-auto" style="max-height: 400px;">
-                        <template x-for="(cat, catName) in cards.psm_card" :key="catName">
-                            <div class="mb-4">
-                                <div class="d-flex justify-content-between align-items-center border-bottom border-primary border-opacity-25 pb-2 mb-2">
-                                    <span class="fw-bold text-primary" x-text="catName"></span>
-                                    <span class="badge bg-primary rounded-pill px-3 py-2" x-text="formatAngka(cat.kegiatan) + ' Kegiatan | ' + formatAngka(cat.peserta) + ' Orang'"></span>
+                    <div class="card-body p-3 pt-2 d-flex flex-column justify-content-start flex-grow-1">
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center bg-light border rounded-3 p-2 shadow-sm">
+                                <i class="bi bi-stopwatch text-warning fs-4 me-3 ms-2"></i>
+                                <div>
+                                    <span class="d-block small text-muted fw-bold mb-0">Total Durasi Penayangan</span>
+                                    <h5 class="mb-0 fw-bold text-dark"><span x-text="formatAngka(cards.media.total_durasi)"></span> <span class="fs-6 text-muted fw-normal">Hari</span></h5>
                                 </div>
-                                <ul class="list-unstyled mb-0 ms-2 ps-3 border-start border-light border-2">
-                                    <template x-for="(det, i) in cat.detail" :key="i">
-                                        <li class="d-flex justify-content-between align-items-start mb-3 pb-2" :class="i !== cat.detail.length - 1 ? 'border-bottom border-light' : ''">
-                                            <span class="small text-secondary" style="width: 55%; line-height: 1.3;" x-text="det.nama"></span>
-                                            <div class="text-end" style="width: 45%">
-                                                <span class="fw-bold text-dark small" x-text="formatAngka(det.kegiatan) + ' Kegiatan | ' + formatAngka(det.peserta) + ' Orang'"></span>
-                                                <template x-if="det.is_tes_urine && det.positif > 0">
-                                                    <div class="mt-1"><span class="badge bg-danger bg-opacity-10 text-danger border border-danger shadow-sm"><i class="bi bi-exclamation-circle-fill me-1"></i> Ditemukan <span x-text="det.positif"></span> Orang Positif</span></div>
-                                                </template>
-                                            </div>
-                                        </li>
-                                    </template>
-                                </ul>
                             </div>
-                        </template>
-                        <template x-if="Object.keys(cards.psm_card || {}).length === 0">
-                            <div class="text-center text-muted py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>Belum ada data kegiatan.</div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="card border-0 shadow-sm h-100 bg-white border-top border-4 border-success rounded-3">
-                    <div class="card-header bg-white border-0 pt-4 pb-3 d-flex align-items-center gap-3">
-                        <div class="bg-success text-white p-2 rounded-3 shadow-sm"><i class="bi bi-briefcase-fill fs-5"></i></div>
-                        <h5 class="fw-bold text-dark mb-0">Pemberdayaan Alternatif</h5>
-                    </div>
-                    <div class="card-body pt-0 overflow-auto" style="max-height: 400px;">
-                        <template x-for="(sub, subName) in cards.pa_card" :key="subName">
-                            <div class="mb-4">
-                                <div class="d-flex justify-content-between align-items-center border-bottom border-success border-opacity-25 pb-2 mb-2">
-                                    <span class="fw-bold text-success" x-text="subName"></span>
-                                    <span class="badge bg-success rounded-pill px-3 py-2" x-text="formatAngka(sub.kegiatan) + ' Kegiatan | ' + formatAngka(sub.peserta) + ' Orang'"></span>
+                        </div>
+                        <div class="mt-1">
+                            <template x-for="(item, idx) in cards.media.list" :key="'media-'+idx">
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                                    <span class="fw-bold text-secondary" style="font-size: 0.85rem;" x-text="item.label"></span>
+                                    <div class="text-end text-dark">
+                                        <span class="fw-bold d-block" style="font-size: 0.85rem;" x-text="formatAngka(item.freq) + ' Tayang'"></span> 
+                                        <span class="badge bg-light text-muted border mt-1" style="font-size: 0.7rem;" x-text="formatAngka(item.durasi) + ' Hari'"></span>
+                                    </div>
                                 </div>
-                                <ul class="list-unstyled mb-0 ms-2 ps-3 border-start border-light border-2">
-                                    <template x-for="(det, j) in sub.detail" :key="j">
-                                        <li class="d-flex justify-content-between align-items-start mb-3 pb-2" :class="j !== sub.detail.length - 1 ? 'border-bottom border-light' : ''">
-                                            <span class="small text-secondary" style="width: 55%; line-height: 1.3;" x-text="det.nama"></span>
-                                            <span class="fw-bold text-dark small" style="width: 45%; text-align: right;" x-text="formatAngka(det.kegiatan) + ' Kegiatan | ' + formatAngka(det.peserta) + ' Orang'"></span>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
-                        </template>
-                        <template x-if="Object.keys(cards.pa_card || {}).length === 0">
-                            <div class="text-center text-muted py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>Belum ada data kegiatan.</div>
-                        </template>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- KARTU 3: KAWASAN BERSINAR --}}
+            <div class="col-xl-4">
+                <div class="card border-0 shadow-sm h-100 bg-white rounded-4 overflow-hidden d-flex flex-column" style="border-top: 4px solid #0dcaf0 !important;">
+                    <div class="card-header bg-white border-0 pt-3 pb-2 d-flex align-items-center gap-3">
+                        <div class="bg-info bg-opacity-10 text-info p-2 rounded-3 shadow-sm"><i class="bi bi-geo-alt-fill fs-4 text-dark"></i></div>
+                        <div>
+                            <h6 class="text-muted fw-bold mb-1 text-uppercase" style="letter-spacing: 0.5px; font-size: 0.7rem;">Ketahanan Kawasan</h6>
+                            <h3 class="fw-bold text-dark mb-0 lh-1"><span x-text="formatAngka(cards.wilayah.total)">0</span> <span class="fs-6 text-muted fw-normal">Kawasan</span></h3>
+                        </div>
+                    </div>
+                    <div class="card-body p-3 pt-2 d-flex flex-column justify-content-center align-items-center flex-grow-1 position-relative">
+                        <i class="bi bi-houses-fill text-light" style="font-size: 7rem; position: absolute; z-index: 0; opacity: 0.3;"></i>
+                        <div style="z-index: 1;" class="text-center mt-3">
+                            <h5 class="fw-bold text-info mb-2">Desa Bersinar</h5>
+                            <p class="text-muted small px-3" style="font-size: 0.85rem;">Total pencanangan dan intervensi Desa / Kelurahan Bersinar pada wilayah kerja.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- RANKING CHART --}}
-        <div class="card border-0 shadow-sm mb-5 bg-white rounded-3">
-            <div class="card-body p-4">
-                <div x-ref="rankingChart" style="min-height: 400px;"></div>
+        {{-- ========================================================== --}}
+        {{-- RANKING CHART AGREGAT (KEGIATAN) --}}
+        {{-- ========================================================== --}}
+        <div class="card border-0 shadow-sm mb-5 bg-white rounded-4">
+            <div class="card-header bg-white border-0 pt-4 pb-0 px-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                <h5 class="fw-bold text-dark mb-0 d-flex align-items-center">
+                    <i class="bi bi-bar-chart-line-fill text-primary me-2 fs-5"></i> Ranking Agregat Program P2M
+                </h5>
+                <div class="bg-primary bg-opacity-10 px-3 py-2 rounded-pill border border-primary border-opacity-25 shadow-sm">
+                    <span class="text-primary fw-bold small">Total Keseluruhan: <span class="fs-6 ms-1" x-text="formatAngka(cards.kegiatan.total)"></span> Kegiatan</span>
+                </div>
+            </div>
+            <div class="card-body p-4 pt-1">
+                <div x-ref="rankingChart" style="min-height: 320px;"></div>
             </div>
         </div>
 
+        {{-- ========================================================== --}}
         {{-- PUSAT ANALISIS KINERJA DETAIL --}}
-        <div class="bg-white p-4 rounded-4 shadow-sm mb-4 border">
+        {{-- ========================================================== --}}
+        <div class="bg-white p-4 rounded-4 shadow-sm mb-4 border border-light">
             <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-4">
                 <div>
                     <h5 class="m-0 fw-bold text-dark"><i class="bi bi-display me-2 text-primary"></i>Analisis Kinerja Detail</h5>
@@ -205,7 +193,6 @@
                 </div>
                 
                 <div class="d-flex flex-wrap gap-3 align-items-center">
-                    {{-- Filter Pilihan Kegiatan --}}
                     <div class="d-flex align-items-center bg-light rounded-3 px-3 py-1 border border-secondary border-opacity-25">
                         <span class="text-muted small fw-bold me-2">Pilih Program:</span>
                         <select x-model="detailType" class="form-select border-0 bg-transparent fw-bold text-dark shadow-none cursor-pointer pe-4" style="min-width: 250px; outline: none;">
@@ -224,7 +211,6 @@
                         </select>
                     </div>
 
-                    {{-- FILTER BULAN --}}
                     <div class="d-flex align-items-center bg-white rounded-3 px-3 py-1 border border-primary border-opacity-50">
                         <i class="bi bi-funnel-fill text-primary me-2"></i>
                         <select x-model="filterMonth" class="form-select border-0 bg-transparent fw-bold text-primary shadow-none cursor-pointer pe-4" style="min-width: 180px; outline: none;">
@@ -292,7 +278,7 @@
                     <div class="px-4 pt-2 pb-3 d-flex justify-content-center border-bottom border-light">
                         <div class="d-inline-flex overflow-auto max-w-100 gap-2 custom-scrollbar pb-2" style="white-space: nowrap;">
                             <button @click="compToggle = 'all'" :class="compToggle === 'all' ? 'btn-dark' : 'btn-outline-dark bg-white'" class="btn btn-sm rounded-pill px-4 fw-bold shadow-sm">Semua Proporsi (Gabungan)</button>
-                            <template x-for="opt in (rawData?.comp[tabComp]?.options || [])">
+                            <template x-for="(opt, idx) in (rawData?.comp[tabComp]?.options || [])" :key="'opt-'+idx">
                                 <button @click="compToggle = opt.id" :class="compToggle === opt.id ? 'btn-primary' : 'btn-outline-primary bg-white'" class="btn btn-sm rounded-pill px-4 fw-bold shadow-sm" x-text="opt.label"></button>
                             </template>
                         </div>
@@ -307,7 +293,6 @@
             {{-- Grafik Rincian Spesifik (Drill-Down Multi-Level) --}}
             <div class="col-12" x-show="detailType === 'peran_serta_masyarakat' || detailType === 'pemberdayaan'">
                 <div class="card border-0 shadow-sm bg-white rounded-4">
-                    
                     <div class="card-header bg-transparent border-0 pt-4 pb-3 d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
                         
                         {{-- BREADCRUMB HIERARKI MULTI-LEVEL --}}
@@ -339,7 +324,6 @@
 
                         <div class="d-flex flex-column align-items-lg-end gap-2 mt-2 mt-lg-0">
                             <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-                                {{-- TOGGLE HEATMAP/BAR KHUSUS PER BULAN LEVEL 3 --}}
                                 <template x-if="filterMonth === 'per_bulan' && drilldownLevel === 3">
                                     <div class="d-flex align-items-center bg-light rounded-pill px-3 py-1 border border-secondary border-opacity-25 shadow-sm">
                                         <i class="bi bi-eye text-muted me-2"></i>
@@ -393,13 +377,12 @@
             globalYear: '{{ max($years) }}', 
             filterMonth: 'all',
             
+            // Struktur Data Awal harus Array Object agar tidak bentrok
             cards: { 
                 kegiatan: { total: 0 }, 
-                orang: { total: 0, list: {} }, 
-                media: { total_freq: 0, total_durasi: 0, list: {} }, 
-                wilayah: { total: 0, list: {} },
-                psm_card: {},
-                pa_card: {}
+                orang: { total: 0, edukasi: [], psm: [], pa: [] }, 
+                media: { total_freq: 0, total_durasi: 0, list: [] }, 
+                wilayah: { total: 0 }
             },
             
             detailType: 'informasi_edukasi', 
@@ -424,7 +407,9 @@
             
             chartInst: { rank: null, trend: null, comp: [], detail: null },
             
-            getColors() { return ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#0dcaf0', '#e83e8c', '#20c997', '#ffc107', '#dc3545']; },
+            getColors() { 
+                return ['#0d6efd', '#198754', '#fd7e14', '#6f42c1', '#0dcaf0', '#e83e8c', '#20c997', '#ffc107', '#dc3545']; 
+            },
 
             init() {
                 this.fetchGlobal(); 
@@ -451,7 +436,9 @@
                 this.$watch('detailChartType', () => this.renderDetailChart());
             },
 
-            formatAngka(num) { return !num ? "0" : new Intl.NumberFormat('id-ID').format(num); },
+            formatAngka(num) { 
+                return !num ? "0" : new Intl.NumberFormat('id-ID').format(num); 
+            },
             
             get detailTypeName() { 
                 const types = { 
@@ -476,7 +463,10 @@
                 }
             },
             
-            get dynamicTrendMetric() { return this.tabTrend === 'kegiatan' ? 'Jumlah Kegiatan' : 'Jumlah Orang / Peserta'; },
+            get dynamicTrendMetric() { 
+                return this.tabTrend === 'kegiatan' ? 'Jumlah Kegiatan' : 'Jumlah Orang / Peserta'; 
+            },
+            
             get dynamicCompMetric() { 
                 const maps = { 'anggaran': 'Anggaran Pelaksanaan', 'sasaran': 'Sasaran Wilayah', 'kategori': 'Kategori Kegiatan', 'sub_kegiatan': 'Sub Kegiatan' };
                 return 'Berdasarkan ' + (maps[this.tabComp] || 'Kategori'); 
@@ -495,12 +485,17 @@
 
             fetchGlobal() { 
                 fetch(`{{ route('dashboard.p2m.api.global') }}?year=${this.globalYear}&satker_id=${this.globalSatkerId}`)
-                    .then(r => r.json()).then(res => { this.cards = res; this.renderRanking(res.ranking_chart); }); 
+                    .then(r => r.json())
+                    .then(res => { 
+                        this.cards = res; 
+                        this.renderRanking(res.ranking_chart); 
+                    }); 
             },
             
             fetchDetail() { 
                 fetch(`{{ route('dashboard.p2m.api.chart') }}?type=${this.detailType}&year=${this.globalYear}&month=${this.filterMonth}&satker_id=${this.globalSatkerId}`)
-                    .then(r => r.json()).then(res => { 
+                    .then(r => r.json())
+                    .then(res => { 
                         this.rawData = res; 
                         this.isMultiSatker = res.is_multi_satker; 
                         this.config = res.config; 
@@ -533,14 +528,24 @@
             },
 
             renderRanking(data) {
+                if(!data || !data.labels || data.labels.length === 0) return;
+
                 let opts = { 
                     series: [{ name: 'Total Kegiatan', data: data.data }], 
                     chart: { type: 'bar', height: 400, toolbar: { show: false }, fontFamily: 'inherit' }, 
-                    plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 6, borderRadiusApplication: 'end' } }, 
-                    xaxis: { categories: data.labels, labels: { formatter: v => Math.round(v) } }, 
-                    dataLabels: { enabled: true }, grid: { show: false }, 
-                    title: { text: `Ranking Agregat Program Utama P2M (Tahun ${this.globalYear})`, align: 'left', style: { fontSize: '15px', fontWeight: '500', color: '#495057' } } 
+                    plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 4 } }, 
+                    xaxis: { 
+                        categories: data.labels, 
+                        tickAmount: 2, 
+                        labels: { formatter: v => Math.round(v) } 
+                    }, 
+                    colors: this.getColors(),
+                    dataLabels: { enabled: true, formatter: v => new Intl.NumberFormat('id-ID').format(v) }, 
+                    grid: { show: true, xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } }, 
+                    tooltip: { y: { formatter: v => new Intl.NumberFormat('id-ID').format(v) + ' Kegiatan' } },
+                    legend: { show: false }
                 };
+                
                 if (this.chartInst.rank) this.chartInst.rank.destroy(); 
                 this.chartInst.rank = new ApexCharts(this.$refs.rankingChart, opts); 
                 this.chartInst.rank.render();
@@ -563,7 +568,8 @@
 
                 if (isHeatmap) {
                     opts.xaxis = { categories: this.rawData.trend_labels };
-                    opts.colors = ['#0d6efd']; opts.legend = { show: false };
+                    opts.colors = ['#0d6efd']; 
+                    opts.legend = { show: false };
                     opts.dataLabels = { enabled: true, formatter: (val) => val > 0 ? new Intl.NumberFormat('id-ID').format(val) : "", style: { colors: ['#212529'], fontSize: '13px' } };
                     opts.plotOptions = { heatmap: { shadeIntensity: 0.6, radius: 4, useFillColorAsStroke: false } };
                     opts.yaxis = { labels: { style: { fontWeight: 'bold' } } };
@@ -603,9 +609,6 @@
 
                 let colors = this.getColors();
 
-                // ======================================================================
-                // PERUBAHAN: KONSEP 2 (SMALL MULTIPLES / PANEL GRID PER SATKER)
-                // ======================================================================
                 if (isPerBulan && isMulti && this.compToggle === 'all') {
                     container.classList.remove('custom-scrollbar');
                     container.style.maxHeight = 'none'; 
@@ -614,7 +617,6 @@
                     let months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
                     let satkerNames = [];
                     
-                    // Kumpulkan semua nama Satker yang tersedia
                     compData.options.forEach(opt => {
                         (compData.detailed[opt.id] || []).forEach(s => { 
                             if (!satkerNames.includes(s.name)) satkerNames.push(s.name); 
@@ -622,7 +624,6 @@
                     });
                     satkerNames.sort();
 
-                    // Buat Global Legend (Keterangan Warna) yang bersih di bagian atas
                     let legendDiv = document.createElement('div');
                     legendDiv.className = 'd-flex flex-wrap justify-content-center gap-3 mb-4 pb-3 border-bottom border-light';
                     compData.options.forEach((opt, idx) => {
@@ -631,22 +632,18 @@
                     });
                     container.appendChild(legendDiv);
 
-                    // Buat Grid Row
                     let gridRow = document.createElement('div');
                     gridRow.className = 'row g-3';
                     container.appendChild(gridRow);
 
-                    // Render Grafik Masing-Masing Satker (Kotak Panel)
                     satkerNames.forEach(sName => {
                         let satkerSeries = [];
                         compData.options.forEach(opt => {
                             let match = (compData.detailed[opt.id] || []).find(s => s.name === sName);
-                            // Hindari rendering nilai 0 agar tooltip lebih bersih
                             let processedData = (match ? match.data : new Array(12).fill(0)).map(v => v > 0 ? v : null); 
                             satkerSeries.push({ name: opt.label, data: processedData });
                         });
 
-                        // Elemen UI Kotak Panel
                         let colDiv = document.createElement('div');
                         colDiv.className = 'col-md-6 col-xl-4';
                         
@@ -669,7 +666,6 @@
                         colDiv.appendChild(cardDiv);
                         gridRow.appendChild(colDiv);
 
-                        // Konfigurasi ApexCharts per Panel
                         let opts = {
                             series: satkerSeries,
                             chart: { type: 'bar', height: 280, stacked: true, toolbar: { show: false }, fontFamily: 'inherit' },
@@ -679,7 +675,7 @@
                             stroke: { show: true, width: 1, colors: ['#fff'] },
                             xaxis: { categories: months, labels: { style: { fontSize: '10px', fontWeight: 'bold' } } },
                             yaxis: { labels: { formatter: v => v ? Math.round(v) : '', style: { fontSize: '11px', fontWeight: 'bold' } } },
-                            legend: { show: false }, // Legenda per kotak dimatikan karena sudah ada Global Legend
+                            legend: { show: false }, 
                             tooltip: { 
                                 shared: true, intersect: false, 
                                 y: { formatter: v => v ? new Intl.NumberFormat('id-ID').format(v) + " Kegiatan" : '' } 
@@ -692,7 +688,6 @@
                     });
                 } 
                 else {
-                    // (Logika rendering selain "Per Bulan + Semua Satker" dibiarkan utuh)
                     container.classList.remove('custom-scrollbar');
                     container.style.maxHeight = 'none';
                     container.style.overflowY = 'visible';
@@ -725,8 +720,10 @@
 
                     let chartDiv = document.createElement('div'); container.appendChild(chartDiv);
                     let opts = { 
-                        series: dataSeries, chart: { type: chartType, height: 450, stacked: isStacked, toolbar: { show: true }, fontFamily: 'inherit' }, 
-                        colors: colors, title: { text: `${this.dynamicCompMetric} - ${this.detailTypeName} (${this.timeLabelText})`, align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500' } }, 
+                        series: dataSeries, 
+                        chart: { type: chartType, height: 450, stacked: isStacked, toolbar: { show: true }, fontFamily: 'inherit' }, 
+                        colors: colors, 
+                        title: { text: `${this.dynamicCompMetric} - ${this.detailTypeName} (${this.timeLabelText})`, align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500' } }, 
                     };
 
                     if (chartType === 'donut') {
@@ -749,9 +746,6 @@
                 }
             },
 
-            // ==========================================================
-            // --- FUNGSI CHART DRILL-DOWN (LEVEL 1-3) ---
-            // ==========================================================
             renderDetailChart() {
                 if (!this.$refs.chartDetail || this.tableData.length === 0) return;
                 
@@ -763,7 +757,6 @@
                 let categories = [];
                 let colors = this.getColors();
                 
-                // Konfigurasi dasar dengan Custom Tooltip cerdas (hilangkan 0 & hitung total)
                 let opts = {
                     chart: {
                         toolbar: { show: false },
@@ -789,8 +782,6 @@
                     },
                     dataLabels: { enabled: false },
                     legend: { position: 'top', horizontalAlign: 'left', fontWeight: 'bold' },
-                    
-                    // CUSTOM TOOLTIP GLOBAL: Mencegah bug ApexCharts Horizontal & Menjumlahkan nilai
                     tooltip: {
                         shared: true,
                         intersect: false,
@@ -799,7 +790,6 @@
                             let total = 0;
                             let hasData = false;
 
-                            // Cek jika ini chart didistribusikan (1 seri, banyak kategori, biasa di Level 3 Satker)
                             let isDistributed = w.config.plotOptions && w.config.plotOptions.bar && w.config.plotOptions.bar.distributed;
 
                             let html = '<div style="font-family: inherit; font-size: 13px; line-height: 1.5;">';
@@ -807,7 +797,6 @@
                             html += '<div style="padding: 8px 12px; display: flex; flex-direction: column; gap: 6px;">';
 
                             w.globals.seriesNames.forEach((name, i) => {
-                                // Ambil raw data dari config agar tidak termanipulasi oleh bug shared tooltip ApexCharts
                                 let rawDataArray = w.config.series[i].data;
                                 let val = rawDataArray ? rawDataArray[dataPointIndex] : null;
 
@@ -817,7 +806,7 @@
                                     
                                     let color = isDistributed ? w.globals.colors[dataPointIndex] : w.globals.colors[i];
                                     let isPos = name.includes('Positif');
-                                    let displayName = name.replace(' (Negatif/Aman)', ''); // Bersihkan teks berlebih
+                                    let displayName = name.replace(' (Negatif/Aman)', ''); 
                                     let suffix = isPeserta ? (isPos ? ' Orang Positif' : ' Orang') : ' Kegiatan';
 
                                     html += '<div style="display:flex; align-items:center; justify-content: space-between; gap: 20px;">';
@@ -838,7 +827,7 @@
 
                             html += '</div></div>';
 
-                            if (!hasData) return ''; // Jangan render tooltip jika tidak ada satupun yg nilainya > 0
+                            if (!hasData) return ''; 
                             return '<div style="background: #fff; border: 1px solid #e3e6f0; border-radius: 4px; box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);">' + html + '</div>';
                         }
                     }
@@ -846,9 +835,6 @@
 
                 let allSatkers = [...new Set(this.tableData.map(r => r.satker))].sort();
 
-                // ------------------------------------------------------------------
-                // LEVEL 1: HORIZONTAL STACKED BAR BERDASARKAN KATEGORI
-                // ------------------------------------------------------------------
                 if (this.drilldownLevel === 1) {
                     categories = [...new Set(this.tableData.map(r => r.kategori))];
                     
@@ -860,7 +846,7 @@
                                 sum += isPeserta ? r.peserta : r.frekuensi;
                                 hasData = true;
                             });
-                            return (hasData && sum > 0) ? sum : null; // Gunakan null agar tooltip mengabaikannya
+                            return (hasData && sum > 0) ? sum : null; 
                         });
                         return { name: s, data: data };
                     });
@@ -875,10 +861,6 @@
                     opts.yaxis = { labels: { style: { fontSize: '12px', fontWeight: '600' }, maxWidth: 400 } };
                     opts.stroke = { show: true, width: 1, colors: ['#fff'] };
                 } 
-                
-                // ------------------------------------------------------------------
-                // LEVEL 2: HORIZONTAL STACKED BAR BERDASARKAN NAMA KEGIATAN
-                // ------------------------------------------------------------------
                 else if (this.drilldownLevel === 2) {
                     let filteredData = this.tableData.filter(r => r.kategori === this.selectedKategori);
                     categories = [...new Set(filteredData.map(r => r.nama))];
@@ -891,7 +873,7 @@
                                 sum += isPeserta ? r.peserta : r.frekuensi;
                                 hasData = true;
                             });
-                            return (hasData && sum > 0) ? sum : null; // Gunakan null agar tdk masuk kalkulasi jika kosong
+                            return (hasData && sum > 0) ? sum : null;
                         });
                         return { name: s, data: data };
                     });
@@ -906,10 +888,6 @@
                     opts.yaxis = { labels: { style: { fontSize: '12px', fontWeight: '600' }, maxWidth: 400 } };
                     opts.stroke = { show: true, width: 1, colors: ['#fff'] };
                 } 
-                
-                // ------------------------------------------------------------------
-                // LEVEL 3: RINCIAN SPESIFIK SATKER (TREN BULANAN atau BAR BIASA)
-                // ------------------------------------------------------------------
                 else if (this.drilldownLevel === 3) {
                     let filteredData = this.tableData.filter(r => r.kategori === this.selectedKategori && r.nama === this.selectedKegiatan);
                     let showPositif = isPeserta && this.selectedKegiatan.toLowerCase().includes('tes urine');
@@ -918,11 +896,9 @@
                         let isHeatmap = this.detailChartType === 'heatmap';
                         categories = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
                         
-                        // OPSI 2: STACKED BAR DENGAN LEGEND BERSIH & BEBAS ANGKA 0
                         if (showPositif && !isHeatmap) {
                             series = [];
                             let dynamicColors = [];
-                            let legendNames = []; 
 
                             let customLegendLabels = allSatkers.slice();
                             customLegendLabels.push('Indikasi Positif');
@@ -962,7 +938,6 @@
                             opts.colors = dynamicColors;
                             opts.chart.stacked = true;
                             
-                            // PAKSA LEGEND HANYA TAMPILKAN NAMA SATKER + 1 KOTAK MERAH
                             opts.legend = {
                                 position: 'top',
                                 horizontalAlign: 'left',
@@ -972,7 +947,6 @@
                             };
 
                         } else {
-                            // Tampilan Standar (Atau Heatmap)
                             series = allSatkers.map(s => {
                                 let data = new Array(12).fill(null);
                                 filteredData.filter(r => r.satker === s).forEach(r => {
@@ -1003,7 +977,6 @@
                             opts.legend = { show: false };
                             opts.chart.height = Math.max(400, (allSatkers.length || 1) * 55);
                             
-                            // Matikan Custom Tooltip khusus Heatmap
                             opts.tooltip = {
                                 shared: false,
                                 y: { formatter: v => v ? new Intl.NumberFormat('id-ID').format(v) : '' }
@@ -1017,7 +990,6 @@
                             opts.yaxis = { labels: { formatter: v => Math.round(v), style: { fontWeight: 'bold' } } };
                         }
                     } else {
-                        // Horizontal Bar (Bukan Per Bulan)
                         categories = [...new Set(filteredData.map(r => r.satker))];
                         
                         if (showPositif) {
@@ -1031,6 +1003,7 @@
                                 });
                                 return (hasData && sum > 0) ? sum : null;
                             });
+                            
                             let sPositif = categories.map(s => {
                                 let sum = 0;
                                 let hasData = false;
@@ -1056,6 +1029,7 @@
                                 });
                                 return (hasData && sum > 0) ? sum : null;
                             });
+                            
                             opts.series = [{ name: isPeserta ? 'Peserta' : 'Kegiatan', data: s1 }];
                             opts.colors = colors;
                             opts.chart.stacked = false;
@@ -1079,7 +1053,6 @@
 </script>
 
 <style>
-    /* Styling untuk custom scrollbar yang elegan */
     .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }

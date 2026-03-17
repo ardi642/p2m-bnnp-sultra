@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use App\Traits\HasDokumentasi;
+use App\Traits\HasDokumen;
 
 class P2mNonElektronik extends Model
 {
-    use HasFactory, HasDokumentasi;
+    use HasFactory, HasDokumen;
 
     protected $table = 'p2m_non_elektronik';
 
@@ -27,6 +27,14 @@ class P2mNonElektronik extends Model
             'Media Luar Ruang' => 'Media Luar Ruang (Baliho, Spanduk, Umbul-umbul)',
             'Branding Sarana Publik' => 'Branding Sarana Publik'
         ];
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::deleting(function ($kegiatan) {
+            $kegiatan->dokumen()->delete(); 
+        });
     }
 
     public function satuanKerja(): BelongsTo

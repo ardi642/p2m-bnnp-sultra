@@ -57,7 +57,8 @@ class UngkapKasusExport implements FromCollection, WithHeadings, WithMapping, Wi
             ->select('berantas_ungkap_tersangka.*')
             ->orderBy('berantas_ungkap_kasus.tanggal_kejadian', 'asc')
             ->orderBy('berantas_ungkap_kasus.nomor_lkn', 'asc')
-            ->orderBy('berantas_ungkap_tersangka.urutan', 'asc')
+            // Kolom 'urutan' sudah dihapus, jadi kita ganti urutannya berdasarkan 'id' tersangka saja
+            ->orderBy('berantas_ungkap_tersangka.id', 'asc') 
             ->get();
 
         $this->cachedData = $data;

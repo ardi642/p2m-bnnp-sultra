@@ -66,14 +66,14 @@
                                 <div class="col-12 col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text bg-light text-secondary small">Lat</span>
-                                        <input type="number" name="latitude" x-model="lat" class="form-control @error('latitude') is-invalid @enderror" placeholder="-4.xxxx" @input="updateMarker">
+                                        <input type="number" name="latitude" x-model="lat" class="form-control @error('latitude') is-invalid @enderror" placeholder="-4.xxxx" @input="updateMarker" step="any">
                                     </div>
                                     @error('latitude') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                 </div>
                                 <div class="col-12 col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text bg-light text-secondary small">Lng</span>
-                                        <input type="number" name="longitude" x-model="lng" class="form-control @error('longitude') is-invalid @enderror" placeholder="122.xxxx" @input="updateMarker">
+                                        <input type="number" name="longitude" x-model="lng" class="form-control @error('longitude') is-invalid @enderror" placeholder="122.xxxx" @input="updateMarker" step="any">
                                     </div>
                                     @error('longitude') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                                 </div>

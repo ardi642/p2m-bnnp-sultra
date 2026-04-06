@@ -166,7 +166,7 @@
             <div class="col-lg-7 d-none d-lg-flex left-side">
                 <div class="brand-content">
                     <img src="{{ asset("assets/logo-bnn.png") }}" alt="Logo BNN" class="logo-img">
-                    <div class="app-title">NAMA APLIKASINYA</div>
+                    <div class="app-title">SIPANTAU SULTRA</div>
                     <div class="app-desc">Sistem Informasi Pelaporan Terintegrasi</div>
                     <div class="separator"></div>
                     <div class="instansi-text">BNN PROVINSI</div>
@@ -179,7 +179,7 @@
                 {{-- MOBILE BRANDING --}}
                 <div class="mobile-branding">
                     <img src="{{ asset("assets/logo-bnn.png") }}" alt="Logo" class="mobile-logo">
-                    <div class="mobile-app-name">NAMA APLIKASINYA</div>
+                    <div class="mobile-app-name">SIPANTAU SULTRA</div>
                     <div class="mobile-app-desc">Sistem Informasi Pelaporan Terintegrasi</div>
                 </div>
 

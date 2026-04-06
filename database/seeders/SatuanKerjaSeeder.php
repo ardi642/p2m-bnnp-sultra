@@ -11,10 +11,10 @@ class SatuanKerjaSeeder extends Seeder
     {
         $satkerList = [
             'BNNP Sultra',
+            'BNNK Kendari',
             'BNNK Kolaka',
             'BNNK Muna',
-            'BNNK Baubau',
-            'BNNK Kendari',
+            'BNNK Bau-bau',
             'BNNK Konawe',
         ];
 

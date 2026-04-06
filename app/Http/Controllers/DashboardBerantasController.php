@@ -38,7 +38,7 @@ class DashboardBerantasController extends Controller
 
         $showTabs = in_array($user->role, ['admin', 'admin_satker', 'operator_satker']);
         $satkers = ($user->role === 'admin') 
-            ? SatuanKerja::orderBy('satuan_kerja', 'asc')->get() 
+            ? SatuanKerja::orderBy('id', 'asc')->get() 
             : [];
 
         return view('dashboard.berantas.index', compact('years', 'showTabs', 'satkers', 'narkotikas'));
@@ -374,7 +374,7 @@ class DashboardBerantasController extends Controller
         $isPerTriwulan = ($f['time'] === 'per_triwulan');
         $isTrend = $isPerBulan || $isPerTriwulan;
         $len = $isPerTriwulan ? 4 : 12;
-        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
+        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('id', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
         
         $trendLabels = [];
         if ($isPerBulan) {
@@ -486,7 +486,7 @@ class DashboardBerantasController extends Controller
         $isPerTriwulan = ($f['time'] === 'per_triwulan');
         $isTrend = $isPerBulan || $isPerTriwulan;
         $len = $isPerTriwulan ? 4 : 12;
-        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
+        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('id', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
         
         $trendLabels = [];
         if ($isPerBulan) {
@@ -604,7 +604,7 @@ class DashboardBerantasController extends Controller
         $isPerTriwulan = ($f['time'] === 'per_triwulan');
         $isTrend = $isPerBulan || $isPerTriwulan;
         $len = $isPerTriwulan ? 4 : 12;
-        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
+        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('id', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
         
         $trendLabels = [];
         if ($isPerBulan) {

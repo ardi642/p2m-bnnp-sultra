@@ -46,7 +46,7 @@ class DashboardP2MController extends Controller
 
         $years = range($currentYear, $minYear);
         $showTabs = in_array($user->role, ['admin', 'admin_satker', 'operator_satker']);
-        $satkers = ($user->role === 'admin') ? SatuanKerja::orderBy('satuan_kerja', 'asc')->get() : [];
+        $satkers = ($user->role === 'admin') ? SatuanKerja::orderBy('id', 'asc')->get() : [];
 
         return view('dashboard.p2m.index', compact('years', 'showTabs', 'satkers'));
     }
@@ -254,7 +254,7 @@ class DashboardP2MController extends Controller
             $timePoints  = range(1, 12);
 
             if ($isMultiSatker) {
-                $satkers = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+                $satkers = SatuanKerja::orderBy('id', 'asc')->get();
                 foreach ($satkers as $satker) {
                     $dataGiat = []; 
                     $dataPeserta = []; 
@@ -298,7 +298,7 @@ class DashboardP2MController extends Controller
             $labelTime = $month === 'all' ? 'Total Akumulasi' : 'Bulan ' . $monthNames[(int)$month];
             
             if ($isMultiSatker) {
-                $satkers = SatuanKerja::orderBy('satuan_kerja', 'asc')->get();
+                $satkers = SatuanKerja::orderBy('id', 'asc')->get();
                 $trendLabels = $satkers->pluck('satuan_kerja')->toArray();
                 
                 $dataGiat = []; 
@@ -430,7 +430,7 @@ class DashboardP2MController extends Controller
             }
 
         } else {
-            $compLabels = $isMultiSatker ? array_values(SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja')->toArray()) : [$mySatkerName];
+            $compLabels = $isMultiSatker ? array_values(SatuanKerja::orderBy('id', 'asc')->pluck('satuan_kerja')->toArray()) : [$mySatkerName];
             $labelIndexes = array_flip($compLabels);
 
             foreach (['anggaran', 'sasaran', 'kategori', 'sub_kegiatan'] as $catKey) {

@@ -37,7 +37,7 @@ class DashboardRehabController extends Controller
         $years = range($currentYear, $minYear);
 
         $showTabs = in_array($user->role, ['admin', 'admin_satker', 'operator_satker']);
-        $satkers = ($user->role === 'admin') ? SatuanKerja::orderBy('satuan_kerja', 'asc')->get() : [];
+        $satkers = ($user->role === 'admin') ? SatuanKerja::orderBy('id', 'asc')->get() : [];
 
         return view('dashboard.rehab.index', compact('years', 'showTabs', 'satkers'));
     }
@@ -131,7 +131,7 @@ class DashboardRehabController extends Controller
         $f = $this->parseFilter($request);
         $year = $f['year'];
         $mode = $request->input('trend_mode', 'per_bulan'); 
-        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
+        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('id', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
 
         // 1. Query Total Kunjungan
         $kunjunganQ = DB::table('rehab_riwayat')
@@ -210,7 +210,7 @@ class DashboardRehabController extends Controller
         $f = $this->parseFilter($request);
         $isPerBulan = ($f['time'] === 'per_bulan');
         $isPerTriwulan = ($f['time'] === 'per_triwulan');
-        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
+        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('id', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
         
         $trendLabels = [];
         if ($isPerBulan) {
@@ -329,7 +329,7 @@ class DashboardRehabController extends Controller
 
     public function getChartDemografi(Request $request) {
         $f = $this->parseFilter($request);
-        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('satuan_kerja', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
+        $satkerMap = $f['isMulti'] ? SatuanKerja::orderBy('id', 'asc')->pluck('satuan_kerja', 'id')->toArray() : [$f['mySatker'] => 'Satuan Kerja'];
         
         if ($f['mode_hitung'] === 'unik') {
             $sub = DB::table('rehab_riwayat')->select('rehab_pasien_id', DB::raw('MAX(id) as max_id'));

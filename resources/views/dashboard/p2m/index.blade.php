@@ -622,7 +622,7 @@
                             if (!satkerNames.includes(s.name)) satkerNames.push(s.name); 
                         });
                     });
-                    satkerNames.sort();
+                    // satkerNames.sort();
 
                     let legendDiv = document.createElement('div');
                     legendDiv.className = 'd-flex flex-wrap justify-content-center gap-3 mb-4 pb-3 border-bottom border-light';
@@ -833,7 +833,7 @@
                     }
                 };
 
-                let allSatkers = [...new Set(this.tableData.map(r => r.satker))].sort();
+                let allSatkers = [...new Set(this.tableData.map(r => r.satker))];
 
                 if (this.drilldownLevel === 1) {
                     categories = [...new Set(this.tableData.map(r => r.kategori))];

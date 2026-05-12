@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIPANTAU SULTRA</title>
+    <title>SIPANTAU</title>
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/filepond.js'])
     @stack('styles')
 </head>

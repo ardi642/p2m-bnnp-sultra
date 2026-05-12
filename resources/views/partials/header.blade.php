@@ -11,10 +11,10 @@
                 
                 <div class="d-flex flex-column justify-content-center">
                     <span class="fw-bold text-primary h5 mb-0" style="line-height: 1; font-weight: 800 !important; white-space: nowrap;">
-                        SIPANTAU SULTRA
+                        SIPANTAU
                     </span>
                     <span class="text-secondary fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">
-                        SISTEM PELAPORAN TERINTEGRASI
+                        Sistem Informasi Pelaporan dan<br> Pemantauan P4GN Sulawesi Tenggara
                     </span>
                 </div>
             </div>

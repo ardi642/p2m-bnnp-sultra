@@ -399,7 +399,16 @@
                 });
                 this.detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
                 this.regionModal = new bootstrap.Modal(document.getElementById('regionModal'));
-                this.initMap();
+                
+                // PERBAIKAN: Cek apakah L (Leaflet) sudah tersedia.
+                // Jika belum, tunggu sampai window selesai meload semua script CDN.
+                if (typeof window.L === 'undefined') {
+                    window.addEventListener('load', () => {
+                        this.initMap();
+                    });
+                } else {
+                    this.initMap();
+                }
             },
 
             initMap() {

@@ -60,9 +60,9 @@
                     ['route' => 'berantas.narkotika.index', 'label' => 'Data Narkotika', 'url' => 'berantas/narkotika*'],
                     ['route' => 'berantas.tat.index', 'label' => 'Tim Asesmen (TAT)', 'url' => 'berantas/tat*'],
                     ['route' => 'berantas.ungkap-kasus.index', 'label' => 'Ungkap Kasus', 'url' => 'berantas/ungkap-kasus*'],
-                    ['route' => 'berantas.peta-ungkap-kasus.index', 'label' => 'Pemetaan Ungkap Kasus', 'url' => 'berantas/peta-ungkap-kasus*'],
+                    // ['route' => 'berantas.peta-ungkap-kasus.index', 'label' => 'Pemetaan Ungkap Kasus', 'url' => 'berantas/peta-ungkap-kasus*'],
                     ['route' => 'berantas.register-barang-bukti.index', 'label' => 'Barang Bukti', 'url' => 'berantas/register-barang-bukti*'],
-                    ['route' => 'berantas.peta-sebaran-bb.index', 'label' => 'Pemetaan Barang Bukti', 'url' => 'berantas/peta-sebaran-bb*'],
+                    // ['route' => 'berantas.peta-sebaran-bb.index', 'label' => 'Pemetaan Barang Bukti', 'url' => 'berantas/peta-sebaran-bb*'],
                 ] as $menu)
                     <a href="{{ route($menu['route']) }}" class="nav-link {{ Request::is($menu['url']) ? 'active' : '' }}">
                         {{ $menu['label'] }}

@@ -242,11 +242,13 @@ class TesUrineController extends Controller
 
             // SIMPAN PANITIA (PIVOT)
             $listPegawai = Pegawai::whereIn('nip', $pegawaiNips)->get();
-            $attachData = [];
+
             foreach ($listPegawai as $pgw) {
-                $attachData[$pgw->nip] = ['saved_satuan_kerja_id' => $pgw->satuan_kerja_id];
+                // Attach satu per satu. NIP tetap murni String.
+                $kegiatan->pegawai()->attach($pgw->nip, [
+                    'saved_satuan_kerja_id' => $pgw->satuan_kerja_id
+                ]);
             }
-            $kegiatan->pegawai()->attach($attachData);
 
             if ($request->filled('dokumentasi')) {
                 $dokumenService->moveToPermanent($request->input('dokumentasi'), $kegiatan, 'dokumentasi', $uploadedPaths);
@@ -360,17 +362,18 @@ class TesUrineController extends Controller
             // SYNC PEGAWAI (HISTORY PRESERVATION)
             $oldPivotData = DB::table('pegawai_p2m_tes_urine')->where('p2m_tes_urine_id', $id)->get()->keyBy('pegawai_nip');
             $masterPegawais = Pegawai::whereIn('nip', $pegawaiNips)->get()->keyBy('nip');
-            $syncData = [];
-
+            
+            $kegiatan->pegawai()->detach();
             foreach ($pegawaiNips as $nip) {
                 if (isset($oldPivotData[$nip]) && $oldPivotData[$nip]->saved_satuan_kerja_id) {
                     $satkerToSave = $oldPivotData[$nip]->saved_satuan_kerja_id; 
                 } else {
                     $satkerToSave = $masterPegawais[$nip]->satuan_kerja_id ?? null;
                 }
-                $syncData[$nip] = ['saved_satuan_kerja_id' => $satkerToSave];
+                $kegiatan->pegawai()->attach($nip, [
+                    'saved_satuan_kerja_id' => $satkerToSave
+                ]);
             }
-            $kegiatan->pegawai()->sync($syncData);
 
             // Hapus Dokumen Lama (File atau Link)
             if ($request->has('delete_files')) {

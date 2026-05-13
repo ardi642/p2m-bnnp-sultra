@@ -235,11 +235,13 @@ class InformasiEdukasiController extends Controller
             $kegiatan = P2mInformasiEdukasi::create($dataKegiatan);
 
             $listPegawai = Pegawai::whereIn('nip', $validasi['pegawai_nips'])->get();
-            $attachData = [];
+            
             foreach ($listPegawai as $pgw) {
-                $attachData[$pgw->nip] = ['saved_satuan_kerja_id' => $pgw->satuan_kerja_id];
+                // Attach satu per satu. NIP tetap murni String.
+                $kegiatan->pegawai()->attach($pgw->nip, [
+                    'saved_satuan_kerja_id' => $pgw->satuan_kerja_id
+                ]);
             }
-            $kegiatan->pegawai()->attach($attachData);
 
             if ($request->filled('dokumentasi')) {
                 $dokumenService->moveToPermanent($request->input('dokumentasi'), $kegiatan, 'dokumentasi', $uploadedPaths);
@@ -342,12 +344,14 @@ class InformasiEdukasiController extends Controller
             // Sync Pegawai (Table Pivot Baru)
             $oldPivotData = DB::table('pegawai_p2m_informasi_edukasi')->where('p2m_informasi_edukasi_id', $id)->get()->keyBy('pegawai_nip');
             $masterPegawais = Pegawai::whereIn('nip', $validasi['pegawai_nips'])->get()->keyBy('nip');
-            $syncData = [];
+
+            $kegiatan->pegawai()->detach();
             foreach ($validasi['pegawai_nips'] as $nip) {
                 $satkerToSave = (isset($oldPivotData[$nip]) && $oldPivotData[$nip]->saved_satuan_kerja_id) ? $oldPivotData[$nip]->saved_satuan_kerja_id : ($masterPegawais[$nip]->satuan_kerja_id ?? null);
-                $syncData[$nip] = ['saved_satuan_kerja_id' => $satkerToSave];
+                $kegiatan->pegawai()->attach($nip, [
+                    'saved_satuan_kerja_id' => $satkerToSave
+                ]);
             }
-            $kegiatan->pegawai()->sync($syncData);
 
             if ($request->has('delete_files')) {
                 $filesToRemove = Dokumen::whereIn('id', $request->delete_files)->get();

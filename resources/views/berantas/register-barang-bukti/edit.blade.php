@@ -193,7 +193,7 @@
                                             <div class="text-danger small mt-1" x-show="hasError('items', i, 'narkotika_id')" x-text="getErrorMessage('items', i, 'narkotika_id')"></div>
                                         </div>
                                         <div x-show="item.kategori === 'Non-Narkotika'" style="display: none;">
-                                            <input type="text" :name="`items[${i}][nama_barang_non_narkotika]`" x-model="item.nama_barang_non_narkotika" class="form-control" :class="{'is-invalid': hasError('items', i, 'nama_barang_non_narkotika')}" placeholder="Contoh: Handphone...">
+                                            <input type="text" :name="`items[${i}][nama_barang_non_narkotika]`" x-model="item.nama_barang_non_narkotika" class="form-control" :class="{'is-invalid': hasError('items', i, 'nama_barang_non_narkotika')}" placeholder="Masukkan Barang Bukti">
                                             <div class="invalid-feedback" x-text="getErrorMessage('items', i, 'nama_barang_non_narkotika')"></div>
                                         </div>
                                     </div>
@@ -235,7 +235,7 @@
                                             <div class="invalid-feedback" x-text="getErrorMessage('items', i, 'satuan_narkotika')"></div>
                                         </div>
                                         <div x-show="item.kategori === 'Non-Narkotika'" style="display: none;">
-                                            <input type="text" :name="`items[${i}][satuan_non_narkotika]`" x-model="item.satuan_non_narkotika" class="form-control" :class="{'is-invalid': hasError('items', i, 'satuan_non_narkotika')}" placeholder="Pcs/Unit/Buah">
+                                            <input type="text" :name="`items[${i}][satuan_non_narkotika]`" x-model="item.satuan_non_narkotika" class="form-control" :class="{'is-invalid': hasError('items', i, 'satuan_non_narkotika')}" placeholder="Masukkan Satuan">
                                             <div class="invalid-feedback" x-text="getErrorMessage('items', i, 'satuan_non_narkotika')"></div>
                                         </div>
                                     </div>

@@ -189,7 +189,7 @@
 
                                             <div class="col-md-6">
                                                 <label class="form-label fs-10px fw-bold text-secondary text-uppercase mb-1">Tahap Kasus</label>
-                                                <input type="text" :name="`tersangka[${idx}][tahap]`" x-model="tsk.tahap" class="form-control form-control-sm" :class="{'is-invalid': hasError('tersangka', idx, 'tahap')}" placeholder="Lidik / Sidik">
+                                                <input type="text" :name="`tersangka[${idx}][tahap]`" x-model="tsk.tahap" class="form-control form-control-sm" :class="{'is-invalid': hasError('tersangka', idx, 'tahap')}" placeholder="Masukkan Tahap Kasus">
                                                 <template x-if="hasError('tersangka', idx, 'tahap')">
                                                     <div class="invalid-feedback fs-10px" x-text="getErrorMessage('tersangka', idx, 'tahap')"></div>
                                                 </template>
@@ -271,7 +271,7 @@
                                                     </template>
                                                 </div>
                                                 <div x-show="item.kategori === 'Non-Narkotika'" class="w-100">
-                                                    <input type="text" :name="`bb_groups[${gIdx}][items][${iIdx}][nama_barang_bukti]`" x-model="item.nama_barang_bukti" class="form-control form-control-sm" placeholder="Contoh: HP Samsung..." :class="{'is-invalid': hasErrorNested('bb_groups', gIdx, 'items', iIdx, 'nama_barang_bukti')}">
+                                                    <input type="text" :name="`bb_groups[${gIdx}][items][${iIdx}][nama_barang_bukti]`" x-model="item.nama_barang_bukti" class="form-control form-control-sm" placeholder="Masukkan nama barang/jenis" :class="{'is-invalid': hasErrorNested('bb_groups', gIdx, 'items', iIdx, 'nama_barang_bukti')}">
                                                     <template x-if="hasErrorNested('bb_groups', gIdx, 'items', iIdx, 'nama_barang_bukti')">
                                                         <div class="invalid-feedback d-block fs-10px" x-text="getErrorMessageNested('bb_groups', gIdx, 'items', iIdx, 'nama_barang_bukti')"></div>
                                                     </template>
@@ -299,7 +299,7 @@
                                                 </template>
                                                 <template x-if="item.kategori === 'Non-Narkotika'">
                                                     <div class="w-100">
-                                                        <input type="text" :name="`bb_groups[${gIdx}][items][${iIdx}][satuan]`" x-model="item.satuan" class="form-control form-control-sm" placeholder="Unit/Pcs" :class="{'is-invalid': hasErrorNested('bb_groups', gIdx, 'items', iIdx, 'satuan')}">
+                                                        <input type="text" :name="`bb_groups[${gIdx}][items][${iIdx}][satuan]`" x-model="item.satuan" class="form-control form-control-sm" placeholder="Masukkan Satuan" :class="{'is-invalid': hasErrorNested('bb_groups', gIdx, 'items', iIdx, 'satuan')}">
                                                         <template x-if="hasErrorNested('bb_groups', gIdx, 'items', iIdx, 'satuan')">
                                                             <div class="invalid-feedback d-block fs-10px" x-text="getErrorMessageNested('bb_groups', gIdx, 'items', iIdx, 'satuan')"></div>
                                                         </template>

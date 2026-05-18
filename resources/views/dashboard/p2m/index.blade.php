@@ -842,7 +842,14 @@
                     }
                 };
 
-                let allSatkers = [...new Set(this.tableData.map(r => r.satker))];
+                let predefinedSatkerOrder = ["BNNP Sultra", "BNNK Kendari", "BNNK Kolaka", "BNNK Muna", "BNNK Bau-bau", "BNNK Konawe"];
+                let allSatkers = [...new Set(this.tableData.map(r => r.satker))].sort((a, b) => {
+                    let idxA = predefinedSatkerOrder.indexOf(a);
+                    let idxB = predefinedSatkerOrder.indexOf(b);
+                    if (idxA === -1) idxA = 999;
+                    if (idxB === -1) idxB = 999;
+                    return idxA - idxB;
+                });
 
                 if (this.drilldownLevel === 1) {
                     categories = [...new Set(this.tableData.map(r => r.kategori))];
@@ -999,7 +1006,13 @@
                             opts.yaxis = { labels: { formatter: v => Math.round(v), style: { fontWeight: 'bold' } } };
                         }
                     } else {
-                        categories = [...new Set(filteredData.map(r => r.satker))];
+                        categories = [...new Set(filteredData.map(r => r.satker))].sort((a, b) => {
+                            let idxA = predefinedSatkerOrder.indexOf(a);
+                            let idxB = predefinedSatkerOrder.indexOf(b);
+                            if (idxA === -1) idxA = 999;
+                            if (idxB === -1) idxB = 999;
+                            return idxA - idxB;
+                        });
                         
                         if (showPositif) {
                             let sNegatif = categories.map(s => {

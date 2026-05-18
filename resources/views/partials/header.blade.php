@@ -1,9 +1,9 @@
 <header class="admin-header shadow-sm bg-white">
     {{-- Padding disesuaikan agar tinggi header pas (sekitar 100-110px total height) --}}
-    <div class="d-flex align-items-center justify-content-between w-100" style="padding: 12px 24px;">
+    <div class="d-flex align-items-center justify-content-between w-100 w-lg-auto py-3 px-4">
         
         {{-- BAGIAN KIRI: LOGO - JUDUL - TOGGLE - INFO --}}
-        <div class="d-flex align-items-center">
+        <div class="d-flex align-items-center w-100">
             
             {{-- 1. LOGO & JUDUL (PINDAHAN DARI SIDEBAR) --}}
             <div class="d-flex align-items-center gap-3 me-4">
@@ -13,14 +13,14 @@
                     <span class="fw-bold text-primary h5 mb-0" style="line-height: 1; font-weight: 800 !important; white-space: nowrap;">
                         SIPANTAU
                     </span>
-                    <span class="text-secondary fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">
+                    <span class="text-secondary fw-bold d-none d-lg-block" style="font-size: 0.75rem; letter-spacing: 1px;">
                         Sistem Informasi Pelaporan dan<br> Pemantauan P4GN Sulawesi Tenggara
                     </span>
                 </div>
             </div>
 
             {{-- 2. TOMBOL TOGGLE --}}
-            <button class="btn btn-link text-dark p-0 me-3 text-decoration-none border-0" 
+            <button class="btn btn-link text-dark p-0 ms-auto ms-lg-0 me-lg-3 text-decoration-none border-0" 
                     @click="$store.layout.toggleSidebar()" 
                     title="Menu">
                 <i class="bi fs-3" :class="$store.layout.sidebarOpen ? 'bi-text-indent-right' : 'bi-text-indent-left'"></i>

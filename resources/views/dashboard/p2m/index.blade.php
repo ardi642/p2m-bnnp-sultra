@@ -351,8 +351,8 @@
                             <i class="bi bi-info-circle me-1"></i> Tips Interaktif: Silakan <b>klik salah satu batang grafik</b> di bawah ini untuk melihat rincian datanya lebih dalam.
                         </p>
 
-                        <div class="w-100 custom-scrollbar pb-2" x-show="tableData.length > 0" style="overflow-x: auto;">
-                            <div x-ref="chartDetail" style="min-width: 900px;"></div>
+                        <div class="w-100 pb-2" x-show="tableData.length > 0" :class="{ 'custom-scrollbar': filterMonth === 'per_bulan' && drilldownLevel === 3 }" :style="(filterMonth === 'per_bulan' && drilldownLevel === 3) ? 'overflow-x: auto;' : 'overflow: visible;'">
+                            <div x-ref="chartDetail" :style="(filterMonth === 'per_bulan' && drilldownLevel === 3) ? 'min-width: 900px;' : 'width: 100%;'"></div>
                         </div>
                         
                         <template x-if="tableData.length === 0">
@@ -563,7 +563,8 @@
                 let opts = { 
                     series: dataSeries, 
                     chart: { type: isHeatmap ? 'heatmap' : 'bar', height: calculatedHeight, toolbar: { show: true }, fontFamily: 'inherit' }, 
-                    title: { text: `${this.dynamicTrendMetric} - ${this.detailTypeName} (${this.timeLabelText})`, align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } } 
+                    title: { text: `${this.dynamicTrendMetric} - ${this.detailTypeName} (${this.timeLabelText})`, align: 'center', margin: 20, style: { fontSize: '18px', fontWeight: '500', color: '#212529' } },
+                    grid: { padding: { top: 20, bottom: 20, left: 10, right: 10 } }
                 };
 
                 if (isHeatmap) {
@@ -778,6 +779,14 @@
                                     this.renderDetailChart();
                                 }
                             }
+                        }
+                    },
+                    grid: {
+                        padding: {
+                            top: 25,
+                            bottom: 25,
+                            left: 10,
+                            right: 10
                         }
                     },
                     dataLabels: { enabled: false },

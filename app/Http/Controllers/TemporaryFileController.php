@@ -32,7 +32,13 @@ class TemporaryFileController extends Controller
 
         // 3. VALIDASI KEAMANAN: Cek validitas file fisik
         if (!$file->isValid()) {
-            return response()->json(['error' => 'File rusak atau tidak valid.'], 500);
+            return response()->json(['error' => 'File rusak atau tidak valid.'], 422);
+        }
+
+        // 4. VALIDASI UKURAN: Maksimal 10 MB
+        $maxSize = 10 * 1024 * 1024; // 10 MB in bytes
+        if ($file->getSize() > $maxSize) {
+            return response()->json(['error' => 'Ukuran file melebihi batas maksimal 10 MB.'], 422);
         }
 
         try {

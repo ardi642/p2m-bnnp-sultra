@@ -191,6 +191,13 @@
                         <p class="welcome-sub">Silakan masuk untuk melanjutkan ke dalam aplikasi.</p>
                     </div>
 
+                    @if (session('status'))
+                        <div class="alert alert-success border-0 rounded-3 d-flex align-items-center mb-4 p-3" style="background-color: #ecfdf5; color: #065f46;">
+                            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                            <div class="fw-semibold">{{ session('status') }}</div>
+                        </div>
+                    @endif
+
                     @if (session('error'))
                         <div class="alert alert-danger border-0 rounded-3 d-flex align-items-center mb-4 p-3" style="background-color: #fef2f2; color: #991b1b;">
                             <i class="bi bi-exclamation-circle-fill me-2 fs-5"></i>

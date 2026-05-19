@@ -1,91 +1,251 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lupa Password - BNNP Sultra</title>
+    <title>Lupa Password - Sistem Terintegrasi BNNP</title>
+    
     <link rel="icon" type="image/png" href="{{ asset("assets/favicon-B_cwPWBd.png") }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" crossorigin href="{{ asset("assets/main-DLfE7m78.css") }}">
+    
+    {{-- Load CSS App --}}
+    @vite(['resources/css/app.css'])
+
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f6f8; }
-        .login-card { border: none; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        .form-control { padding: 0.75rem 1rem; }
-        .btn-primary { padding: 0.75rem 1rem; font-weight: 600; }
-        .info-box { background-color: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3; font-size: 0.85rem; border-radius: 6px; padding: 12px; margin-top: 1.5rem; }
+        :root {
+            --bn-primary: #005eb8;
+            --bn-dark: #003d7a;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #fff;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* --- SISI KIRI (DESKTOP) --- */
+        .left-side {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            padding: 2rem;
+            /* Gambar Background */
+            background-image: url("{{ asset('assets/gedung-bnn.png') }}");
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        /* OVERLAY BIRU (DESKTOP) */
+        .left-side::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 94, 184, 0.80) 0%, rgba(0, 42, 84, 0.90) 100%);
+            z-index: 1;
+        }
+
+        .brand-content { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .logo-img { height: 160px; width: auto; display: block; margin: 0 auto 1.5rem auto; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3)); transition: transform 0.3s; }
+        .app-title { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.2; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px; }
+        .app-desc { font-size: 1rem; font-weight: 400; opacity: 0.95; margin-bottom: 0; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); max-width: 90%; }
+        .separator { width: 60px; height: 4px; background: rgba(255,255,255,0.6); border-radius: 4px; margin: 2.5rem auto; }
+        .instansi-text { font-size: 1.1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; line-height: 1.5; opacity: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+
+        /* --- SISI KANAN (DESKTOP DEFAULT) --- */
+        .right-side {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f1f5f9;
+            padding: 2rem;
+            flex-direction: column;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 450px;
+            background-color: #ffffff;
+            padding: 3rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+            position: relative; z-index: 2;
+        }
+
+        /* Style Desktop */
+        .welcome-header { margin-bottom: 3rem; }
+        .form-group { margin-bottom: 2rem; }
+        .btn-submit { margin-top: 2rem; }
+        .welcome-title { font-size: 1.8rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem; }
+        .welcome-sub { font-size: 0.95rem; color: var(--text-sub); line-height: 1.5; }
+        .form-label { font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.8rem; display: block; }
+        .footer-copy { margin-top: 3rem; text-align: center; font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 1.5rem; }
+
+        /* Input Style */
+        .input-wrapper { position: relative; }
+        .styled-input {
+            width: 100%; padding: 0.9rem 1rem 0.9rem 3rem;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0; border-radius: 12px;
+            font-size: 1rem; font-weight: 600; color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+        .styled-input:focus { background-color: #fff; border-color: var(--bn-primary); box-shadow: 0 0 0 4px rgba(0, 94, 184, 0.1); outline: none; }
+        .input-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); font-size: 1.25rem; color: #94a3b8; }
+        .styled-input:focus + .input-icon { color: var(--bn-primary); }
+
+        .btn-submit {
+            width: 100%; padding: 1rem;
+            background: linear-gradient(135deg, var(--bn-primary) 0%, var(--bn-dark) 100%);
+            color: white; font-size: 1rem; font-weight: 700; border: none; border-radius: 12px;
+            cursor: pointer; box-shadow: 0 10px 20px -5px rgba(0, 94, 184, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 15px 30px -5px rgba(0, 94, 184, 0.4); }
+
+        /* Info Box */
+        .info-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; margin-top: 1.5rem; }
+        .info-box-title { font-weight: 700; color: var(--text-main); font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .info-box-desc { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 0; line-height: 1.5; }
+        
+        .back-to-login { display: block; text-align: center; margin-top: 1.5rem; color: var(--text-sub); font-size: 0.95rem; font-weight: 600; text-decoration: none; transition: color 0.2s; }
+        .back-to-login:hover { color: var(--bn-primary); }
+
+        /* --- MOBILE LAYOUT --- */
+        .mobile-branding { display: none; }
+
+        @media (max-width: 991px) {
+            .welcome-header { margin-bottom: 2rem; }
+            .form-group { margin-bottom: 1.2rem; }
+            .btn-submit { margin-top: 1rem; }
+            .form-label { margin-bottom: 0.5rem; }
+
+            .right-side {
+                background-image: url("{{ asset('assets/gedung-bnn.png') }}");
+                background-size: cover; background-position: center; justify-content: center;
+                position: relative;
+            }
+            
+            .right-side::before {
+                content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background: linear-gradient(135deg, rgba(0, 94, 184, 0.65) 0%, rgba(0, 42, 84, 0.85) 100%);
+                z-index: 1;
+            }
+
+            .login-card { background-color: transparent; box-shadow: none; padding: 0; margin-top: 0; }
+            
+            .welcome-title { color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+            .welcome-sub { color: rgba(255,255,255,0.95); text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+            .form-label { color: #ffffff; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+            .footer-copy { color: rgba(255,255,255,0.7); border-top: 1px solid rgba(255,255,255,0.3); }
+            
+            /* Info Box for mobile */
+            .info-box { background-color: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); backdrop-filter: blur(5px); }
+            .info-box-title { color: #ffffff; }
+            .info-box-desc { color: rgba(255,255,255,0.9); }
+            .back-to-login { color: rgba(255,255,255,0.9); text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+            .back-to-login:hover { color: #ffffff; }
+
+            .mobile-branding { display: block; position: relative; z-index: 2; text-align: center; margin-bottom: 2.5rem; color: white; }
+            .mobile-logo { height: 100px; display: block; margin: 0 auto 1rem auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+            .mobile-app-name { font-size: 1.8rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.2rem; text-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+            .mobile-app-desc { font-size: 0.95rem; opacity: 1; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+
+            .styled-input { box-shadow: 0 4px 15px rgba(0,0,0,0.25); border: none; }
+        }
     </style>
-    {{-- Javascript Utama --}}
-    <script type="module" crossorigin src="{{  asset("assets/main-Bfr21rhA.js") }}"></script>
-    {{-- CSS Utama --}}
-    <link rel="stylesheet" crossorigin href="{{ asset("assets/main-DLfE7m78.css") }}">
+</head>
 <body>
 
-    <div class="container">
-        <div class="row justify-content-center align-items-center min-vh-100">
-            <div class="col-md-5 col-lg-4">
-                <div class="card login-card p-3">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            
+            <div class="col-lg-7 d-none d-lg-flex left-side">
+                <div class="brand-content">
+                    <img src="{{ asset("assets/logo-bnn.png") }}" alt="Logo BNN" class="logo-img">
+                    <div class="app-title">SIPANTAU</div>
+                    <div class="app-desc">Sistem Informasi Pelaporan dan Pemantauan P4GN Sulawesi Tenggara</div>
+                    <div class="separator"></div>
+                    <div class="instansi-text">BNN PROVINSI</div>
+                    <div class="instansi-text">SULAWESI TENGGARA</div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-5 right-side">
+                
+                {{-- MOBILE BRANDING --}}
+                <div class="mobile-branding">
+                    <img src="{{ asset("assets/logo-bnn.png") }}" alt="Logo" class="mobile-logo">
+                    <div class="mobile-app-name">SIPANTAU</div>
+                    <div class="mobile-app-desc">Sistem Informasi Pelaporan dan Pemantauan P4GN Sulawesi Tenggara</div>
+                </div>
+
+                {{-- FORM AREA --}}
+                <div class="login-card">
                     
-                    <div class="card-header text-center bg-white border-0 pb-0">
-                        <img src="{{ asset("assets/logo-bnn.png") }}" alt="Logo BNN" class="bnn-logo mb-3" height="70">
-                        <h4 class="fw-bold text-dark">Reset Password</h4>
-                        <p class="text-muted small">Masukkan NIP atau Email akun Anda untuk menerima link reset password.</p>
+                    <div class="welcome-header">
+                        <h1 class="welcome-title">Lupa Sandi? 🔒</h1>
+                        <p class="welcome-sub">Masukkan NIP atau Email akun Anda untuk menerima link reset password.</p>
                     </div>
 
-                    <div class="card-body p-4 pt-3">
+                    @if (session('status'))
+                        <div class="alert alert-success border-0 rounded-3 d-flex align-items-center mb-4 p-3" style="background-color: #ecfdf5; color: #065f46;">
+                            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                            <div class="fw-semibold">{{ session('status') }}</div>
+                        </div>
+                    @endif
+
+                    @if ($errors->any())
+                        <div class="alert alert-danger border-0 rounded-3 d-flex align-items-center mb-4 p-3" style="background-color: #fef2f2; color: #991b1b;">
+                            <i class="bi bi-exclamation-circle-fill me-2 fs-5"></i>
+                            <div class="fw-semibold">{{ $errors->first() }}</div>
+                        </div>
+                    @endif
+
+                    <form action="{{ route('password.email') }}" method="POST">
+                        @csrf
                         
-                        {{-- Alert Sukses / Gagal --}}
-                        @if (session('status'))
-                            <div class="alert alert-success small shadow-sm border-0" role="alert">
-                                <i class="bi bi-check-circle-fill me-1"></i> {{ session('status') }}
+                        <div class="form-group">
+                            <label class="form-label" for="loginId">Identitas (NIP/Email)</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="loginId" name="login_id" class="styled-input" 
+                                       placeholder="Contoh: 198001... atau email@bnn.go.id" value="{{ old('login_id') }}" required autofocus>
+                                <i class="bi bi-envelope input-icon"></i>
                             </div>
-                        @endif
-                        @if ($errors->any())
-                            <div class="alert alert-danger small shadow-sm border-0" role="alert">
-                                <i class="bi bi-exclamation-circle-fill me-1"></i> {{ $errors->first() }}
-                            </div>
-                        @endif
+                            @error('login_id')
+                                <small class="text-danger fw-bold mt-1 d-block">{{ $message }}</small>
+                            @enderror
+                        </div>
 
-                        <form action="{{ route('password.email') }}" method="POST">
-                            @csrf
-                            
-                            <div class="mb-4">
-                                <label class="form-label small text-muted fw-bold text-uppercase">NIP / Email</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0 text-muted">
-                                        <i class="bi bi-envelope"></i>
-                                    </span>
-                                    <input type="text" 
-                                           class="form-control border-start-0 ps-0 @error('login_id') is-invalid @enderror" 
-                                           name="login_id" 
-                                           value="{{ old('login_id') }}" 
-                                           placeholder="Contoh: 1980... atau email@bnn.go.id" 
-                                           required autofocus>
-                                </div>
-                            </div>
+                        <button type="submit" class="btn-submit">
+                            KIRIM LINK RESET <i class="bi bi-arrow-right ms-2"></i>
+                        </button>
+                    </form>
 
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-primary">
-                                    Kirim Link Reset
-                                </button>
-                                <a href="{{ route('login') }}" class="btn btn-light text-muted border-0">
-                                    <i class="bi bi-arrow-left me-1"></i> Kembali ke Login
-                                </a>
-                            </div>
+                    <div class="info-box d-flex align-items-start">
+                        <i class="bi bi-info-circle-fill me-2 mt-1 fs-5" style="color: var(--bn-primary);"></i>
+                        <div>
+                            <div class="info-box-title">Kesulitan Akses?</div>
+                            <p class="info-box-desc">Jika Anda tidak menerima email atau lupa email yang terdaftar, silakan hubungi <strong>Admin Pusat</strong> atau <strong>Admin Satker</strong> Anda untuk melakukan reset password manual.</p>
+                        </div>
+                    </div>
 
-                            {{-- INFO TAMBAHAN: Opsi Reset Manual --}}
-                            <div class="info-box d-flex align-items-start">
-                                <i class="bi bi-info-circle-fill me-2 mt-1 fs-6"></i>
-                                <div>
-                                    <strong>Kesulitan Akses?</strong><br>
-                                    Jika Anda tidak menerima email atau lupa email yang terdaftar, silakan hubungi <strong>Admin Pusat</strong> atau <strong>Admin Satker</strong> Anda untuk melakukan reset password manual atau mengubah email.
-                                </div>
-                            </div>
+                    <a href="{{ route('login') }}" class="back-to-login">
+                        <i class="bi bi-arrow-left me-1"></i> Kembali ke Halaman Login
+                    </a>
 
-                        </form>
+                    <div class="footer-copy">
+                        &copy; {{ date('Y') }} Badan Narkotika Nasional Provinsi Sulawesi Tenggara.
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
+
 </body>
 </html>

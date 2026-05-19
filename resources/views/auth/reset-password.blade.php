@@ -1,60 +1,259 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buat Password Baru - Sistem Terintegrasi BNNP</title>
+    
     <link rel="icon" type="image/png" href="{{ asset("assets/favicon-B_cwPWBd.png") }}">
-    <title>Buat Password Baru</title>
-    {{-- Javascript Utama --}}
-    <script type="module" crossorigin src="{{  asset("assets/main-Bfr21rhA.js") }}"></script>
-    {{-- CSS Utama --}}
-    <link rel="stylesheet" crossorigin href="{{ asset("assets/main-DLfE7m78.css") }}">
+    
+    {{-- Load CSS App --}}
+    @vite(['resources/css/app.css'])
+
+    <style>
+        :root {
+            --bn-primary: #005eb8;
+            --bn-dark: #003d7a;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #fff;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* --- SISI KIRI (DESKTOP) --- */
+        .left-side {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            padding: 2rem;
+            /* Gambar Background */
+            background-image: url("{{ asset('assets/gedung-bnn.png') }}");
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        /* OVERLAY BIRU (DESKTOP) */
+        .left-side::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 94, 184, 0.80) 0%, rgba(0, 42, 84, 0.90) 100%);
+            z-index: 1;
+        }
+
+        .brand-content { position: relative; z-index: 2; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .logo-img { height: 160px; width: auto; display: block; margin: 0 auto 1.5rem auto; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3)); transition: transform 0.3s; }
+        .app-title { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.2; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px; }
+        .app-desc { font-size: 1rem; font-weight: 400; opacity: 0.95; margin-bottom: 0; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.3); max-width: 90%; }
+        .separator { width: 60px; height: 4px; background: rgba(255,255,255,0.6); border-radius: 4px; margin: 2.5rem auto; }
+        .instansi-text { font-size: 1.1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; line-height: 1.5; opacity: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+
+        /* --- SISI KANAN (DESKTOP DEFAULT) --- */
+        .right-side {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f1f5f9;
+            padding: 2rem;
+            flex-direction: column;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 450px;
+            background-color: #ffffff;
+            padding: 3rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+            position: relative; z-index: 2;
+        }
+
+        /* Style Desktop */
+        .welcome-header { margin-bottom: 3rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .btn-submit { margin-top: 1.5rem; }
+        .welcome-title { font-size: 1.8rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem; }
+        .welcome-sub { font-size: 0.95rem; color: var(--text-sub); line-height: 1.5; }
+        .form-label { font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.8rem; display: block; }
+        .footer-copy { margin-top: 3rem; text-align: center; font-size: 0.8rem; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 1.5rem; }
+
+        /* Input Style */
+        .input-wrapper { position: relative; }
+        .styled-input {
+            width: 100%; padding: 0.9rem 1rem 0.9rem 3rem;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0; border-radius: 12px;
+            font-size: 1rem; font-weight: 600; color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+        .styled-input:focus { background-color: #fff; border-color: var(--bn-primary); box-shadow: 0 0 0 4px rgba(0, 94, 184, 0.1); outline: none; }
+        .input-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); font-size: 1.25rem; color: #94a3b8; }
+        .styled-input:focus + .input-icon { color: var(--bn-primary); }
+        .styled-input[readonly] { background-color: #f8fafc; color: #94a3b8; border-color: #e2e8f0; cursor: not-allowed; }
+
+        .toggle-btn { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; }
+
+        .btn-submit {
+            width: 100%; padding: 1rem;
+            background: linear-gradient(135deg, var(--bn-primary) 0%, var(--bn-dark) 100%);
+            color: white; font-size: 1rem; font-weight: 700; border: none; border-radius: 12px;
+            cursor: pointer; box-shadow: 0 10px 20px -5px rgba(0, 94, 184, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 15px 30px -5px rgba(0, 94, 184, 0.4); }
+
+        /* --- MOBILE LAYOUT --- */
+        .mobile-branding { display: none; }
+
+        @media (max-width: 991px) {
+            .welcome-header { margin-bottom: 2rem; }
+            .form-group { margin-bottom: 1.2rem; }
+            .btn-submit { margin-top: 1rem; }
+            .form-label { margin-bottom: 0.5rem; }
+
+            .right-side {
+                background-image: url("{{ asset('assets/gedung-bnn.png') }}");
+                background-size: cover; background-position: center; justify-content: center;
+                position: relative;
+            }
+            
+            .right-side::before {
+                content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background: linear-gradient(135deg, rgba(0, 94, 184, 0.65) 0%, rgba(0, 42, 84, 0.85) 100%);
+                z-index: 1;
+            }
+
+            .login-card { background-color: transparent; box-shadow: none; padding: 0; margin-top: 0; }
+            
+            .welcome-title { color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+            .welcome-sub { color: rgba(255,255,255,0.95); text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+            .form-label { color: #ffffff; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+            .footer-copy { color: rgba(255,255,255,0.7); border-top: 1px solid rgba(255,255,255,0.3); }
+            
+            .mobile-branding { display: block; position: relative; z-index: 2; text-align: center; margin-bottom: 2.5rem; color: white; }
+            .mobile-logo { height: 100px; display: block; margin: 0 auto 1rem auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); }
+            .mobile-app-name { font-size: 1.8rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.2rem; text-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+            .mobile-app-desc { font-size: 0.95rem; opacity: 1; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+
+            .styled-input { box-shadow: 0 4px 15px rgba(0,0,0,0.25); border: none; }
+            .styled-input[readonly] { background-color: rgba(255,255,255,0.8); color: #475569; }
+        }
+    </style>
+</head>
 <body>
 
-    <div class="container">
-        <div class="row justify-content-center align-items-center min-vh-100">
-            <div class="col-md-5 col-lg-4">
-                <div class="card login-card p-3">
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            
+            <div class="col-lg-7 d-none d-lg-flex left-side">
+                <div class="brand-content">
+                    <img src="{{ asset("assets/logo-bnn.png") }}" alt="Logo BNN" class="logo-img">
+                    <div class="app-title">SIPANTAU</div>
+                    <div class="app-desc">Sistem Informasi Pelaporan dan Pemantauan P4GN Sulawesi Tenggara</div>
+                    <div class="separator"></div>
+                    <div class="instansi-text">BNN PROVINSI</div>
+                    <div class="instansi-text">SULAWESI TENGGARA</div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-5 right-side">
+                
+                {{-- MOBILE BRANDING --}}
+                <div class="mobile-branding">
+                    <img src="{{ asset("assets/logo-bnn.png") }}" alt="Logo" class="mobile-logo">
+                    <div class="mobile-app-name">SIPANTAU</div>
+                    <div class="mobile-app-desc">Sistem Informasi Pelaporan dan Pemantauan P4GN Sulawesi Tenggara</div>
+                </div>
+
+                {{-- FORM AREA --}}
+                <div class="login-card">
                     
-                    <div class="card-header text-center">
-                        <h5 class="mb-0 fw-bold text-primary">Password Baru</h5>
-                        <small class="text-muted">Silakan buat password baru Anda</small>
+                    <div class="welcome-header">
+                        <h1 class="welcome-title">Buat Sandi Baru 🔑</h1>
+                        <p class="welcome-sub">Silakan buat kata sandi baru untuk akun Anda.</p>
                     </div>
 
-                    <div class="card-body p-4">
-                        <form action="{{ route('password.update') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="token" value="{{ $token }}">
+                    @if ($errors->any())
+                        <div class="alert alert-danger border-0 rounded-3 d-flex align-items-center mb-4 p-3" style="background-color: #fef2f2; color: #991b1b;">
+                            <i class="bi bi-exclamation-circle-fill me-2 fs-5"></i>
+                            <div class="fw-semibold">{{ $errors->first() }}</div>
+                        </div>
+                    @endif
 
-                            {{-- Email (Readonly) --}}
-                            <div class="mb-3">
-                                <label class="form-label small text-muted fw-bold">Email Address</label>
-                                <input type="email" class="form-control bg-light" name="email" value="{{ $email ?? old('email') }}" readonly>
-                                @error('email') <div class="text-danger small">{{ $message }}</div> @enderror
+                    <form action="{{ route('password.update') }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="token" value="{{ $token }}">
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="email">Email Address</label>
+                            <div class="input-wrapper">
+                                <input type="email" id="email" name="email" class="styled-input" 
+                                       value="{{ $email ?? old('email') }}" readonly>
+                                <i class="bi bi-envelope input-icon"></i>
                             </div>
+                        </div>
 
-                            {{-- Password Baru --}}
-                            <div class="mb-3">
-                                <label class="form-label small text-muted fw-bold">Password Baru</label>
-                                <input type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autofocus>
-                                @error('password') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        <div class="form-group">
+                            <label class="form-label" for="password">Password Baru</label>
+                            <div class="input-wrapper">
+                                <input type="password" id="password" name="password" class="styled-input" 
+                                       placeholder="Minimal 8 karakter" required autofocus>
+                                <i class="bi bi-shield-lock input-icon"></i>
+                                <button type="button" class="toggle-btn" onclick="togglePassword('password', 'toggleIcon1')">
+                                    <i class="bi bi-eye-slash" id="toggleIcon1"></i>
+                                </button>
                             </div>
+                        </div>
 
-                            {{-- Konfirmasi Password --}}
-                            <div class="mb-4">
-                                <label class="form-label small text-muted fw-bold">Ulangi Password</label>
-                                <input type="password" class="form-control" name="password_confirmation" required>
+                        <div class="form-group">
+                            <label class="form-label" for="password_confirmation">Ulangi Password Baru</label>
+                            <div class="input-wrapper">
+                                <input type="password" id="password_confirmation" name="password_confirmation" class="styled-input" 
+                                       placeholder="Ketik ulang password" required>
+                                <i class="bi bi-shield-check input-icon"></i>
+                                <button type="button" class="toggle-btn" onclick="togglePassword('password_confirmation', 'toggleIcon2')">
+                                    <i class="bi bi-eye-slash" id="toggleIcon2"></i>
+                                </button>
                             </div>
+                        </div>
 
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">Reset Password</button>
-                            </div>
-                        </form>
+                        <button type="submit" class="btn-submit">
+                            SIMPAN PASSWORD BARU <i class="bi bi-check-circle ms-2"></i>
+                        </button>
+                    </form>
+
+                    <div class="footer-copy">
+                        &copy; {{ date('Y') }} Badan Narkotika Nasional Provinsi Sulawesi Tenggara.
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 
+    <script>
+        function togglePassword(inputId, iconId) {
+            const pass = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            
+            if (pass.type === 'password') {
+                pass.type = 'text';
+                icon.classList.replace('bi-eye-slash', 'bi-eye');
+                icon.style.color = '#005eb8';
+            } else {
+                pass.type = 'password';
+                icon.classList.replace('bi-eye', 'bi-eye-slash');
+                icon.style.color = '';
+            }
+        }
+    </script>
 </body>
 </html>

@@ -19,40 +19,40 @@ class DatabaseSeeder extends Seeder
         ]);
         
         // 2. Buat Data Pegawai
-        Pegawai::factory(200)->create(); 
+        // Pegawai::factory(200)->create(); 
 
         // 3. Buat Data Dummy Lain
         // p2mElektronik::factory(50)->create();
         // p2mOnline::factory(50)->create();
 
-        $this->call([
-            P2mInformasiEdukasiSeeder::class,
-            P2mUpacaraSeeder::class,
-            P2mKieSeeder::class,
-            P2mLingkunganBersinarSeeder::class,
-            P2mCfdSeeder::class,
-            P2mElektronikSeeder::class,
-            P2mNonElektronikSeeder::class,
-            P2mOnlineSeeder::class,
-            P2mTesUrineSeeder::class,
-            P2mDesaKelurahanBersinarSeeder::class,
-            P2mSafariReligiSeeder::class,
-            P2mPeranSertaMasyarakatSeeder::class,
-            P2mPemberdayaanSeeder::class,
+        // $this->call([
+            // P2mInformasiEdukasiSeeder::class,
+            // P2mUpacaraSeeder::class,
+            // P2mKieSeeder::class,
+            // P2mLingkunganBersinarSeeder::class,
+            // P2mCfdSeeder::class,
+            // P2mElektronikSeeder::class,
+            // P2mNonElektronikSeeder::class,
+            // P2mOnlineSeeder::class,
+            // P2mTesUrineSeeder::class,
+            // P2mDesaKelurahanBersinarSeeder::class,
+            // P2mSafariReligiSeeder::class,
+            // P2mPeranSertaMasyarakatSeeder::class,
+            // P2mPemberdayaanSeeder::class,
             // P2mMonevSeeder::class,
             // P2mPemetaanSdmSdaSeeder::class
-        ]);
+        // ]);
 
         // $this->call([
         //     BerantasUngkapKasusSeeder::class,
         //     BerantasRegisterBarangBuktiSeeder::class,
         // ]);
 
-        $this->call([
-            RehabTargetSeeder::class,
-            RehabLaporanSeeder::class,
-            RehabPasienSeeder::class,
-        ]);
+        // $this->call([
+            // RehabTargetSeeder::class,
+            // RehabLaporanSeeder::class,
+            // RehabPasienSeeder::class,
+        // ]);
 
 
         // Buat User Login
